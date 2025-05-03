@@ -1,0 +1,13 @@
+*.so
+*.test
+*.out
+go.work
+go.work.sum
+.vscode
+.env
+.idea
+.git
+.venv
+__pycache__/
+*.py[cod]
+.ruff_cache/
