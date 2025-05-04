@@ -141,9 +141,9 @@ func (t *Task) Print(colorize bool) string {
 				add("print.color-interval", fmt.Sprintf("$every=%s", formatDuration(t.Every)))
 			case "r": // reminder
 				reminder, err := parseAbsoluteDatetime(value)
-				if err != nil {
-					reminder, err = t.parseVariableDuration("due", value)
-				}
+				// if err != nil {
+				// 	reminder, err = t.parseVariableDuration("due", value)
+				// }
 				if err != nil {
 					// regular ass text
 					addAsRegular(token)

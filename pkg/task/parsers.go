@@ -85,52 +85,24 @@ func parseDuration(dur string) (*time.Duration, error) {
 	return &duration, nil
 }
 
-func (t *Task) parseVariableDuration(relVar, dur string) (*time.Time, error) {
-	if strings.HasPrefix(dur, "variable=") {
-		ndx := strings.Index(dur, ";")
+func parseTmpRelativeDatetime(field, dt string) (*temporalNode, error) {
+	fallback, ok := temporalFallback[field]
+	if !ok {
+		return nil, fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, field)
+	}
+	if strings.HasPrefix(dt, "variable=") {
+		ndx := strings.Index(dt, ";")
 		if ndx == -1 {
-			return nil, fmt.Errorf("%w: did not find semi-colon", terrors.ErrParse)
+			return nil, fmt.Errorf("%w: did not find ';'", terrors.ErrParse)
 		}
-		relVar = dur[9:ndx]
-		dur = dur[ndx+1:]
+		fallback = dt[len("variable="):ndx]
+		dt = dt[ndx+1:]
 	}
-	duration, err := parseDuration(dur)
+	duration, err := parseDuration(dt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: failed parsing tmp relative datetime: %w", terrors.ErrParse, err)
 	}
-	var dt *time.Time
-	switch relVar {
-	case "c":
-		dt = t.CreationDate
-	case "lud":
-		dt = t.LastUpdated
-	case "due":
-		dt = t.DueDate
-	case "end":
-		dt = t.EndDate
-	case "dead":
-		dt = t.Deadline
-	}
-	if dt == nil && t.CreationDate != nil {
-		dt = t.CreationDate
-	} else if dt == nil {
-		return nil, fmt.Errorf("%w: null date error", terrors.ErrParse)
-	}
-	tmp, dt := dt, new(time.Time)
-	*dt = *tmp
-	*dt = dt.Add(*duration)
-	return dt, nil
-}
-
-func parseDate(task *Task, token, relVar string) (*time.Time, error) {
-	dt, err := parseAbsoluteDatetime(token)
-	if err != nil {
-		dt, err = task.parseVariableDuration(relVar, token)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return dt, nil
+	return &temporalNode{Field: field, Ref: fallback, Offset: duration}, nil
 }
 
 func parseProgress(token string) (*Progress, error) {
@@ -179,118 +151,202 @@ func parseID(token string) (int, error) {
 	return val, nil
 }
 
+func resolveDates(tokens []Token) []error {
+	tokenKeyToNdx := make(map[string]int)
+	nodes := make(map[string]*temporalNode)
+	resolved := make(map[string]time.Time)
+	var totalDateCount int
+	for ndx, token := range tokens {
+		if token.Type != TokenDate {
+			continue
+		}
+		if token.Key == "r" {
+			token.Key = fmt.Sprintf("r%d", ndx)
+		}
+		totalDateCount++
+		tokenKeyToNdx[token.Key] = ndx
+		switch v := token.Value.(type) {
+		case *time.Time:
+			// nodes[token.Key] = &temporalNode{Field: token.Key, Absolute: v}
+			resolved[token.Key] = *v
+		case *temporalNode:
+			if v.Field == "r" {
+				v.Field = fmt.Sprintf("r%d", ndx)
+			}
+			nodes[token.Key] = v
+		}
+	}
+	for len(resolved) < totalDateCount {
+		changed := false
+		for _, n := range nodes {
+			if _, ok := resolved[n.Field]; ok {
+				continue
+			}
+			if base, ok := resolved[n.Ref]; ok {
+				resolved[n.Field] = base.Add(*n.Offset)
+				changed = true
+			}
+		}
+		if !changed {
+			return []error{fmt.Errorf("%w: dependency of date fields are not resolvable", terrors.ErrValue)}
+		}
+	}
+	var errs []error
+	for key, ndx := range tokenKeyToNdx {
+		tVal, ok := resolved[key]
+		if ok {
+			tokens[ndx].Value = &tVal
+		} else {
+			errs = append(errs, fmt.Errorf("%w: somehow the date '%s' was not resolved", terrors.ErrNotFound, key))
+		}
+	}
+	return errs
+}
+
+func tokenizeLine(line string) ([]Token, []error) {
+	var tokens []Token
+	var errs []error
+	handleTokenText := func(tokenStr string, err error) {
+		if err != nil {
+			errs = append(errs, err)
+		}
+		tokens = append(tokens, Token{Type: TokenText, Raw: tokenStr})
+	}
+	if i, j, err := parsePriority(line); err == nil {
+		p := line[i:j]
+		tokens = append(tokens, Token{
+			Type: TokenPriority, Key: "priority",
+			Value: p,
+			Raw:   fmt.Sprintf("(%s)", p),
+		})
+		line = line[j+1:]
+	}
+	for tokenStr := range strings.SplitSeq(line, " ") {
+		tokenStr = strings.TrimSpace(tokenStr)
+		if tokenStr == "" {
+			continue
+		}
+		switch tokenStr[0] {
+		case '+', '@', '#':
+			if err := validateHint(tokenStr); err != nil {
+				handleTokenText(tokenStr, nil)
+				continue
+			}
+			tokens = append(tokens, Token{
+				Type: TokenHint, Raw: tokenStr,
+				Key: tokenStr[0:1], Value: tokenStr[1:],
+			})
+		case '$':
+			keyValue := strings.SplitN(tokenStr[1:], "=", 2)
+			if len(keyValue) != 2 {
+				errs = append(errs, fmt.Errorf("%w: zero or multiple `=` were found: %s", terrors.ErrParse, tokenStr))
+				handleTokenText(tokenStr, nil)
+				continue
+			}
+			key, value := keyValue[0], keyValue[1]
+			switch key {
+			case "id", "P":
+				intVal, err := parseID(value)
+				if err != nil {
+					handleTokenText(tokenStr, fmt.Errorf("%w: $%s", err, key))
+					continue
+				}
+				tokens = append(tokens, Token{
+					Type: TokenID, Raw: tokenStr,
+					Key: key, Value: intVal,
+				})
+			case "c", "lud", "due", "end", "dead", "r":
+				var dt any
+				dt, err := parseAbsoluteDatetime(value)
+				if err != nil {
+					dt, err = parseTmpRelativeDatetime(key, value)
+					if err != nil {
+						handleTokenText(tokenStr, fmt.Errorf("%w: $%s", err, key))
+						continue
+					}
+				}
+				tokens = append(tokens, Token{
+					Type: TokenDate, Raw: tokenStr,
+					Key: key, Value: dt,
+				})
+			case "every":
+				duration, err := parseDuration(value)
+				if err != nil {
+					handleTokenText(tokenStr, fmt.Errorf("%w: $every: %w", terrors.ErrParse, err))
+					continue
+				}
+				tokens = append(tokens, Token{
+					Type: TokenDuration, Raw: tokenStr,
+					Key: key, Value: duration,
+				})
+			case "p":
+				progress, err := parseProgress(value)
+				if err != nil {
+					handleTokenText(tokenStr, err)
+				}
+				tokens = append(tokens, Token{
+					Type: TokenProgress, Raw: tokenStr,
+					Key: "p", Value: progress,
+				})
+			default:
+				handleTokenText(tokenStr, nil)
+			}
+		default:
+			handleTokenText(tokenStr, nil)
+		}
+	}
+	tmpErrs := resolveDates(tokens)
+	if len(tmpErrs) > 0 {
+		errs = append(errs, tmpErrs...)
+	}
+	return tokens, errs
+}
+
 func ParseTask(id *int, line string) (*Task, error) {
 	if err := validateEmptyText(line); err != nil {
 		return nil, err
 	}
 	task := &Task{ID: id, Text: &line}
-	var PTextArr []string
 	if i, j, err := parsePriority(line); err == nil {
 		task.Priority = line[i:j]
 	}
-	tokens := strings.SplitSeq(line, " ")
-	var errs []error
-	handleErr := func(token string, err error) {
-		errs = append(errs, err)
-		PTextArr = append(PTextArr, token)
-	}
-	for token := range tokens {
-		token = strings.TrimSpace(token)
-		if token == "" {
-			continue
-		}
-		switch token[0] {
-		case '+', '@', '#':
-			PTextArr = append(PTextArr, token)
-			if err := validateHint(token); err != nil {
-				continue
-			}
-			task.Hints = append(task.Hints, token)
-		case '$':
-			keyValue := strings.SplitN(token[1:], "=", 2)
-			if len(keyValue) != 2 {
-				errs = append(errs, fmt.Errorf("%w: zero or multiple `=` were found: %s", terrors.ErrParse, token))
-				PTextArr = append(PTextArr, token)
-				continue
-			}
-			key, value := keyValue[0], keyValue[1]
-			switch key {
+	tokens, errs := tokenizeLine(line)
+	for _, token := range tokens {
+		switch token.Type {
+		case TokenText:
+			task.PText += token.Raw
+		case TokenID:
+			intVal := token.Value.(int)
+			switch token.Key {
 			case "id":
-				intVal, err := parseID(value)
-				if err != nil {
-					handleErr(token, fmt.Errorf("%w: $id", err))
-					continue
-				}
 				task.EID = &intVal
 			case "P":
-				intVal, err := parseID(value)
-				if err != nil {
-					handleErr(token, fmt.Errorf("%w: $P", err))
-					continue
-				}
 				task.Parent = &intVal
-			case "c":
-				var err error
-				task.CreationDate, err = parseAbsoluteDatetime(value)
-				if err != nil {
-					handleErr(token, fmt.Errorf("%w: $creationDate", err))
-					continue
-				}
-			case "lud":
-				var err error
-				task.LastUpdated, err = parseDate(task, value, "c")
-				if err != nil {
-					handleErr(token, fmt.Errorf("%w: $lastUpdated", err))
-					continue
-				}
-			case "due":
-				var err error
-				task.DueDate, err = parseDate(task, value, "c")
-				if err != nil {
-					handleErr(token, fmt.Errorf("%w: $dueDate", err))
-					continue
-				}
-			case "end":
-				var err error
-				task.EndDate, err = parseDate(task, value, "due")
-				if err != nil {
-					handleErr(token, fmt.Errorf("%w: $endDate", err))
-					continue
-				}
-			case "dead":
-				var err error
-				task.Deadline, err = parseDate(task, value, "due")
-				if err != nil {
-					handleErr(token, fmt.Errorf("%w: $deadline", err))
-					continue
-				}
-			case "every":
-				var err error
-				task.Every, err = parseDuration(value)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("%w: every: %w", terrors.ErrParse, err))
-					PTextArr = append(PTextArr, token)
-					continue
-				}
-			case "r":
-				reminder, err := parseDate(task, value, "due")
-				if err != nil {
-					handleErr(token, fmt.Errorf("%w: $reminder", err))
-					continue
-				}
-				task.Reminders = append(task.Reminders, *reminder)
-			case "p":
-				progress, err := parseProgress(value)
-				if err != nil {
-					handleErr(token, err)
-				}
-				if progress != nil {
-					task.Progress = *progress
-				}
 			}
-		default:
-			PTextArr = append(PTextArr, token)
-			continue
+		case TokenHint:
+			task.Hints = append(task.Hints, token.Value.(string))
+		case TokenPriority:
+			task.Priority = token.Value.(string)
+		case TokenDate:
+			// TODO(2025-05-03T20-00)
+			switch token.Key {
+			case "c":
+				task.CreationDate = token.Value.(*time.Time)
+			case "lud":
+				task.LastUpdated = token.Value.(*time.Time)
+			case "due":
+				task.DueDate = token.Value.(*time.Time)
+			case "r":
+				task.Reminders = append(task.Reminders, *token.Value.(*time.Time))
+			case "end":
+				task.EndDate = token.Value.(*time.Time)
+			case "dead":
+				task.Deadline = token.Value.(*time.Time)
+			}
+		case TokenDuration:
+			task.Every = token.Value.(*time.Duration)
+		case TokenProgress:
+			task.Progress = *token.Value.(*Progress)
 		}
 	}
 	if viper.GetBool("debug") {
@@ -298,7 +354,6 @@ func ParseTask(id *int, line string) (*Task, error) {
 			fmt.Fprintln(os.Stderr, err)
 		}
 	}
-	task.PText = strings.Join(PTextArr, " ")
 	return task, nil
 }
 

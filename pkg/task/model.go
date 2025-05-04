@@ -17,13 +17,14 @@ const (
 	TokenPriority
 	TokenDate
 	TokenDuration
+	TokenProgress
 )
 
 type Token struct {
 	Type  TokenType
 	Raw   string
 	Key   string
-	Value string
+	Value any
 }
 
 type Progress struct {
@@ -33,25 +34,48 @@ type Progress struct {
 	DoneCount int
 }
 
+// TODO(2025-05-03T20-00)
+// change *time.Time to a struct which holds `Ref` for relative fields...
+// that way e.g. for when updating a field or deleting it, you know
+// which field is related to which field and so on and so forth...
+type Temporal struct {
+	CreationDate *time.Time
+	LastUpdated  *time.Time
+	DueDate      *time.Time
+	Reminders    []time.Time
+	EndDate      *time.Time
+	Deadline     *time.Time
+	Every        *time.Duration
+}
+
+// The default fields for each temporal field used for
+// parsing relative datetime
+var temporalFallback = map[string]string{
+	"c":   "", // c has no fallback
+	"lud": "c", "due": "c",
+	"end": "due", "dead": "due", "r": "due",
+}
+
+// The temporary contrainer to hold parsed duration until offset
+// datetime is resolved during parsing relative datetime
+type temporalNode struct {
+	Field    string
+	Ref      string
+	Offset   *time.Duration
+	Absolute *time.Time
+}
+
 type Task struct {
 	Tokens   []Token
 	ID       *int
-	EID      *int // explicit id ($id=)
-	Text     *string
-	PText    string
+	EID      *int    // explicit id ($id=)
+	Text     *string // this is the line raw text
+	PText    string  // I don't know what this is, yet...
 	Hints    []string
 	Priority string
 	Parent   *int
 
-	CreationDate *time.Time
-	LastUpdated  *time.Time
-
-	DueDate   *time.Time
-	Reminders []time.Time
-	EndDate   *time.Time
-	Deadline  *time.Time
-	Every     *time.Duration
-
+	Temporal
 	Progress
 }
 
