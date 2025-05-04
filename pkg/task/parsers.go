@@ -1,5 +1,6 @@
 package task
 
+// TODO: heavily validate...
 import (
 	"fmt"
 	"os"
@@ -155,6 +156,7 @@ func resolveDates(tokens []Token) []error {
 	tokenKeyToNdx := make(map[string]int)
 	nodes := make(map[string]*temporalNode)
 	resolved := make(map[string]time.Time)
+	resolved["rn"] = rightNow
 	var totalDateCount int
 	for ndx, token := range tokens {
 		if token.Type != TokenDate {
@@ -167,7 +169,6 @@ func resolveDates(tokens []Token) []error {
 		tokenKeyToNdx[token.Key] = ndx
 		switch v := token.Value.(type) {
 		case *time.Time:
-			// nodes[token.Key] = &temporalNode{Field: token.Key, Absolute: v}
 			resolved[token.Key] = *v
 		case *temporalNode:
 			if v.Field == "r" {
@@ -176,7 +177,7 @@ func resolveDates(tokens []Token) []error {
 			nodes[token.Key] = v
 		}
 	}
-	for len(resolved) < totalDateCount {
+	for len(resolved)-1 < totalDateCount {
 		changed := false
 		for _, n := range nodes {
 			if _, ok := resolved[n.Field]; ok {
@@ -306,10 +307,11 @@ func ParseTask(id *int, line string) (*Task, error) {
 	if err := validateEmptyText(line); err != nil {
 		return nil, err
 	}
+
 	task := &Task{ID: id, Text: &line}
-	if i, j, err := parsePriority(line); err == nil {
-		task.Priority = line[i:j]
-	}
+	task.Temporal.CreationDate = &rightNow
+	task.Temporal.LastUpdated = &rightNow
+
 	tokens, errs := tokenizeLine(line)
 	for _, token := range tokens {
 		switch token.Type {
@@ -349,6 +351,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 			task.Progress = *token.Value.(*Progress)
 		}
 	}
+	task.Tokens = tokens
 	if viper.GetBool("debug") {
 		for _, err := range errs {
 			fmt.Fprintln(os.Stderr, err)

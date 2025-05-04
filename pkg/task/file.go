@@ -244,9 +244,11 @@ func StoreFile(path string) error {
 	}
 	var lines []string
 	for _, file := range fileTasks {
-		if file.Text != nil {
-			lines = append(lines, *file.Text)
+		var textArr []string
+		for _, token := range file.Tokens {
+			textArr = append(textArr, token.Raw)
 		}
+		lines = append(lines, strings.Join(textArr, " "))
 	}
 	if err = mkDirs(); err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+	"to-dotxt/pkg/terrors"
 )
 
 var FileTasks map[string][]*Task = make(map[string][]*Task)
@@ -48,10 +49,40 @@ type Temporal struct {
 	Every        *time.Duration
 }
 
+func (t *Temporal) getField(key string) (*time.Time, error) {
+	switch key {
+	case "rn":
+		return &rightNow, nil
+	case "c":
+		return t.CreationDate, nil
+	case "lud":
+		return t.LastUpdated, nil
+	case "due":
+		return t.DueDate, nil
+	case "end":
+		return t.EndDate, nil
+	case "dead":
+		return t.Deadline, nil
+	}
+	if key == "r" {
+		return nil, fmt.Errorf("key r not supported since it's a slice of *time.Time")
+	}
+	return nil, fmt.Errorf("%w: key '%s' not found", terrors.ErrNotFound, key)
+}
+
+// The default fields for each temporal field used for
+// formatting datetime relatively
+var temporalFormatFallback = map[string]string{
+	"c": "rn", "lud": "rn", "due": "rn",
+	"end": "due", "dead": "due",
+	"r": "rn",
+}
+
 // The default fields for each temporal field used for
 // parsing relative datetime
 var temporalFallback = map[string]string{
-	"c":   "", // c has no fallback
+	"rn":  "rn",
+	"c":   "rn",
 	"lud": "c", "due": "c",
 	"end": "due", "dead": "due", "r": "due",
 }

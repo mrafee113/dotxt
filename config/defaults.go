@@ -27,15 +27,15 @@ colors:
   default: &default "#DEF4ED"
 
 print:
+  color-index: *light-grey
   color-id: *light-grey
-  color-eid: *light-grey
   color-pid: *light-grey
   
-  color-due-date: *light-red
-  color-end-date: *light-red
-  color-deadline: *light-red
-  color-interval: *light-yellow
-  color-reminder: *light-jade
+  color-date-due: *light-red
+  color-date-end: *light-red
+  color-date-dead: *light-red   # deadline
+  color-date-r: *light-jade     # reminders
+  color-every: *light-yellow
   color-progress: *light-pink
 
   color-at: *blue
