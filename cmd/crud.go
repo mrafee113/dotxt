@@ -107,7 +107,7 @@ func setDelCmdFlags() {
 var appendCmd = &cobra.Command{
 	Use:   "app <id> <task> [--to=<todolist=todo>]",
 	Short: "append to task",
-	Long: `app|rm <task> [--to=<todolist=todo>],
+	Long: `append|app <task> [--to=<todolist=todo>],
   appends text to the end of the designated task`,
 	Aliases: []string{"append"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -335,24 +335,29 @@ func setDoneCmdFlags() {
 }
 
 var revertCmd = &cobra.Command{
-	Use:   "revert <id> [--from=<todolist=todo>]",
-	Short: "revert task from done to list",
-	Long: `revert <id> [--from=<todolist=todo>]
-  reverts task from done to list`,
+	Use:   "revert <id>... [--from=<todolist=todo>]",
+	Short: "revert tasks from done to list",
+	Long: `revert <id>... [--from=<todolist=todo>]
+  reverts tasks from done to list`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return terrors.NewArgNotProvidedError("id")
+			return terrors.ErrNoArgsProvided
 		}
-		id, err := strconv.Atoi(args[0])
-		if err != nil {
-			return err
+		var ids []int
+		for _, arg := range args {
+			num, err := strconv.Atoi(arg)
+			if err != nil {
+				return fmt.Errorf("%w: failed to parse task id <%s>: %w", terrors.ErrParse, arg, err)
+			}
+			ids = append(ids, num)
 		}
+
 		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
 		if err != nil {
 			return err
 		}
 		return loadFuncStoreFile(path, func() error {
-			return task.RevertTask(id, path)
+			return task.RevertTask(ids, path)
 		})
 	},
 }

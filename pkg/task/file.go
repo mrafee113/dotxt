@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 	"to-dotxt/config"
 	"to-dotxt/pkg/terrors"
@@ -146,31 +147,41 @@ func appendToDoneFile(text, path string) error {
 	return err
 }
 
-func removeFromDoneFile(id int, path string) (string, error) {
+func removeFromDoneFile(ids []int, path string) ([]string, error) {
+	var tasks []string
+	if len(ids) < 1 {
+		return tasks, fmt.Errorf("%w: ids is empty", terrors.ErrValue)
+	}
 	path, err := parseFilepath(path)
 	if err != nil {
-		return "", err
+		return tasks, err
 	}
 	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
 	if err = mkDirs(); err != nil {
-		return "", err
+		return tasks, err
 	}
 	path = filepath.Join(config.ConfigPath(), "todos", "_etc", path+".done")
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", err
+		return tasks, err
 	}
 	lines := strings.Split(string(data), "\n")
-	if len(lines)-1 < id {
-		return "", fmt.Errorf("%w: id exceeds number of lines in done file %s", terrors.ErrValue, path)
+	sort.Sort(sort.Reverse(sort.IntSlice(ids)))
+	for _, id := range ids {
+		if len(lines)-1 < id {
+			return tasks, fmt.Errorf("%w: id '%d' exceeds number of lines in done file %s", terrors.ErrValue, id, path)
+		}
+		text := lines[id]
+		lines = slices.Delete(lines, id, id+1)
+		if validateEmptyText(text) == nil {
+			tasks = append(tasks, text)
+		}
 	}
-	task := lines[id]
-	lines = slices.Delete(lines, id, id+1)
 	err = os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644)
 	if err != nil {
-		return "", err
+		return tasks, err
 	}
-	return task, nil
+	return tasks, nil
 }
 
 func CreateFile(path string) error {

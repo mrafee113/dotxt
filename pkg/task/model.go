@@ -3,6 +3,8 @@ package task
 import (
 	"fmt"
 	"reflect"
+	"slices"
+	"strings"
 	"time"
 	"to-dotxt/pkg/terrors"
 )
@@ -112,6 +114,21 @@ type Task struct {
 
 func (t *Task) String() string {
 	return fmt.Sprintf("%-2d %s", *t.ID, t.PText)
+}
+
+// A reduced form of the raw string that represents tasks
+// more rigidly used for comparison
+func (t *Task) Norm() string {
+	var out []string
+	for _, token := range t.Tokens {
+		if slices.Contains([]TokenType{
+			TokenHint, TokenPriority,
+			TokenProgress, TokenText,
+		}, token.Type) {
+			out = append(out, token.Raw)
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 func helper[T any](p T) string {

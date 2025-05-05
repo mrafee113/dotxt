@@ -205,6 +205,7 @@ func resolveDates(tokens []Token) []error {
 }
 
 func tokenizeLine(line string) ([]Token, []error) {
+	// TODO: validate multiple tokens...
 	var tokens []Token
 	var errs []error
 	handleTokenText := func(tokenStr string, err error) {
