@@ -278,3 +278,19 @@ func StoreFiles() error {
 	}
 	return nil
 }
+
+func taskifyRandomFile(path string) ([]Task, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return []Task{}, err
+	}
+	var tasks []Task
+	for _, line := range strings.Split(string(data), "\n") {
+		task, err := ParseTask(nil, line)
+		if err != nil {
+			continue
+		}
+		tasks = append(tasks, *task)
+	}
+	return tasks, nil
+}

@@ -32,6 +32,5 @@ var printCmd = &cobra.Command{
 }
 
 func setPrintCmdFlags() {
-	// printCmd.Flags().BoolP("color", "c", true, "print colorized output tailored for conky")
 	printCmd.Flags().String("from", "", "designate the target todolist")
 }

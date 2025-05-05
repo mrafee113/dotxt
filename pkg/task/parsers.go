@@ -33,6 +33,10 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 	return &t, nil
 }
 
+func unparseAbsoluteDatetime(absDt time.Time) string {
+	return absDt.Format("2006-01-02T15-04-05")
+}
+
 func parseDuration(dur string) (*time.Duration, error) {
 	sign := 1
 	if dur[0] == '-' {
@@ -84,6 +88,63 @@ func parseDuration(dur string) (*time.Duration, error) {
 	}
 	duration *= time.Duration(sign)
 	return &duration, nil
+}
+
+func unparseDuration(dur time.Duration) string {
+	totalSec := int(dur.Seconds())
+	var sign string
+	if totalSec < 0 {
+		sign = "-"
+		totalSec *= -1
+	}
+
+	const (
+		secPerMin = 60
+		secPerHr  = secPerMin * 60
+		secPerDay = secPerHr * 24
+		secPerMo  = secPerDay * 30
+		secPerYr  = secPerDay * 365
+	)
+
+	years := totalSec / secPerYr
+	totalSec %= secPerYr
+	months := totalSec / secPerMo
+	totalSec %= secPerMo
+	days := totalSec / secPerDay
+	totalSec %= secPerDay
+	hours := totalSec / secPerHr
+	totalSec %= secPerHr
+	mins := totalSec / secPerMin
+	secs := totalSec % secPerMin
+
+	parts := []string{sign}
+	if years > 0 {
+		parts = append(parts, fmt.Sprintf("%dy", years))
+	}
+	if months > 0 {
+		parts = append(parts, fmt.Sprintf("%02dm", months))
+	}
+	if days > 0 {
+		parts = append(parts, fmt.Sprintf("%02dd", days))
+	}
+	if hours > 0 {
+		parts = append(parts, fmt.Sprintf("%02dh", hours))
+	}
+	if mins > 0 {
+		parts = append(parts, fmt.Sprintf("%02dM", mins))
+	}
+	if secs > 0 || len(parts) == 0 {
+		parts = append(parts, fmt.Sprintf("%02dS", secs))
+	}
+
+	return strings.Join(parts, "")
+}
+
+func unparseRelativeDatetime(dt, rel time.Time) string {
+	if dt == rel {
+		return "1S"
+	}
+	return unparseDuration(dt.Sub(rel))
 }
 
 func parseTmpRelativeDatetime(field, dt string) (*temporalNode, error) {
@@ -310,9 +371,6 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 
 	task := &Task{ID: id, Text: &line}
-	task.Temporal.CreationDate = &rightNow
-	task.Temporal.LastUpdated = &rightNow
-
 	tokens, errs := tokenizeLine(line)
 	for _, token := range tokens {
 		switch token.Type {
@@ -353,6 +411,20 @@ func ParseTask(id *int, line string) (*Task, error) {
 		}
 	}
 	task.Tokens = tokens
+	if task.Temporal.CreationDate == nil {
+		task.Temporal.CreationDate = &rightNow
+		task.Tokens = append(task.Tokens, Token{
+			Type: TokenDate, Raw: fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow)),
+			Key: "c", Value: &rightNow,
+		})
+	}
+	if task.Temporal.LastUpdated == nil {
+		task.Temporal.LastUpdated = &rightNow
+		task.Tokens = append(task.Tokens, Token{
+			Type: TokenDate, Raw: fmt.Sprintf("$lud=%s", unparseRelativeDatetime(rightNow, *task.Temporal.CreationDate)),
+			Key: "c", Value: &rightNow,
+		})
+	}
 	if viper.GetBool("debug") {
 		for _, err := range errs {
 			fmt.Fprintln(os.Stderr, err)

@@ -140,7 +140,6 @@ func formatProgress(p *Progress) string {
 }
 
 func (t *Task) Print(colorize bool) string {
-	DebugTask(t)
 	var out []string
 	add := func(colorName, text string) {
 		out = append(out, utils.Colorize(colorize, viper.GetString(colorName), text))

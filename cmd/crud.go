@@ -12,7 +12,12 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(addCmd, delCmd, appendCmd, prependCmd, replaceCmd, deduplicateCmd, deprioritizeCmd, prioritizeCmd, doneCmd, revertCmd, moveCmd)
+	rootCmd.AddCommand(
+		addCmd, delCmd, appendCmd,
+		prependCmd, replaceCmd,
+		deduplicateCmd, deprioritizeCmd,
+		prioritizeCmd, doneCmd,
+		revertCmd, moveCmd, migrateCmd)
 	setAddCmdFlags()
 	setDelCmdFlags()
 	setAppendCmdFlags()
@@ -23,6 +28,7 @@ func init() {
 	setPrioritizeCmdFlags()
 	setRevertCmdFlags()
 	setDoneCmdFlags()
+	setMigrateCmdFlags()
 }
 
 func loadFuncStoreFile(path string, f func() error) error {
@@ -409,4 +415,28 @@ var moveCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+var migrateCmd = &cobra.Command{
+	Use:   "migrate <from> [--to=<todolist=todo>]",
+	Short: "migrate tasks from a given file",
+	Long: `migrate <from> [--to=<todolist=todo>]
+  migrate tasks from a given file`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return terrors.ErrNoArgsProvided
+		}
+		from := args[0]
+		to, err := task.GetTodoPathArgFromCmd(cmd, "to")
+		if err != nil {
+			return err
+		}
+		return loadorcreateFuncStoreFile(to, func() error {
+			return task.MigrateTasks(from, to)
+		})
+	},
+}
+
+func setMigrateCmdFlags() {
+	migrateCmd.Flags().String("to", "", "designate the target todolist")
 }

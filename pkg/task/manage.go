@@ -14,6 +14,10 @@ func AddTask(task *Task, path string) error {
 		return err
 	}
 	FileTasks[path] = append(FileTasks[path], task)
+	if task.ID == nil {
+		id := len(FileTasks[path]) - 1
+		task.ID = &id
+	}
 	return nil
 }
 
@@ -298,6 +302,19 @@ func RevertTask(ids []int, path string) error {
 			return err
 		}
 		FileTasks[path] = append(FileTasks[path], task)
+	}
+	return nil
+}
+
+func MigrateTasks(from, to string) error {
+	tasks, err := taskifyRandomFile(from)
+	if err != nil {
+		return err
+	}
+	for _, t := range tasks {
+		if err := AddTask(&t, to); err != nil {
+			return err
+		}
 	}
 	return nil
 }
