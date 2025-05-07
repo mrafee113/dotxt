@@ -79,4 +79,27 @@
 - reminder `r`: =absolute-datetime ; =duration
 - progress `p`: =[:unit:]/[:category:]/[:count:]/[:doneCount:]
 
-## output
+## printing
+- each list must start with this line `> {list-name} | {list-report} ---`
+- priorities should have a dynamic color system and the color system not only has to respect the ascending sort but also some depth as well
+- digits lenghts should be harmonized; id, count, donecount, etc should be represented by the same amount of digits all over
+- progress bar must have a color system that respects increments
+- all $id= and $P= numbers should be uniquely colorized
+- dates must be printed relative to other dates customized in configurations
+- sorting
+    - tasks with parents should be literally under the tasks with ids set; and this overrules any other sorting rule
+    - tasks with progress should be sorted based on category and put at the start of list
+    - tasks with priorities should be before others
+    - after priorities `+` hints should be taken into account
+    - after all of the above comes the regular text
+- each progress category (including the empty category (unless it's just that)) should be started with a category line
+- if a reminder has been passed, it should not be shown
+- if a due date has been passed, it should be shown, and it should change the color of the whole task
+    - unless it had an end date or a deadline that has not passed yet
+        - if there was an end date and the end date has not passed the default texts should be changed to another color
+        - if there was a deadline and it has not passed then only the task should be shown normally except that `$due` and `$dead` are colored differently
+- develop an exponential-based color system for dates... the closer the date is to right now
+
+## todo
+- add commands for modifying progress
+- modify the ci3 script appropriately along with i3config

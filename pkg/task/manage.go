@@ -149,7 +149,6 @@ func DeprioritizeTask(id int, path string) error {
 		}
 	}
 	task.Priority = ""
-	fmt.Println(task.Tokens)
 	return nil
 }
 

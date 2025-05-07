@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"to-dotxt/pkg/task"
@@ -427,9 +428,12 @@ var migrateCmd = &cobra.Command{
 			return terrors.ErrNoArgsProvided
 		}
 		from := args[0]
-		to, err := task.GetTodoPathArgFromCmd(cmd, "to")
+		to, err := cmd.Flags().GetString("to")
 		if err != nil {
 			return err
+		}
+		if strings.TrimSpace(to) == "" {
+			to = filepath.Base(from)
 		}
 		return loadorcreateFuncStoreFile(to, func() error {
 			return task.MigrateTasks(from, to)

@@ -16,6 +16,7 @@ colors:
   light-green: &light-green "#78FC76"
   yellow: &yellow "#FCFC64"
   light-yellow: &light-yellow "#f4f07f"
+  pale-yellow: &pale-yellow "#f9f7b9"
   dark-yellow: &dark-yellow "#b2bc45"
   light-blue: &light-blue "#6CC0FC"
   light-purple: &light-purple "#d994fc"
@@ -27,18 +28,48 @@ colors:
   default: &default "#DEF4ED"
 
 print:
+  color-header: *light-red
+  color-default: *default
   color-index: *light-grey
-  color-id: *light-grey
-  color-pid: *light-grey
-  
+
   color-date-due: *light-red
   color-date-end: *light-red
   color-date-dead: *light-red   # deadline
   color-date-r: *light-jade     # reminders
   color-every: *light-yellow
-  color-progress: *light-pink
 
   color-at: *blue
   color-plus: *light-jade
   color-tag: *light-pink
+
+  ids:
+    saturation: 0.7
+    lightness: 0.6
+    start-hue: 30
+    end-hue: 210
+
+  progress:
+    count: *default
+    done-count: *light-grey
+    percentage:
+      saturation: 0.7
+      lightness: 0.6
+    unit: *default
+    bartext-len: 10
+    header: *pale-yellow
+
+  priority:
+    saturation: 0.7
+    lightness: 0.6
+    group-depth: 5
+    start-hue: 0
+    end-hue: 360
+  
+  temporal-format:
+    c: rn
+    lud: rn
+    due: rn
+    end: due
+    dead: due
+    r: rn
 `

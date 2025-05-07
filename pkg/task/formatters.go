@@ -2,11 +2,13 @@ package task
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+	"to-dotxt/pkg/terrors"
 	"to-dotxt/pkg/utils"
 
 	"github.com/spf13/viper"
@@ -116,9 +118,103 @@ func formatAbsoluteDatetime(dt *time.Time, relDt *time.Time) string {
 	return formatDuration(&d)
 }
 
-func formatProgress(p *Progress) string {
-	// TODO: progress color system
+func formatPriorities(tasks []*rTask) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	colorSaturation := viper.GetFloat64("print.priority.saturation")
+	colorLightness := viper.GetFloat64("print.priority.lightness")
+	maxDepth := viper.GetInt("print.priority.group-depth")
+	colorStartHue := viper.GetFloat64("print.priority.start-hue")
+	colorEndHue := viper.GetFloat64("print.priority.end-hue")
+
+	// AI generated...
+	var assignHue func([]string, float64, float64, int) []string
+	assignHue = func(tasks []string, startHue, endHue float64, depth int) []string {
+		n := len(tasks)
+		// base case: single task or max depth
+		if n == 1 || depth >= maxDepth {
+			hexes := make([]string, n)
+			for i := range tasks {
+				// evenly space within [startHue, endHue]
+				h := startHue + (float64(i)+0.5)/float64(n)*(endHue-startHue)
+				hexes[i] = utils.HslToHex(h, colorSaturation, colorLightness)
+			}
+			return hexes
+		}
+
+		// group by the next character of prefix
+		groups := make([][]string, 0, n)
+		prefixes := make([]string, 0, n)
+		for _, t := range tasks {
+			p := ""
+			if len(t) > depth {
+				p = t[:depth+1]
+			}
+			if len(groups) == 0 || prefixes[len(prefixes)-1] != p {
+				groups = append(groups, []string{t})
+				prefixes = append(prefixes, p)
+			} else {
+				groups[len(groups)-1] = append(groups[len(groups)-1], t)
+			}
+		}
+
+		// if only one group formed, stop recursing deeper
+		if len(groups) == 1 {
+			return assignHue(tasks, startHue, endHue, maxDepth)
+		}
+
+		// otherwise recurse on each group, slicing the hue span
+		out := make([]string, 0, n)
+		span := (endHue - startHue) / float64(len(groups))
+		for i, grp := range groups {
+			h0 := startHue + float64(i)*span
+			h1 := h0 + span
+			out = append(out, assignHue(grp, h0, h1, depth+1)...)
+		}
+		return out
+	}
+
+	var priorities []string
+	reverseMap := make(map[string][]int)
+	for ndx, t := range tasks {
+		if t.tsk != nil && t.tsk.Priority != "" {
+			priorities = append(priorities, t.tsk.Priority)
+			reverseMap[t.tsk.Priority] = append(reverseMap[t.tsk.Priority], ndx)
+		}
+	}
+	slices.Sort(priorities)
+	pColors := assignHue(priorities, colorStartHue, colorEndHue, 0)
+	for cNdx := range pColors {
+		for _, ndx := range reverseMap[priorities[cNdx]] {
+			for _, tk := range tasks[ndx].tokens {
+				if tk.token != nil && tk.token.Type == TokenPriority {
+					tk.color = pColors[cNdx]
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func formatProgress(p *Progress, countLen, doneCountLen int) []rToken {
+	colorizePercentage := func(percent int) string {
+		if percent < 0 {
+			percent = 0
+		}
+		if percent > 100 {
+			percent = 100
+		}
+		// 0-120 red to green TODO: make dynamic
+		hue := 120.0 * float64(percent) / 100.0
+		saturation := viper.GetFloat64("print.progress.percentage.saturation")
+		lightness := viper.GetFloat64("print.progress.percentage.lightness")
+		return utils.HslToHex(hue, saturation, lightness)
+	}
+
 	percentage := 100 * p.Count / p.DoneCount
+	percentageColor := colorizePercentage(percentage)
 	barText := func(width int) string {
 		pLen := width * p.Count / p.DoneCount
 		switch pLen {
@@ -130,46 +226,129 @@ func formatProgress(p *Progress) string {
 			return strings.Repeat("=", width)
 		}
 		return strings.Repeat("=", pLen-1) + ">" + strings.Repeat(" ", width-pLen)
-	}(10)
+	}(viper.GetInt("print.progress.bartext-len"))
 
-	return fmt.Sprintf(
-		"%3d/%3d(%3d%%) %s (%s)",
-		p.Count, p.DoneCount,
-		percentage, barText, p.Unit,
-	)
+	return []rToken{
+		{raw: fmt.Sprintf("%*d", countLen, p.Count), color: "print.progress.count"},
+		{raw: fmt.Sprintf("/%*d", doneCountLen, p.DoneCount), color: "print.progress.done-count"},
+		{raw: fmt.Sprintf("(%3d%%)", percentage), color: percentageColor},
+		{raw: fmt.Sprintf(" %s ", barText), color: percentageColor},
+		{raw: fmt.Sprintf("(%s)", p.Unit), color: "print.progress.unit"},
+	}
 }
 
-func (t *Task) Print(colorize bool) string {
-	var out []string
-	add := func(colorName, text string) {
-		out = append(out, utils.Colorize(colorize, viper.GetString(colorName), text))
-	}
-	addAsRegular := func(text string) {
-		out = append(out, text)
-	}
+func formatListHeader(list *rList) string {
+	var out strings.Builder
+	out.WriteString("> ")
+	out.WriteString(filepath.Base(list.path))
+	out.WriteString(" | ") // TODO: add reports
+	out.WriteString(strings.Repeat("—", list.maxLen-out.Len()))
+	out.WriteRune('\n')
+	return colorize("print.color-header", out.String())
+}
 
-	add("print.color-index", strconv.Itoa(*t.ID))
+func resolvColor(color string) string {
+	if strings.TrimSpace(color) == "" {
+		color = "print.color-default"
+	}
+	if validateHexColor(color) != nil {
+		color = viper.GetString(color)
+	}
+	return color
+}
+
+func colorize(color, text string) string {
+	return utils.Colorize(resolvColor(color), text)
+}
+
+func colorizeToken(tk *rToken) string {
+	return colorize(tk.color, tk.raw)
+}
+
+func colorizeIds(ids map[int]bool) map[int]string {
+	out := make(map[int]string)
+	if len(ids) == 0 {
+		return out
+	}
+	startHue := viper.GetFloat64("print.ids.start-hue")
+	endHue := viper.GetFloat64("print.ids.end-hue")
+	saturation := viper.GetFloat64("print.ids.saturation")
+	lightness := viper.GetFloat64("print.ids.lightness")
+	ndx := 0
+	n := float64(len(ids))
+	for _, id := range slices.Sorted(maps.Keys(ids)) {
+		h := startHue + float64(ndx)*(endHue-startHue)/n
+		out[id] = utils.HslToHex(h, saturation, lightness)
+		ndx++
+	}
+	return out
+}
+
+func formatID(tk Token) string {
+	return fmt.Sprintf("$%s=%d", tk.Key, tk.Value.(int))
+}
+
+func formatCategoryHeader(category string, list *rList) string {
+	var out strings.Builder
+	out.WriteString(strings.Repeat(" ", list.idLen+1))
+	out.WriteString(fmt.Sprintf("+ %s ", category))
+	out.WriteString(strings.Repeat("—", list.maxLen-out.Len()))
+	out.WriteRune('\n')
+	return colorize("print.progress.header", out.String())
+}
+
+func (t *Task) Render(listMetadata *rList) *rTask {
+	if listMetadata == nil {
+		listMetadata = &rList{}
+	}
+	out := rTask{tsk: t, id: *t.ID, idColor: "print.color-index"}
+	addAsRegular := func(token *Token) {
+		out.tokens = append(out.tokens, &rToken{token: token, raw: token.Raw})
+	}
+	specialTokenMap := func() map[string]*Token {
+		out := make(map[string]*Token)
+		for ndx := range t.Tokens {
+			if slices.Contains([]TokenType{
+				TokenDate, TokenID, TokenDuration,
+				TokenPriority, TokenProgress,
+			}, t.Tokens[ndx].Type) {
+				out[t.Tokens[ndx].Key] = &t.Tokens[ndx]
+			}
+		}
+		return out
+	}()
 
 	if t.Progress.DoneCount > 0 {
-		addAsRegular(formatProgress(&t.Progress))
+		out.tokens = append(out.tokens, &rToken{token: specialTokenMap["p"]})
+		listMetadata.countLen = max(listMetadata.countLen, len(strconv.Itoa(t.Progress.Count)))
+		listMetadata.doneCountLen = max(listMetadata.doneCountLen, len(strconv.Itoa(t.Progress.DoneCount)))
 	}
 	if t.Priority != "" {
-		// TODO: priority color system
-		addAsRegular(fmt.Sprintf("(%s)", t.Priority))
+		out.tokens = append(out.tokens, &rToken{
+			token: specialTokenMap["priority"],
+			raw:   fmt.Sprintf("(%s)", t.Priority),
+		})
 	}
-	var reminderCount int
 
-	for _, token := range t.Tokens {
-		switch token.Type {
+	var reminderCount int
+	for ndx := range t.Tokens {
+		switch t.Tokens[ndx].Type {
 		case TokenPriority, TokenProgress:
 			continue
 		case TokenText:
-			addAsRegular(token.Raw)
+			out.tokens = append(out.tokens, &rToken{
+				token: &t.Tokens[ndx], raw: t.Tokens[ndx].Raw,
+			})
 		case TokenID:
-			add("print.color-"+token.Key, strconv.Itoa(token.Value.(int)))
+			out.tokens = append(out.tokens, &rToken{
+				token: &t.Tokens[ndx],
+				raw:   formatID(t.Tokens[ndx]),
+				color: "",
+			})
+			listMetadata.idList[t.Tokens[ndx].Value.(int)] = true
 		case TokenHint:
 			var color string
-			switch token.Key {
+			switch t.Tokens[ndx].Key {
 			case "@":
 				color = "print.color-at"
 			case "#":
@@ -177,68 +356,166 @@ func (t *Task) Print(colorize bool) string {
 			case "+":
 				color = "print.color-plus"
 			}
-			add(color, token.Raw)
+			out.tokens = append(out.tokens, &rToken{
+				token: &t.Tokens[ndx],
+				raw:   t.Tokens[ndx].Raw, color: color,
+			})
 		case TokenDate:
-			// TODO: make dynamic using config
-			if slices.Contains([]string{"due", "end", "dead"}, token.Key) {
-				val, err := t.Temporal.getField(token.Key)
+			if slices.Contains([]string{"due", "end", "dead"}, t.Tokens[ndx].Key) {
+				val, err := t.Temporal.getField(t.Tokens[ndx].Key)
 				if err != nil {
-					addAsRegular(token.Raw)
+					addAsRegular(&t.Tokens[ndx])
 					continue
 				}
-				relStr, ok := temporalFormatFallback[token.Key]
+				relStr, ok := temporalFormatFallback[t.Tokens[ndx].Key]
 				if !ok {
-					addAsRegular(token.Raw)
+					addAsRegular(&t.Tokens[ndx])
 					continue
 				}
 				rel, err := t.Temporal.getField(relStr)
 				if err != nil {
-					addAsRegular(token.Raw)
+					addAsRegular(&t.Tokens[ndx])
 					continue
 				}
-				add("print.color-date"+token.Key, fmt.Sprintf("$%s=%s", token.Key, formatAbsoluteDatetime(val, rel)))
+				out.tokens = append(out.tokens, &rToken{
+					token: &t.Tokens[ndx],
+					raw:   fmt.Sprintf("$%s=%s", t.Tokens[ndx].Key, formatAbsoluteDatetime(val, rel)),
+					color: "print.color-date-" + t.Tokens[ndx].Key,
+				})
 			}
-			if strings.HasPrefix(token.Key, "r") {
+			if strings.HasPrefix(t.Tokens[ndx].Key, "r") {
 				if reminderCount >= len(t.Temporal.Reminders) {
-					addAsRegular(token.Raw)
+					addAsRegular(&t.Tokens[ndx])
 					continue
 				}
 				val := t.Temporal.Reminders[reminderCount]
 				relStr, ok := temporalFormatFallback["r"]
 				if !ok {
-					addAsRegular(token.Raw)
+					addAsRegular(&t.Tokens[ndx])
 					continue
 				}
 				rel, err := t.Temporal.getField(relStr)
 				if err != nil {
-					addAsRegular(token.Raw)
+					addAsRegular(&t.Tokens[ndx])
 					continue
 				}
-				add("print.color-date-r", fmt.Sprintf("$r=%s", formatAbsoluteDatetime(&val, rel)))
+				out.tokens = append(out.tokens, &rToken{
+					token: &t.Tokens[ndx],
+					raw:   fmt.Sprintf("$r=%s", formatAbsoluteDatetime(&val, rel)),
+					color: "print.color-date-r",
+				})
 			}
 		case TokenDuration:
-			add("print.color-every", fmt.Sprintf("$every=%s", formatDuration(t.Every)))
+			out.tokens = append(out.tokens, &rToken{
+				token: &t.Tokens[ndx],
+				raw:   fmt.Sprintf("$every=%s", formatDuration(t.Every)),
+				color: "print.color-every",
+			})
 		default:
-			addAsRegular(token.Raw)
+			addAsRegular(&t.Tokens[ndx])
 		}
 	}
-	return strings.Join(out, " ")
+	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false)))
+	listMetadata.idLen = max(listMetadata.idLen, len(strconv.Itoa(*t.ID)))
+	return &out
 }
 
-func PrintTasks(path string, maxLen int) error {
+func RenderList(sessionMetadata *rPrint, path string) error {
+	if sessionMetadata == nil {
+		return fmt.Errorf("%w: session metadata must not be nil", terrors.ErrValue)
+	}
 	path, err := prepFileTaskFromPath(path)
 	if err != nil {
 		return err
 	}
 
-	var out []string
-	var maxLenTask int = len(fmt.Sprintf("> %s", filepath.Base(path)))
+	FileTasks[path] = sortTasks(FileTasks[path])
+	listMetadata := rList{path: path, idList: make(map[int]bool)}
+	sessionMetadata.lists[path] = &listMetadata
 	for _, task := range FileTasks[path] {
-		taskText := task.Print(viper.GetBool("color"))
-		maxLenTask = max(maxLenTask, len(taskText))
-		out = append(out, taskText)
+		rtask := task.Render(&listMetadata)
+		listMetadata.tasks = append(listMetadata.tasks, rtask)
 	}
-	out = append([]string{fmt.Sprintf("> %s %s", filepath.Base(path), strings.Repeat("—", min(maxLenTask, maxLen)))}, out...)
-	fmt.Println(strings.Join(out, "\n"))
+	idColors := colorizeIds(listMetadata.idList)
+	for _, task := range listMetadata.tasks {
+		for _, tk := range task.tokens {
+			if tk.token.Type == TokenID {
+				tk.color = idColors[tk.token.Value.(int)]
+			}
+		}
+	}
+	formatPriorities(listMetadata.tasks)
+	sessionMetadata.maxLen = max(sessionMetadata.maxLen, listMetadata.maxLen)
+	sessionMetadata.idLen = max(sessionMetadata.idLen, listMetadata.idLen)
+	sessionMetadata.countLen = max(sessionMetadata.countLen, listMetadata.countLen)
+	sessionMetadata.doneCountLen = max(sessionMetadata.doneCountLen, sessionMetadata.doneCountLen)
+	return nil
+}
+
+func PrintLists(paths []string, maxLen int) error {
+	readTemporalFormatFallback()
+	var err error
+	for ndx := range paths {
+		paths[ndx], err = prepFileTaskFromPath(paths[ndx])
+		if err != nil {
+			return err
+		}
+	}
+	sessionMetadata := rPrint{lists: make(map[string]*rList)}
+	for _, path := range paths {
+		err := RenderList(&sessionMetadata, path)
+		if err != nil {
+			return err
+		}
+	}
+
+	sessionMetadata.maxLen = min(sessionMetadata.maxLen, maxLen)
+	for _, path := range paths {
+		list := sessionMetadata.lists[path]
+		list.maxLen = sessionMetadata.maxLen
+		list.idLen = sessionMetadata.idLen
+		list.countLen = sessionMetadata.countLen
+		list.doneCountLen = sessionMetadata.doneCountLen
+		for _, task := range list.tasks {
+			task.idLen = list.idLen
+			task.countLen = list.countLen
+			task.doneCountLen = list.doneCountLen
+		}
+	}
+	var out strings.Builder
+	for _, path := range paths {
+		list := sessionMetadata.lists[path]
+
+		emptyCatThere := false
+		categories := make(map[string]bool)
+		for _, task := range list.tasks {
+			if task.tsk.DoneCount > 0 {
+				if task.tsk.Category == "" {
+					emptyCatThere = true
+				}
+				categories[task.tsk.Category] = true
+			}
+		}
+		useCatHeader := !((len(categories) == 1 && emptyCatThere) || len(categories) == 0)
+		var lastCat string
+		firstNonCat := true
+
+		out.WriteString(formatListHeader(list))
+		for _, task := range list.tasks {
+			if useCatHeader && task.tsk.DoneCount > 0 && task.tsk.Category != lastCat {
+				out.WriteString(formatCategoryHeader(task.tsk.Category, list))
+				lastCat = task.tsk.Category
+			}
+			if useCatHeader && task.tsk.DoneCount == 0 && firstNonCat {
+				firstNonCat = false
+				out.WriteString(formatCategoryHeader("", list))
+			}
+
+			out.WriteString(task.stringify(true))
+			out.WriteRune('\n')
+		}
+		out.WriteRune('\n')
+	}
+	fmt.Print(out.String())
 	return nil
 }

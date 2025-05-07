@@ -7,6 +7,10 @@ import (
 	"strings"
 	"time"
 	"to-dotxt/pkg/terrors"
+
+	"maps"
+
+	"github.com/spf13/viper"
 )
 
 var FileTasks map[string][]*Task = make(map[string][]*Task)
@@ -80,6 +84,11 @@ var temporalFormatFallback = map[string]string{
 	"r": "rn",
 }
 
+func readTemporalFormatFallback() {
+	tmp := viper.GetStringMapString("print.temporal-format")
+	maps.Copy(temporalFormatFallback, tmp)
+}
+
 // The default fields for each temporal field used for
 // parsing relative datetime
 var temporalFallback = map[string]string{
@@ -125,6 +134,18 @@ func (t *Task) Norm() string {
 			TokenHint, TokenPriority,
 			TokenProgress, TokenText,
 		}, token.Type) {
+			out = append(out, token.Raw)
+		}
+	}
+	return strings.Join(out, " ")
+}
+
+// A reduced form of the raw string that represents tasks
+// more rigidly via only regular texts used for comparison
+func (t *Task) NormRegular() string {
+	var out []string
+	for _, token := range t.Tokens {
+		if token.Type == TokenText {
 			out = append(out, token.Raw)
 		}
 	}

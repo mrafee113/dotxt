@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -293,4 +294,30 @@ func taskifyRandomFile(path string) ([]Task, error) {
 		tasks = append(tasks, *task)
 	}
 	return tasks, nil
+}
+
+func LsFiles() ([]string, error) {
+	var out []string
+	if err := mkDirs(); err != nil {
+		return out, err
+	}
+	rootDir := filepath.Join(config.ConfigPath(), "todos")
+	rootDir, err := filepath.Abs(rootDir)
+	if err != nil {
+		return out, err
+	}
+
+	err = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && strings.HasPrefix(d.Name(), "_") {
+			return fs.SkipDir
+		}
+		if !d.IsDir() {
+			out = append(out, path)
+		}
+		return nil
+	})
+	return out, err
 }

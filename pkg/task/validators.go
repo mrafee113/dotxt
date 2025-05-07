@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"to-dotxt/pkg/terrors"
+	"unicode"
 )
 
 func validateHint(token string) error {
@@ -16,6 +17,21 @@ func validateHint(token string) error {
 func validateEmptyText(text string) error {
 	if strings.TrimSpace(text) == "" {
 		return terrors.ErrEmptyText
+	}
+	return nil
+}
+
+func validateHexColor(color string) error {
+	if len(color) != 7 {
+		return fmt.Errorf("%w: length of hex color must be 7", terrors.ErrValue)
+	}
+	if color[0] != '#' {
+		return fmt.Errorf("%w: hex color must start with #", terrors.ErrValue)
+	}
+	for _, char := range color[1:] {
+		if !(unicode.IsDigit(char) || unicode.IsLetter(char)) {
+			return fmt.Errorf("%w: hex color must only consist of letters and digits", terrors.ErrValue)
+		}
 	}
 	return nil
 }
