@@ -26,16 +26,18 @@ type rTask struct {
 	doneCountLen int // progress doneCount
 }
 
-func (r *rTask) stringify(color bool) string {
+func (r *rTask) stringify(color bool, withIndex bool) string {
 	var out strings.Builder
 
-	idTxt := fmt.Sprintf("%0*d", r.idLen, r.id)
-	if color {
-		out.WriteString(colorize(r.idColor, idTxt))
-	} else {
-		out.WriteString(idTxt)
+	if withIndex {
+		idTxt := fmt.Sprintf("%0*d", r.idLen, r.id)
+		if color {
+			out.WriteString(colorize(r.idColor, idTxt))
+		} else {
+			out.WriteString(idTxt)
+		}
+		out.WriteRune(' ')
 	}
-	out.WriteRune(' ')
 
 	for _, tk := range r.tokens {
 		if tk.color == "" {
@@ -50,6 +52,7 @@ func (r *rTask) stringify(color bool) string {
 					out.WriteString(pt.raw)
 				}
 			}
+			out.WriteRune(' ')
 			continue
 		}
 		if color {

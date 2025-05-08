@@ -317,3 +317,38 @@ func MigrateTasks(from, to string) error {
 	}
 	return nil
 }
+
+func IncrementProgressCount(id int, path string, value int) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	task, err := getTaskFromId(id, path)
+	if err != nil {
+		return err
+	}
+	if task.Progress.DoneCount == 0 {
+		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+	}
+	task.Progress.Count = min(task.Progress.Count+value, task.Progress.DoneCount)
+	var pToken *Token
+	for ndx := range task.Tokens {
+		if task.Tokens[ndx].Type == TokenProgress {
+			pToken = &task.Tokens[ndx]
+		}
+	}
+	if pToken == nil {
+		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+	}
+	prevRaw := pToken.Raw
+	prog := task.Progress
+	progText, err := unparseProgress(prog)
+	if err != nil {
+		return err
+	}
+	progText = fmt.Sprintf("$p=%s", progText)
+	*task.Text = strings.Replace(*task.Text, prevRaw, progText, 1)
+	task.PText = strings.Replace(task.PText, prevRaw, progText, 1)
+	pToken.Raw = progText
+	return nil
+}

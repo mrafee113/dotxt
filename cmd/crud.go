@@ -18,7 +18,8 @@ func init() {
 		prependCmd, replaceCmd,
 		deduplicateCmd, deprioritizeCmd,
 		prioritizeCmd, doneCmd,
-		revertCmd, moveCmd, migrateCmd)
+		revertCmd, moveCmd, migrateCmd,
+		LsNCmd)
 	setAddCmdFlags()
 	setDelCmdFlags()
 	setAppendCmdFlags()
@@ -30,6 +31,7 @@ func init() {
 	setRevertCmdFlags()
 	setDoneCmdFlags()
 	setMigrateCmdFlags()
+	setLsNCmdFlags()
 }
 
 func loadFuncStoreFile(path string, f func() error) error {
@@ -443,4 +445,33 @@ var migrateCmd = &cobra.Command{
 
 func setMigrateCmdFlags() {
 	migrateCmd.Flags().String("to", "", "designate the target todolist")
+}
+
+var LsNCmd = &cobra.Command{
+	Use:   "lsn id [--from=<todolist=todo>]",
+	Short: "print a single task from list",
+	Long: `lsn id [--from=<todolist=todo>]
+  print a single task from list`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return terrors.ErrNoArgsProvided
+		}
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return err
+		}
+		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		if err != nil {
+			return err
+		}
+
+		if err := task.LoadFile(path); err != nil {
+			return err
+		}
+		return task.PrintTask(id, path)
+	},
+}
+
+func setLsNCmdFlags() {
+	LsNCmd.Flags().String("from", "", "designate the target todolist")
 }

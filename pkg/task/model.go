@@ -152,6 +152,14 @@ func (t *Task) NormRegular() string {
 	return strings.Join(out, " ")
 }
 
+func (t *Task) Raw() string {
+	var out []string
+	for _, token := range t.Tokens {
+		out = append(out, token.Raw)
+	}
+	return strings.Join(out, " ")
+}
+
 func helper[T any](p T) string {
 	v := reflect.ValueOf(p)
 	if v.Kind() == reflect.Ptr {

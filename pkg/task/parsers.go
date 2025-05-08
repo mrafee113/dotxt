@@ -197,6 +197,30 @@ func parseProgress(token string) (*Progress, error) {
 	}, nil
 }
 
+func unparseProgress(progress Progress) (string, error) {
+	if progress.Unit == "" {
+		return "", fmt.Errorf("%w: progress unit cannot be empty", terrors.ErrValue)
+	}
+	if progress.DoneCount == 0 {
+		return "", fmt.Errorf("%w: progress doneCount cannot be empty", terrors.ErrValue)
+	}
+	if progress.Category != "" && progress.Count > 0 {
+		return fmt.Sprintf(
+			"%s/%s/%d/%d",
+			progress.Unit, progress.Category,
+			progress.Count, progress.DoneCount,
+		), nil
+	}
+	if progress.Count > 0 {
+		return fmt.Sprintf(
+			"%s/%d/%d",
+			progress.Unit,
+			progress.Count, progress.DoneCount,
+		), nil
+	}
+	return fmt.Sprintf("%s/%d", progress.Unit, progress.DoneCount), nil
+}
+
 func parsePriority(line string) (int, int, error) {
 	if j := strings.IndexRune(line, ')'); j > 0 &&
 		strings.IndexFunc(line[1:j], unicode.IsSpace) == -1 {

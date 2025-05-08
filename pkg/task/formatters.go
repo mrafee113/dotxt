@@ -456,7 +456,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			addAsRegular(&t.Tokens[ndx])
 		}
 	}
-	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false)))
+	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false, true)))
 	listMetadata.idLen = max(listMetadata.idLen, len(strconv.Itoa(*t.ID)))
 	if dominantColor != "" || defaultColor != "" {
 		for _, rtk := range out.tokens {
@@ -560,11 +560,26 @@ func PrintLists(paths []string, maxLen int) error {
 				out.WriteString(formatCategoryHeader("", list))
 			}
 
-			out.WriteString(task.stringify(true))
+			out.WriteString(task.stringify(true, true))
 			out.WriteRune('\n')
 		}
 		out.WriteRune('\n')
 	}
 	fmt.Print(out.String())
+	return nil
+}
+
+// single task
+func PrintTask(id int, path string) error {
+	readTemporalFormatFallback()
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	task, err := getTaskFromId(id, path)
+	if err != nil {
+		return err
+	}
+	fmt.Println(task.Raw())
 	return nil
 }
