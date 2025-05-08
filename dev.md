@@ -101,6 +101,4 @@
 - develop an exponential-based color system for dates... the closer the date is to right now
 
 ## todo
-- add commands for modifying progress
-- modify the ci3 script appropriately along with i3config
-- heavily validate input for addText and updateText, preprocess the tokens, don't allow repetetive tokens... but also be flexible about it...
+- deal with `every`

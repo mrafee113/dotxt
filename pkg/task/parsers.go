@@ -243,6 +243,7 @@ func resolveDates(tokens []Token) []error {
 	resolved := make(map[string]time.Time)
 	resolved["rn"] = rightNow
 	var totalDateCount int
+	var reminderKeys []string
 	for ndx, token := range tokens {
 		if token.Type != TokenDate {
 			continue
@@ -258,19 +259,34 @@ func resolveDates(tokens []Token) []error {
 		case *temporalNode:
 			if v.Field == "r" {
 				v.Field = fmt.Sprintf("r%d", ndx)
+				reminderKeys = append(reminderKeys, v.Field)
 			}
 			nodes[token.Key] = v
 		}
 	}
 	for len(resolved)-1 < totalDateCount {
 		changed := false
-		for _, n := range nodes {
+		// this order is based on temporalFallback and please review this if you change that
+		for _, key := range append([]string{"c", "lud", "due", "end", "dead"}, reminderKeys...) {
+			n, ok := nodes[key]
+			if !ok {
+				continue
+			}
 			if _, ok := resolved[n.Field]; ok {
 				continue
 			}
-			if base, ok := resolved[n.Ref]; ok {
-				resolved[n.Field] = base.Add(*n.Offset)
-				changed = true
+			ref := n.Ref
+			for range 3 {
+				if base, ok := resolved[ref]; ok {
+					resolved[n.Field] = base.Add(*n.Offset)
+					changed = true
+				} else {
+					tmp, ok := temporalFallback[ref]
+					if !ok {
+						continue
+					}
+					ref = tmp
+				}
 			}
 		}
 		if !changed {
@@ -290,6 +306,7 @@ func resolveDates(tokens []Token) []error {
 }
 
 func tokenizeLine(line string) ([]Token, []error) {
+	specialFields := make(map[string]bool)
 	// TODO: validate multiple tokens...
 	var tokens []Token
 	var errs []error
@@ -331,6 +348,12 @@ func tokenizeLine(line string) ([]Token, []error) {
 				continue
 			}
 			key, value := keyValue[0], keyValue[1]
+			_, seenKey := specialFields[key]
+			if key != "r" && seenKey {
+				continue
+			} else if key != "r" {
+				specialFields[key] = true
+			}
 			switch key {
 			case "id", "P":
 				intVal, err := parseID(value)

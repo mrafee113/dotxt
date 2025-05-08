@@ -125,6 +125,43 @@ func (t *Task) String() string {
 	return fmt.Sprintf("%-2d %s", *t.ID, t.PText)
 }
 
+func (t *Task) update(new *Task) {
+	creationDate := t.Temporal.CreationDate
+	creationDateText := fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*creationDate))
+	*t = *new
+	t.Temporal.CreationDate = creationDate
+	for ndx := range t.Tokens {
+		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == "c" {
+			t.Tokens[ndx].Raw = creationDateText
+			t.Tokens[ndx].Value = creationDate
+		}
+	}
+	t.updateLud()
+}
+
+func (t *Task) updateLud() {
+	lud := t.Temporal.LastUpdated
+	t.Temporal.LastUpdated = &rightNow
+	ludText := fmt.Sprintf("$lud=%s", unparseRelativeDatetime(*lud, *t.Temporal.CreationDate))
+
+	var token *Token
+	for ndx := range t.Tokens {
+		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == "lud" {
+			token = &t.Tokens[ndx]
+			break
+		}
+	}
+	if token == nil {
+		t.Tokens = append(t.Tokens, Token{
+			Type: TokenDate, Key: "lud",
+			Raw: ludText, Value: &rightNow,
+		})
+		return
+	}
+	*t.Text = strings.Replace(*t.Text, token.Raw, ludText, 1)
+	t.PText = strings.Replace(t.PText, token.Raw, ludText, 1)
+}
+
 // A reduced form of the raw string that represents tasks
 // more rigidly used for comparison
 func (t *Task) Norm() string {

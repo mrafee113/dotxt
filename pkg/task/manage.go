@@ -61,7 +61,7 @@ func AppendToTask(id int, text, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed creating dummy task with updated text: %w", err)
 	}
-	*task = *dummy
+	task.update(dummy)
 	task.ID = &id
 	return nil
 }
@@ -83,7 +83,7 @@ func PrependToTask(id int, text, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed creating dummy task with updated text: %w", err)
 	}
-	*task = *dummy
+	task.update(dummy)
 	task.ID = &id
 	return nil
 }
@@ -98,7 +98,7 @@ func ReplaceTask(id int, text, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed creating dummy task with updated text: %w", err)
 	}
-	*task = *dummy
+	task.update(dummy)
 	task.ID = &id
 	return nil
 }
