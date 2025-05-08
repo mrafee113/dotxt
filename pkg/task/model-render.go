@@ -9,9 +9,10 @@ import (
 // or a part of a token,
 // or a formatted string from a token
 type rToken struct {
-	token *Token
-	raw   string
-	color string
+	token         *Token
+	raw           string
+	color         string
+	dominantColor string
 }
 
 // Used to carry intermediary info for a task

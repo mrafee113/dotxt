@@ -262,6 +262,9 @@ func colorize(color, text string) string {
 }
 
 func colorizeToken(tk *rToken) string {
+	if tk.dominantColor != "" {
+		return colorize(tk.dominantColor, tk.raw)
+	}
 	return colorize(tk.color, tk.raw)
 }
 
@@ -330,6 +333,27 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 		})
 	}
 
+	var dominantColor, defaultColor string = func() (string, string) {
+		if t.Temporal.DueDate != nil && t.Temporal.DueDate.Sub(rightNow) <= 0 {
+			if t.Temporal.EndDate == nil && t.Temporal.Deadline == nil {
+				return "print.color-burnt", ""
+			}
+			if t.Temporal.EndDate != nil {
+				if t.Temporal.EndDate.Sub(rightNow) <= 0 {
+					return "print.color-burnt", ""
+				}
+				return "", "print.color-running-event-text"
+			}
+			if t.Temporal.Deadline != nil {
+				if t.Temporal.Deadline.Sub(rightNow) <= 0 {
+					return "print.color-burnt", ""
+				}
+				return "", ""
+			}
+		}
+		return "", ""
+	}()
+
 	var reminderCount int
 	for ndx := range t.Tokens {
 		switch t.Tokens[ndx].Type {
@@ -377,10 +401,24 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 					addAsRegular(&t.Tokens[ndx])
 					continue
 				}
+				color := "print.color-date-" + t.Tokens[ndx].Key
+				if t.Temporal.DueDate != nil && t.Temporal.DueDate.Sub(rightNow) <= 0 {
+					if t.Tokens[ndx].Key == "due" {
+						color = "print.color-burnt"
+					}
+					if t.Temporal.Deadline != nil && t.Temporal.Deadline.Sub(rightNow) > 0 &&
+						t.Tokens[ndx].Key == "dead" {
+						color = "print.color-imminent-deadline"
+					}
+					if t.Temporal.EndDate != nil && t.Temporal.EndDate.Sub(rightNow) > 0 &&
+						t.Tokens[ndx].Key == "end" {
+						color = "print.color-running-event"
+					}
+				}
 				out.tokens = append(out.tokens, &rToken{
 					token: &t.Tokens[ndx],
 					raw:   fmt.Sprintf("$%s=%s", t.Tokens[ndx].Key, formatAbsoluteDatetime(val, rel)),
-					color: "print.color-date-" + t.Tokens[ndx].Key,
+					color: color,
 				})
 			}
 			if strings.HasPrefix(t.Tokens[ndx].Key, "r") {
@@ -397,6 +435,9 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 				rel, err := t.Temporal.getField(relStr)
 				if err != nil {
 					addAsRegular(&t.Tokens[ndx])
+					continue
+				}
+				if val.Sub(rightNow) < 0 {
 					continue
 				}
 				out.tokens = append(out.tokens, &rToken{
@@ -417,6 +458,14 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 	}
 	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false)))
 	listMetadata.idLen = max(listMetadata.idLen, len(strconv.Itoa(*t.ID)))
+	if dominantColor != "" || defaultColor != "" {
+		for _, rtk := range out.tokens {
+			rtk.dominantColor = dominantColor
+			if rtk.token.Type == TokenText && defaultColor != "" {
+				rtk.color = defaultColor
+			}
+		}
+	}
 	return &out
 }
 
