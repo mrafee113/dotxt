@@ -227,7 +227,6 @@ func formatProgress(p *Progress, countLen, doneCountLen int) []rToken {
 		}
 		return strings.Repeat("=", pLen-1) + ">" + strings.Repeat(" ", width-pLen)
 	}(viper.GetInt("print.progress.bartext-len"))
-
 	return []rToken{
 		{raw: fmt.Sprintf("%*d", countLen, p.Count), color: "print.progress.count"},
 		{raw: fmt.Sprintf("/%*d", doneCountLen, p.DoneCount), color: "print.progress.done-count"},
@@ -293,7 +292,11 @@ func formatID(tk Token) string {
 
 func formatCategoryHeader(category string, list *rList) string {
 	var out strings.Builder
-	out.WriteString(strings.Repeat(" ", list.idLen+1))
+	out.WriteString(strings.Repeat(" ", list.idLen+1+
+		list.countLen+1+list.doneCountLen+len("(100%) ")+
+		viper.GetInt("print.progress.bartext-len")+1+
+		-1-1-len(category)-1,
+	))
 	out.WriteString(fmt.Sprintf("+ %s ", category))
 	out.WriteString(strings.Repeat("—", list.maxLen-out.Len()))
 	out.WriteRune('\n')
@@ -497,7 +500,7 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 	sessionMetadata.maxLen = max(sessionMetadata.maxLen, listMetadata.maxLen)
 	sessionMetadata.idLen = max(sessionMetadata.idLen, listMetadata.idLen)
 	sessionMetadata.countLen = max(sessionMetadata.countLen, listMetadata.countLen)
-	sessionMetadata.doneCountLen = max(sessionMetadata.doneCountLen, sessionMetadata.doneCountLen)
+	sessionMetadata.doneCountLen = max(sessionMetadata.doneCountLen, listMetadata.doneCountLen)
 	return nil
 }
 

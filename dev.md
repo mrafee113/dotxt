@@ -102,3 +102,9 @@
 
 ## todo
 - deal with `every`
+- create field `$done=<absoluteDt>`
+- allow parsing partial absolute datetimes, like `2025-05-07`, `2025-05`, `2025`
+- develop a reporting system
+- reimagine the priority coloring system
+- consider progress-percentage for prioritizing tasks
+- validate negative count and doneCount

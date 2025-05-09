@@ -16,9 +16,13 @@ func sortHelper(l, r *Task) int {
 		return -1
 	} else if l.DoneCount == 0 && r.DoneCount > 0 {
 		return 1
-	} else if l.DoneCount > 0 && r.DoneCount > 0 && l.Category < r.Category {
+	} else if l.Category != "" && r.Category == "" {
 		return -1
-	} else if l.DoneCount > 0 && r.DoneCount > 0 && l.Category > r.Category {
+	} else if l.Category == "" && r.Category != "" {
+		return 1
+	} else if l.Category < r.Category {
+		return -1
+	} else if l.Category > r.Category {
 		return 1
 	} else if l.Priority != "" && r.Priority == "" {
 		return -1
