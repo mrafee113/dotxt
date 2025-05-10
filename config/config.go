@@ -63,6 +63,12 @@ func InitViper(arg string) error {
 	if err != nil {
 		return fmt.Errorf("%w: failed parsing default configurations: %w", terrors.ErrParse, err)
 	}
+	err = viper.ReadInConfig()
+	if err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
+	}
 	err = os.MkdirAll(path, 0755)
 	if err != nil {
 		return err

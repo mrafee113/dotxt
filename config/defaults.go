@@ -12,6 +12,7 @@ colors:
   light-jade: &light-jade "#6aa88f"
   light-grey: &light-grey "#919191"
   dark-grey: &dark-grey "#4C4C4C"
+  dark-purple: &dark-purple "#6b5f73"
   light-red: &light-red "#FC7876"
   darker-light-red: &darker-light-red "#fb4141"
   light-green: &light-green "#78FC76"
@@ -63,7 +64,7 @@ print:
       lightness: 0.6
     unit: *default
     bartext-len: 10
-    header: *pale-yellow
+    header: *dark-purple
 
   priority:
     saturation: 0.7
