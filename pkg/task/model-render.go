@@ -26,17 +26,41 @@ type rTask struct {
 	doneCountLen int // progress doneCount
 }
 
-func (r *rTask) stringify(color bool, withIndex bool) string {
+func (r *rTask) stringify(color bool, withIndex bool, maxWidth int) string {
 	var out strings.Builder
+	var length int
+	var fold func(string) string
+	fold = func(str string) string {
+		if maxWidth == -1 {
+			return str
+		}
+		n := len(str)
+		if n+length <= maxWidth {
+			length += n
+			return str
+		}
+		if n > maxWidth {
+			length = r.idLen + 1
+			return str[:maxWidth-length-1] + "\\\n" +
+				strings.Repeat(" ", r.idLen+1) +
+				fold(str[maxWidth:])
+		}
+		if r.idLen+1+len(str) > maxWidth {
+			length = 0
+			return "\n" + fold(strings.Repeat(" ", r.idLen+1)+str)
+		}
+		length = r.idLen + 1 + len(str)
+		return "\n" + strings.Repeat(" ", r.idLen+1) + str
+	}
 
 	if withIndex {
 		idTxt := fmt.Sprintf("%0*d", r.idLen, r.id)
 		if color {
-			out.WriteString(colorize(r.idColor, idTxt))
+			out.WriteString(colorize(r.idColor, fold(idTxt)))
 		} else {
-			out.WriteString(idTxt)
+			out.WriteString(fold(idTxt))
 		}
-		out.WriteRune(' ')
+		out.WriteString(fold(" "))
 	}
 
 	for _, tk := range r.tokens {
@@ -47,20 +71,20 @@ func (r *rTask) stringify(color bool, withIndex bool) string {
 			parts := formatProgress(tk.token.Value.(*Progress), r.countLen, r.doneCountLen)
 			for _, pt := range parts {
 				if color {
-					out.WriteString(colorizeToken(&pt))
+					out.WriteString(colorizeToken(fold(pt.raw), pt.color, pt.dominantColor))
 				} else {
-					out.WriteString(pt.raw)
+					out.WriteString(fold(pt.raw))
 				}
 			}
-			out.WriteRune(' ')
+			out.WriteString(fold(" "))
 			continue
 		}
 		if color {
-			out.WriteString(colorizeToken(tk))
+			out.WriteString(colorizeToken(fold(tk.raw), tk.color, tk.dominantColor))
 		} else {
-			out.WriteString(tk.raw)
+			out.WriteString(fold(tk.raw))
 		}
-		out.WriteRune(' ')
+		out.WriteString(fold(" "))
 	}
 	return strings.TrimSpace(out.String())
 }

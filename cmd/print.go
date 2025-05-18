@@ -19,6 +19,7 @@ var printCmd = &cobra.Command{
   print tasks from lists`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		maxlen := viper.GetInt("maxlen")
+		minlen := viper.GetInt("minlen")
 
 		all, err := cmd.Flags().GetBool("all")
 		if err != nil {
@@ -37,14 +38,14 @@ var printCmd = &cobra.Command{
 					return err
 				}
 			}
-			return task.PrintLists(paths, maxlen)
+			return task.PrintLists(paths, maxlen, minlen)
 		}
 		for _, arg := range args {
 			if err := task.LoadFile(arg); err != nil {
 				return err
 			}
 		}
-		return task.PrintLists(args, maxlen)
+		return task.PrintLists(args, maxlen, minlen)
 	},
 }
 
@@ -52,4 +53,6 @@ func setPrintCmdFlags() {
 	printCmd.Flags().Bool("all", false, "print all lists")
 	printCmd.Flags().Int("maxlen", 80, "maximum length")
 	viper.BindPFlag("maxlen", printCmd.Flags().Lookup("maxlen"))
+	printCmd.Flags().Int("minlen", 80, "maximum length")
+	viper.BindPFlag("minlen", printCmd.Flags().Lookup("minlen"))
 }

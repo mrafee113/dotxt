@@ -260,11 +260,11 @@ func colorize(color, text string) string {
 	return utils.Colorize(resolvColor(color), text)
 }
 
-func colorizeToken(tk *rToken) string {
-	if tk.dominantColor != "" {
-		return colorize(tk.dominantColor, tk.raw)
+func colorizeToken(raw, color, dominantColor string) string {
+	if dominantColor != "" {
+		return colorize(dominantColor, raw)
 	}
-	return colorize(tk.color, tk.raw)
+	return colorize(color, raw)
 }
 
 func colorizeIds(ids map[int]bool) map[int]string {
@@ -459,7 +459,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			addAsRegular(&t.Tokens[ndx])
 		}
 	}
-	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false, true)))
+	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false, true, -1)))
 	listMetadata.idLen = max(listMetadata.idLen, len(strconv.Itoa(*t.ID)))
 	if dominantColor != "" || defaultColor != "" {
 		for _, rtk := range out.tokens {
@@ -504,7 +504,7 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 	return nil
 }
 
-func PrintLists(paths []string, maxLen int) error {
+func PrintLists(paths []string, maxLen, minlen int) error {
 	readTemporalFormatFallback()
 	var err error
 	for ndx := range paths {
@@ -522,6 +522,7 @@ func PrintLists(paths []string, maxLen int) error {
 	}
 
 	sessionMetadata.maxLen = min(sessionMetadata.maxLen, maxLen)
+	sessionMetadata.maxLen = max(sessionMetadata.maxLen, minlen)
 	for _, path := range paths {
 		list := sessionMetadata.lists[path]
 		list.maxLen = sessionMetadata.maxLen
@@ -556,7 +557,7 @@ func PrintLists(paths []string, maxLen int) error {
 		for _, task := range list.tasks {
 			if useCatHeader && task.tsk.DoneCount > 0 && task.tsk.Category != lastCat {
 				cat := task.tsk.Category
-				if cat  == "" {
+				if cat == "" {
 					cat = "*"
 				}
 				out.WriteString(formatCategoryHeader(cat, list))
@@ -567,7 +568,7 @@ func PrintLists(paths []string, maxLen int) error {
 				out.WriteString(formatCategoryHeader("", list))
 			}
 
-			out.WriteString(task.stringify(true, true))
+			out.WriteString(task.stringify(true, true, sessionMetadata.maxLen))
 			out.WriteRune('\n')
 		}
 		out.WriteRune('\n')

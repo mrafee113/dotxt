@@ -100,7 +100,6 @@
         - if there was a deadline and it has not passed then only the task should be shown normally except that `$due` and `$dead` are colored differently
 
 ## todo
-- deal with `every`
 - create field `$done=<absoluteDt>`
 - allow parsing partial absolute datetimes, like `2025-05-07`, `2025-05`, `2025`
 - develop a reporting system
