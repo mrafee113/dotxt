@@ -147,18 +147,26 @@ func unparseRelativeDatetime(dt, rel time.Time) string {
 	return unparseDuration(dt.Sub(rel))
 }
 
-func parseTmpRelativeDatetime(field, dt string) (*temporalNode, error) {
+func getTemporalFallback(field, dt string) (string, string, error) {
 	fallback, ok := temporalFallback[field]
 	if !ok {
-		return nil, fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, field)
+		return "", "", fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, field)
 	}
 	if strings.HasPrefix(dt, "variable=") {
 		ndx := strings.Index(dt, ";")
 		if ndx == -1 {
-			return nil, fmt.Errorf("%w: did not find ';'", terrors.ErrParse)
+			return "", "", fmt.Errorf("%w: did not find ';'", terrors.ErrParse)
 		}
 		fallback = dt[len("variable="):ndx]
 		dt = dt[ndx+1:]
+	}
+	return fallback, dt, nil
+}
+
+func parseTmpRelativeDatetime(field, dt string) (*temporalNode, error) {
+	fallback, dt, err := getTemporalFallback(field, dt)
+	if err != nil {
+		return nil, err
 	}
 	duration, err := parseDuration(dt)
 	if err != nil {

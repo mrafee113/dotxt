@@ -76,6 +76,25 @@ func (t *Temporal) getField(key string) (*time.Time, error) {
 	return nil, fmt.Errorf("%w: key '%s' not found", terrors.ErrNotFound, key)
 }
 
+func (t *Temporal) setField(key string, val *time.Time) error {
+	switch key {
+	case "c":
+		t.CreationDate = val
+	case "lud":
+		t.LastUpdated = val
+	case "due":
+		t.DueDate = val
+	case "end":
+		t.EndDate = val
+	case "dead":
+		t.Deadline = val
+	}
+	if key == "r" {
+		return fmt.Errorf("key r not supported since it's a slice of *time.Time")
+	}
+	return fmt.Errorf("%w: key '%s' not found", terrors.ErrNotFound, key)
+}
+
 // The default fields for each temporal field used for
 // formatting datetime relatively
 var temporalFormatFallback = map[string]string{
@@ -160,6 +179,43 @@ func (t *Task) updateLud() {
 	}
 	*t.Text = strings.Replace(*t.Text, token.Raw, ludText, 1)
 	t.PText = strings.Replace(t.PText, token.Raw, ludText, 1)
+}
+
+func (t *Task) updateDate(field string, newDt *time.Time) error {
+	var curDtTxt, newDtTxt string
+	for _, tk := range t.Tokens {
+		if tk.Type == TokenDate && tk.Key == field {
+			curDtTxt = strings.TrimPrefix(tk.Raw, fmt.Sprintf("$%s=", field))
+		}
+	}
+	_, isAbsDt := parseAbsoluteDatetime(curDtTxt)
+	if isAbsDt == nil {
+		newDtTxt = unparseAbsoluteDatetime(*newDt)
+	} else {
+		fallback, _, err := getTemporalFallback(field, curDtTxt)
+		if err != nil {
+			return err
+		}
+		rel, err := t.getField(fallback)
+		if err != nil {
+			return err
+		}
+		newDtTxt = unparseRelativeDatetime(*newDt, *rel)
+		tmp := temporalFallback[field]
+		if tmp != fallback {
+			newDtTxt = fmt.Sprintf("variable=%s;%s", fallback, newDtTxt)
+		}
+	}
+	*t.Text = strings.Replace(*t.Text, curDtTxt, newDtTxt, 1)
+	t.PText = strings.Replace(t.PText, curDtTxt, newDtTxt, 1)
+	for ndx := range t.Tokens {
+		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == field {
+			t.Tokens[ndx].Raw = fmt.Sprintf("$%s=%s", field, newDtTxt)
+			t.Tokens[ndx].Value = &newDt
+		}
+	}
+	t.setField(field, newDt)
+	return nil
 }
 
 // A reduced form of the raw string that represents tasks

@@ -6,6 +6,7 @@ go.work.sum
 .vscode
 main
 to-dotxt
+to-dotxt.bak
 .env
 .idea
 .git

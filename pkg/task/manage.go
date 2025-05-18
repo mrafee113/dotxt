@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 	"to-dotxt/pkg/terrors"
 )
 
@@ -350,5 +351,48 @@ func IncrementProgressCount(id int, path string, value int) error {
 	*task.Text = strings.Replace(*task.Text, prevRaw, progText, 1)
 	task.PText = strings.Replace(task.PText, prevRaw, progText, 1)
 	pToken.Raw = progText
+	return nil
+}
+
+func incrementDateUntil(dt *time.Time, every *time.Duration) *time.Time {
+	newDt := *dt
+	for newDt.Before(rightNow) {
+		newDt = newDt.Add(*every)
+	}
+	return &newDt
+}
+
+func CheckAndRecurTasks(path string) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	for _, task := range FileTasks[path] {
+		if task.Temporal.Every != nil &&
+			task.Temporal.DueDate != nil &&
+			task.Temporal.DueDate.Before(rightNow) {
+
+			newDt := incrementDateUntil(task.Temporal.DueDate, task.Temporal.Every)
+			diff := newDt.Sub(*task.Temporal.DueDate) // must be before update!
+			err := task.updateDate("due", newDt)
+			if err != nil {
+				return err
+			}
+
+			if task.Temporal.EndDate != nil && task.Temporal.EndDate.Before(rightNow) {
+				newDt := task.Temporal.EndDate.Add(diff)
+				err = task.updateDate("end", &newDt)
+				if err != nil {
+					return err
+				}
+			} else if task.Temporal.Deadline != nil && task.Temporal.Deadline.Before(rightNow) {
+				newDt := task.Temporal.Deadline.Add(diff)
+				err = task.updateDate("dead", &newDt)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }

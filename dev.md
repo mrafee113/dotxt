@@ -111,7 +111,11 @@
 - setup a reminder system
 - write test cases
 - refactor this shit show so we can develop further
+    - the update task functions are severely out of hand...
 - autodone based on count/doneCount
 - ponder calendar view
 - fix width. there should be a minimum width. and a strict maximum width ... folding...
 - integrate the second conky shit properly
+- validate: when `every` is provided, `due` should be provided as well
+    - if there's `end` as well, then `due`+`every`>`end`
+    - if there's `dead` as well, then `due`+`dead`>`dead`
