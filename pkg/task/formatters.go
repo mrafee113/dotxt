@@ -295,9 +295,9 @@ func formatCategoryHeader(category string, list *rList) string {
 	out.WriteString(strings.Repeat(" ", list.idLen+1+
 		list.countLen+1+list.doneCountLen+len("(100%) ")+
 		viper.GetInt("print.progress.bartext-len")+1+
-		-1-1-len(category)-1,
+		-len(category)-1,
 	))
-	out.WriteString(fmt.Sprintf("+ %s ", category))
+	out.WriteString(fmt.Sprintf("%s ", category))
 	out.WriteString(strings.Repeat("—", list.maxLen-out.Len()))
 	out.WriteRune('\n')
 	return colorize("print.progress.header", out.String())
@@ -555,7 +555,11 @@ func PrintLists(paths []string, maxLen int) error {
 		out.WriteString(formatListHeader(list))
 		for _, task := range list.tasks {
 			if useCatHeader && task.tsk.DoneCount > 0 && task.tsk.Category != lastCat {
-				out.WriteString(formatCategoryHeader(task.tsk.Category, list))
+				cat := task.tsk.Category
+				if cat  == "" {
+					cat = "*"
+				}
+				out.WriteString(formatCategoryHeader(cat, list))
 				lastCat = task.tsk.Category
 			}
 			if useCatHeader && task.tsk.DoneCount == 0 && firstNonCat {

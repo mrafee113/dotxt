@@ -50,6 +50,6 @@ var printCmd = &cobra.Command{
 
 func setPrintCmdFlags() {
 	printCmd.Flags().Bool("all", false, "print all lists")
-	printCmd.Flags().Int("maxlen", 130, "maximum length")
+	printCmd.Flags().Int("maxlen", 80, "maximum length")
 	viper.BindPFlag("maxlen", printCmd.Flags().Lookup("maxlen"))
 }

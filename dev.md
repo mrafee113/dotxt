@@ -98,7 +98,6 @@
     - unless it had an end date or a deadline that has not passed yet
         - if there was an end date and the end date has not passed the default texts should be changed to another color
         - if there was a deadline and it has not passed then only the task should be shown normally except that `$due` and `$dead` are colored differently
-- develop an exponential-based color system for dates... the closer the date is to right now
 
 ## todo
 - deal with `every`
@@ -108,3 +107,11 @@
 - reimagine the priority coloring system
 - consider progress-percentage for prioritizing tasks
 - validate negative count and doneCount
+- introduce a `$` variable that allows to set a date from which task will be shown!
+- setup a reminder system
+- write test cases
+- refactor this shit show so we can develop further
+- autodone based on count/doneCount
+- ponder calendar view
+- fix width. there should be a minimum width. and a strict maximum width ... folding...
+- integrate the second conky shit properly
