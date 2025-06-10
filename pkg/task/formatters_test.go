@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"to-dotxt/pkg/utils"
+	"dotxt/pkg/utils"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

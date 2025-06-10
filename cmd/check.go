@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"to-dotxt/pkg/task"
+	"dotxt/pkg/task"
 
 	"github.com/spf13/cobra"
 )

@@ -5,8 +5,8 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"to-dotxt/pkg/terrors"
-	"to-dotxt/pkg/utils"
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 )
 
 func cleanupIDs(path string) error {

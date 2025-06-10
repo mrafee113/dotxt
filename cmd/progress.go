@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"strconv"
-	"to-dotxt/pkg/task"
-	"to-dotxt/pkg/terrors"
+	"dotxt/pkg/task"
+	"dotxt/pkg/terrors"
 
 	"github.com/spf13/cobra"
 )

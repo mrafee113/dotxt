@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"to-dotxt/pkg/task"
-	"to-dotxt/pkg/terrors"
+	"dotxt/pkg/task"
+	"dotxt/pkg/terrors"
 	"unicode"
 
 	"github.com/spf13/cobra"

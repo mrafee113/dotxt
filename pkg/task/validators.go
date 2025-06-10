@@ -3,7 +3,7 @@ package task
 import (
 	"fmt"
 	"strings"
-	"to-dotxt/pkg/terrors"
+	"dotxt/pkg/terrors"
 	"unicode"
 )
 

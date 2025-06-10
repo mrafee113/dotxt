@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"to-dotxt/config"
-	"to-dotxt/pkg/terrors"
-	"to-dotxt/pkg/utils"
+	"dotxt/config"
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

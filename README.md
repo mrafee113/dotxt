@@ -1,4 +1,4 @@
-# do-txt
+# dotxt
 # Docs
 CONFIG_FILE
         /home/francis/.todo/config

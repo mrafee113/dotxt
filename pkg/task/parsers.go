@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"to-dotxt/pkg/terrors"
-	"to-dotxt/pkg/utils"
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"unicode"
 
 	"github.com/spf13/viper"

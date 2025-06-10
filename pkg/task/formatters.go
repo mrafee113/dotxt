@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"to-dotxt/pkg/terrors"
-	"to-dotxt/pkg/utils"
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"

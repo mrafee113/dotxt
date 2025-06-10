@@ -1,5 +1,5 @@
 SHELL=/bin/bash
-BINARY_NAME=to-dotxt
+BINARY_NAME=dotxt
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_ROOT := $(dir $(MAKEFILE_PATH))
 

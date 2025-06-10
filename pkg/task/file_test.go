@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"to-dotxt/config"
-	"to-dotxt/pkg/terrors"
+	"dotxt/config"
+	"dotxt/pkg/terrors"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"

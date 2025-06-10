@@ -11,7 +11,7 @@
     * calendar
         * for calendar I to need divide time-bound tasks based on how far away they are.
             for now let's say if they're later than 2 days after the end of this week (start of week is Sat),
-            they're **not** gonna be **visible** in todotxt.
+            they're **not** gonna be **visible** in dotxt.
         * calendar representation:
             I need to print the calendar week view on the right...
             I still have to figure this part out
@@ -66,7 +66,7 @@
 ## variable syntax
 - tokens are seperated by spaces; and no escaping is allowed!!
 - only the starting character makes a token special. so `#hint1#hint2` is a `hint1#hint2` # hint.
-- priority must be enclosed in parentheses at the beginning of the line otherwise it's just part of the text. this is backwards compatible with todotxt;apart from the length.
+- priority must be enclosed in parentheses at the beginning of the line otherwise it's just part of the text. this is backwards compatible with dotxt;apart from the length.
 - for parenting and subtasking, the parent must posess the $id variable and the child must point to the parent using the $P variable.
 - absolute-datetime: %Y-%m-%dT%H-%M[-%S]
 - duration: [variable=$due?5-min-prior;][-+=+][%Yy][%mm][%dd][%Hh][%MM][%SS]

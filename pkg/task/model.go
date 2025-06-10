@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"to-dotxt/pkg/terrors"
+	"dotxt/pkg/terrors"
 
 	"maps"
 

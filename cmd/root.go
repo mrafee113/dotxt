@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"to-dotxt/config"
+	"dotxt/config"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -11,8 +11,8 @@ import (
 const version = "0.0.0"
 
 var rootCmd = &cobra.Command{
-	Use:          "To-DoTxt",
-	Short:        fmt.Sprintf("To-DoTxt %s: a text based todo list inspired by todotxt", version),
+	Use:          "dotxt",
+	Short:        fmt.Sprintf("dotxt %s: a text based todo list inspired by todotxt", version),
 	SilenceUsage: true,
 }
 

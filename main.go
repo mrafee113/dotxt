@@ -2,7 +2,7 @@ package main
 
 import (
 	"os"
-	"to-dotxt/cmd"
+	"dotxt/cmd"
 )
 
 func main() {

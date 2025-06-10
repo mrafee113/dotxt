@@ -8,9 +8,9 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"to-dotxt/config"
-	"to-dotxt/pkg/terrors"
-	"to-dotxt/pkg/utils"
+	"dotxt/config"
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
