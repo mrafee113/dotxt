@@ -1,6 +1,9 @@
 package task
 
 import (
+	"dotxt/config"
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"fmt"
 	"io/fs"
 	"os"
@@ -8,9 +11,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"dotxt/config"
-	"dotxt/pkg/terrors"
-	"dotxt/pkg/utils"
 
 	"github.com/spf13/cobra"
 )

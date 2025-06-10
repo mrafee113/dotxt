@@ -1,12 +1,12 @@
 package task
 
 import (
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"fmt"
 	"slices"
 	"sort"
 	"strings"
-	"dotxt/pkg/terrors"
-	"dotxt/pkg/utils"
 )
 
 func cleanupIDs(path string) error {

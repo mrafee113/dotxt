@@ -1,6 +1,8 @@
 package task
 
 import (
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"fmt"
 	"maps"
 	"math"
@@ -9,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"dotxt/pkg/terrors"
-	"dotxt/pkg/utils"
 
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"

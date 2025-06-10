@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"dotxt/pkg/task"
+	"dotxt/pkg/terrors"
 	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"dotxt/pkg/task"
-	"dotxt/pkg/terrors"
 	"unicode"
 
 	"github.com/spf13/cobra"

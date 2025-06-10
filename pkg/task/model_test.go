@@ -1,11 +1,13 @@
 package task
 
 import (
+	"dotxt/pkg/terrors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUpdate(t *testing.T) {
@@ -142,5 +144,71 @@ func TestRenewLud(t *testing.T) {
 		}
 		assert.True(found, "not found")
 		assert.Contains(*task.Text, "$lud=1S")
+	})
+}
+
+func TestUpdateDate(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("token not found", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$due=1m")
+		dt := rightNow.Add(7 * 24 * 60 * 60 * time.Second)
+		err := task.updateDate("dead", &dt)
+		require.Error(t, err)
+		assert.ErrorIs(err, terrors.ErrNotFound)
+		assert.ErrorContains(err, "token date for field 'dead' not found")
+	})
+	t.Run("relative", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$due=1m")
+		dt := rightNow.Add(7 * 24 * 60 * 60 * time.Second)
+		err := task.updateDate("due", &dt)
+		require.NoError(t, err)
+		assert.Equal("$due=7d", task.Norm())
+		assert.Contains(*task.Text, "$due=7d")
+		assert.Equal(dt, *task.DueDate)
+		found := false
+		for _, tk := range task.Tokens {
+			if tk.Type == TokenDate && tk.Key == "due" {
+				found = true
+				assert.Equal("$due=7d", tk.Raw)
+				assert.Equal(dt, *tk.Value.(*time.Time))
+			}
+		}
+		assert.True(found)
+	})
+	t.Run("relative with var", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$due=1m $dead=variable=c;2m")
+		dt := rightNow.Add(3 * 30 * 24 * 60 * 60 * time.Second)
+		err := task.updateDate("dead", &dt)
+		require.NoError(t, err)
+		assert.Equal("$due=1m $dead=variable=c;3m", task.Norm())
+		assert.Contains(*task.Text, "$dead=variable=c;3m")
+		assert.Equal(dt, *task.Deadline)
+		found := false
+		for _, tk := range task.Tokens {
+			if tk.Type == TokenDate && tk.Key == "dead" {
+				found = true
+				assert.Equal("$dead=variable=c;3m", tk.Raw)
+				assert.Equal(dt, *tk.Value.(*time.Time))
+			}
+		}
+		assert.True(found)
+	})
+	t.Run("absolute", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$c=2025-05-05T05-05 $due=2025-06-05T05-05")
+		dt, _ := parseAbsoluteDatetime("2025-07-05T05-05")
+		err := task.updateDate("due", dt)
+		require.NoError(t, err)
+		assert.Equal("$due=2025-07-05T05-05-00", task.Norm())
+		assert.Contains(*task.Text, "$due=2025-07-05T05-05-00")
+		assert.Equal(*dt, *task.DueDate)
+		found := false
+		for _, tk := range task.Tokens {
+			if tk.Type == TokenDate && tk.Key == "due" {
+				found = true
+				assert.Equal("$due=2025-07-05T05-05-00", tk.Raw)
+				assert.Equal(*dt, *tk.Value.(*time.Time))
+			}
+		}
+		assert.True(found)
 	})
 }

@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"fmt"
 	"dotxt/config"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -2,11 +2,11 @@ package config
 
 import (
 	"bytes"
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"fmt"
 	"os"
 	"path/filepath"
-	"dotxt/pkg/terrors"
-	"dotxt/pkg/utils"
 
 	"github.com/spf13/viper"
 )
@@ -16,7 +16,7 @@ const (
 	EnvCFG    = "DOTXT_CONFIG"
 )
 
-var DefaultPath = "~/.config/.dotxt"
+var DefaultPath = "~/.config/dotxt"
 
 var configPath string
 

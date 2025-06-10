@@ -1,12 +1,12 @@
 package task
 
 import (
+	"dotxt/pkg/terrors"
 	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 	"time"
-	"dotxt/pkg/terrors"
 
 	"maps"
 
@@ -199,11 +199,18 @@ func (t *Task) renewLud() {
 
 func (t *Task) updateDate(field string, newDt *time.Time) error {
 	var curDtTxt, newDtTxt string
-	for _, tk := range t.Tokens {
-		if tk.Type == TokenDate && tk.Key == field {
-			curDtTxt = strings.TrimPrefix(tk.Raw, fmt.Sprintf("$%s=", field))
+	var token *Token
+	for ndx := range t.Tokens {
+		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == field {
+			token = &t.Tokens[ndx]
+			break
 		}
 	}
+	if token == nil {
+		return fmt.Errorf("%w: token date for field '%s' not found", terrors.ErrNotFound, field)
+	}
+	curDtTxt = strings.TrimPrefix(token.Raw, fmt.Sprintf("$%s=", field))
+
 	_, isAbsDt := parseAbsoluteDatetime(curDtTxt)
 	if isAbsDt == nil {
 		newDtTxt = unparseAbsoluteDatetime(*newDt)
@@ -224,12 +231,8 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 	}
 	*t.Text = strings.Replace(*t.Text, curDtTxt, newDtTxt, 1)
 	t.PText = strings.Replace(t.PText, curDtTxt, newDtTxt, 1)
-	for ndx := range t.Tokens {
-		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == field {
-			t.Tokens[ndx].Raw = fmt.Sprintf("$%s=%s", field, newDtTxt)
-			t.Tokens[ndx].Value = &newDt
-		}
-	}
+	token.Raw = fmt.Sprintf("$%s=%s", field, newDtTxt)
+	token.Value = newDt
 	t.setField(field, newDt)
 	return nil
 }

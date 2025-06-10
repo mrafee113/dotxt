@@ -1,13 +1,13 @@
 package task
 
 import (
+	"dotxt/config"
+	"dotxt/pkg/terrors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"dotxt/config"
-	"dotxt/pkg/terrors"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"

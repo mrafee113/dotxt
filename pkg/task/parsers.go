@@ -1,14 +1,14 @@
 package task
 
 import (
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"fmt"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
-	"dotxt/pkg/terrors"
-	"dotxt/pkg/utils"
 	"unicode"
 
 	"github.com/spf13/viper"
@@ -437,6 +437,7 @@ func tokenizeLine(line string) ([]Token, []error) {
 				progress, err := parseProgress(value)
 				if err != nil {
 					handleTokenText(tokenStr, err)
+					continue
 				}
 				tokens = append(tokens, Token{
 					Type: TokenProgress, Raw: tokenStr,

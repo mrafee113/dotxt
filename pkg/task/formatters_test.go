@@ -2,6 +2,7 @@ package task
 
 import (
 	"bytes"
+	"dotxt/pkg/utils"
 	"fmt"
 	"math"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"dotxt/pkg/utils"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

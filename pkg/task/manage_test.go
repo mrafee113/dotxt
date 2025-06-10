@@ -1,15 +1,15 @@
 package task
 
 import (
+	"dotxt/config"
+	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-	"dotxt/config"
-	"dotxt/pkg/terrors"
-	"dotxt/pkg/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
