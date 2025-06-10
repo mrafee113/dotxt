@@ -3,6 +3,7 @@ package task
 import (
 	"fmt"
 	"maps"
+	"math"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"to-dotxt/pkg/terrors"
 	"to-dotxt/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 )
 
@@ -57,14 +59,16 @@ func formatDuration(d *time.Duration) string {
 		secPerYr   = secPerDay * 365
 	)
 
-	calcRemaining := func(val, oldUnit, newUnit float64) float64 {
-		return (totalSec - val*oldUnit) / newUnit
-	}
-	getIfPositive := func(format string, val float64) string {
-		if val <= 0 || (strings.Contains(format, ".0f") && int(val) <= 0) {
+	// this function assumes that all formats are .1f or .0f
+	fmtFloat := func(fpoints int, format string, val float64) string {
+		valD := decimal.NewFromFloat(val)
+		if fpoints != -1 {
+			valD = valD.Truncate(int32(fpoints))
+		}
+		if valD.IsZero() {
 			return ""
 		}
-		return fmt.Sprintf(format, val)
+		return valD.String() + format
 	}
 
 	if totalSec == 0 {
@@ -72,36 +76,36 @@ func formatDuration(d *time.Duration) string {
 	}
 	var dtStr string = func() string {
 		if years := totalSec / secPerYr; 1.25 <= years {
-			return fmt.Sprintf("%.2fy", years)
+			return fmtFloat(1, "y", years)
 		}
 		if years := totalSec / secPerYr; 1 <= years && years < 1.25 {
-			return fmt.Sprintf("%.0fy", years) + getIfPositive("%.2fm", calcRemaining(years, secPerYr, secPerMo))
+			return fmtFloat(0, "y", years) + fmtFloat(1, "m", math.Mod(totalSec, secPerYr)/secPerMo)
 		}
 		if months := totalSec / secPerMo; 2 <= months {
-			return fmt.Sprintf("%.2fm", months)
+			return fmtFloat(1, "m", months)
 		}
 		if months := totalSec / secPerMo; 1 <= months && months < 2 {
-			if weeks := calcRemaining(months, secPerMo, secPerWeek); 1 <= weeks {
-				return fmt.Sprintf("%.0fm", months) + getIfPositive("%.2fw", weeks)
+			if weeks := math.Mod(totalSec, secPerMo) / secPerWeek; 1 <= weeks {
+				return fmtFloat(0, "m", months) + fmtFloat(1, "w", weeks)
 			}
-			return fmt.Sprintf("%.0fm", months) + getIfPositive("%.0fd", calcRemaining(months, secPerMo, secPerDay))
+			return fmtFloat(0, "m", months) + fmtFloat(0, "d", math.Mod(totalSec, secPerMo)/secPerDay)
 		}
 		if weeks := totalSec / secPerWeek; 1 <= weeks {
-			return fmt.Sprintf("%.0fw", weeks) + getIfPositive("%.0fd", calcRemaining(weeks, secPerWeek, secPerDay))
+			return fmtFloat(0, "w", weeks) + fmtFloat(0, "d", math.Mod(totalSec, secPerWeek)/secPerDay)
 		}
 		if days := totalSec / secPerDay; 2 <= days {
-			return fmt.Sprintf("%.0fd", days)
+			return fmtFloat(0, "d", days)
 		}
 		if days := totalSec / secPerDay; 1 <= days && days < 2 {
-			return fmt.Sprintf("%0.fd", days) + getIfPositive("%.0f'", calcRemaining(days, secPerDay, secPerHr))
+			return fmtFloat(0, "d", days) + fmtFloat(0, "'", math.Mod(totalSec, secPerDay)/secPerHr)
 		}
 		if hours := totalSec / secPerHr; 2 <= hours {
-			return fmt.Sprintf("%0.f'", hours) + getIfPositive(`%.0f"`, calcRemaining(hours, secPerHr, secPerMin))
+			return fmtFloat(0, "'", hours) + fmtFloat(0, `"`, math.Mod(totalSec, secPerHr)/secPerMin)
 		}
 		hours := totalSec / secPerHr
-		mins := calcRemaining(hours, secPerHr, secPerMin)
-		secs := totalSec - (mins * secPerMin)
-		return fmt.Sprintf("%0.f'", hours) + getIfPositive(`%.0f"`, mins) + getIfPositive("%.0fs", secs)
+		mins := math.Mod(totalSec, secPerHr) / secPerMin
+		secs := math.Mod(math.Mod(totalSec, secPerHr), secPerMin)
+		return fmtFloat(0, "'", hours) + fmtFloat(0, `"`, mins) + fmtFloat(0, "s", secs)
 	}()
 
 	return sign + dtStr
@@ -118,9 +122,9 @@ func formatAbsoluteDatetime(dt *time.Time, relDt *time.Time) string {
 	return formatDuration(&d)
 }
 
-func formatPriorities(tasks []*rTask) error {
+func formatPriorities(tasks []*rTask) {
 	if len(tasks) == 0 {
-		return nil
+		return
 	}
 
 	colorSaturation := viper.GetFloat64("print.priority.saturation")
@@ -129,73 +133,69 @@ func formatPriorities(tasks []*rTask) error {
 	colorStartHue := viper.GetFloat64("print.priority.start-hue")
 	colorEndHue := viper.GetFloat64("print.priority.end-hue")
 
-	// AI generated...
-	var assignHue func([]string, float64, float64, int) []string
-	assignHue = func(tasks []string, startHue, endHue float64, depth int) []string {
-		n := len(tasks)
-		// base case: single task or max depth
-		if n == 1 || depth >= maxDepth {
-			hexes := make([]string, n)
-			for i := range tasks {
-				// evenly space within [startHue, endHue]
-				h := startHue + (float64(i)+0.5)/float64(n)*(endHue-startHue)
-				hexes[i] = utils.HslToHex(h, colorSaturation, colorLightness)
+	assignColor := func(task *rTask, color string) {
+		for _, tk := range task.tokens {
+			if tk.token != nil && tk.token.Type == TokenPriority {
+				tk.color = color
+				break
 			}
-			return hexes
+		}
+	}
+
+	var assignHue func([]*rTask, float64, float64, int)
+	assignHue = func(tasks []*rTask, startHue, endHue float64, depth int) {
+		n := len(tasks)
+		if n == 1 || depth >= maxDepth {
+			for i, tsk := range tasks {
+				h := startHue + (float64(i)+0.5)/float64(n)*(endHue-startHue)
+				assignColor(tsk, utils.HslToHex(h, colorSaturation, colorLightness))
+			}
+			return
 		}
 
-		// group by the next character of prefix
-		groups := make([][]string, 0, n)
+		groups := make([][]*rTask, 0, n)
 		prefixes := make([]string, 0, n)
 		for _, t := range tasks {
 			p := ""
-			if len(t) > depth {
-				p = t[:depth+1]
+			if len(t.tsk.Priority) > depth {
+				p = t.tsk.Priority[:depth+1]
 			}
 			if len(groups) == 0 || prefixes[len(prefixes)-1] != p {
-				groups = append(groups, []string{t})
+				groups = append(groups, []*rTask{t})
 				prefixes = append(prefixes, p)
 			} else {
 				groups[len(groups)-1] = append(groups[len(groups)-1], t)
 			}
 		}
 
-		// if only one group formed, stop recursing deeper
 		if len(groups) == 1 {
-			return assignHue(tasks, startHue, endHue, maxDepth)
+			assignHue(tasks, startHue, endHue, depth+1)
+			return
 		}
 
-		// otherwise recurse on each group, slicing the hue span
-		out := make([]string, 0, n)
 		span := (endHue - startHue) / float64(len(groups))
 		for i, grp := range groups {
 			h0 := startHue + float64(i)*span
 			h1 := h0 + span
-			out = append(out, assignHue(grp, h0, h1, depth+1)...)
+			assignHue(grp, h0, h1, depth+1)
 		}
-		return out
 	}
 
-	var priorities []string
-	reverseMap := make(map[string][]int)
-	for ndx, t := range tasks {
-		if t.tsk != nil && t.tsk.Priority != "" {
-			priorities = append(priorities, t.tsk.Priority)
-			reverseMap[t.tsk.Priority] = append(reverseMap[t.tsk.Priority], ndx)
-		}
-	}
-	slices.Sort(priorities)
-	pColors := assignHue(priorities, colorStartHue, colorEndHue, 0)
-	for cNdx := range pColors {
-		for _, ndx := range reverseMap[priorities[cNdx]] {
-			for _, tk := range tasks[ndx].tokens {
-				if tk.token != nil && tk.token.Type == TokenPriority {
-					tk.color = pColors[cNdx]
-				}
+	assignHue(func() []*rTask {
+		var out []*rTask
+		for _, t := range tasks {
+			if t.tsk != nil && t.tsk.Priority != "" {
+				out = append(out, t)
 			}
 		}
-	}
-	return nil
+		slices.SortFunc(out, func(l, r *rTask) int {
+			if r := sortPriority(l.tsk, r.tsk); r != 2 {
+				return r
+			}
+			return 0
+		})
+		return out
+	}(), colorStartHue, colorEndHue, 0)
 }
 
 func formatProgress(p *Progress, countLen, doneCountLen int) []rToken {
@@ -206,7 +206,6 @@ func formatProgress(p *Progress, countLen, doneCountLen int) []rToken {
 		if percent > 100 {
 			percent = 100
 		}
-		// 0-120 red to green TODO: make dynamic
 		hue := 120.0 * float64(percent) / 100.0
 		saturation := viper.GetFloat64("print.progress.percentage.saturation")
 		lightness := viper.GetFloat64("print.progress.percentage.lightness")
@@ -240,7 +239,7 @@ func formatListHeader(list *rList) string {
 	var out strings.Builder
 	out.WriteString("> ")
 	out.WriteString(filepath.Base(list.path))
-	out.WriteString(" | ") // TODO: add reports
+	out.WriteString(" | ")
 	out.WriteString(strings.Repeat("—", list.maxLen-out.Len()))
 	out.WriteRune('\n')
 	return colorize("print.color-header", out.String())
@@ -252,6 +251,9 @@ func resolvColor(color string) string {
 	}
 	if validateHexColor(color) != nil {
 		color = viper.GetString(color)
+		if validateHexColor(color) != nil {
+			color = viper.GetString("print.color-default")
+		}
 	}
 	return color
 }
@@ -305,7 +307,7 @@ func formatCategoryHeader(category string, list *rList) string {
 
 func (t *Task) Render(listMetadata *rList) *rTask {
 	if listMetadata == nil {
-		listMetadata = &rList{}
+		listMetadata = &rList{idList: make(map[int]bool)}
 	}
 	out := rTask{tsk: t, id: *t.ID, idColor: "print.color-index"}
 	addAsRegular := func(token *Token) {
@@ -430,6 +432,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 					continue
 				}
 				val := t.Temporal.Reminders[reminderCount]
+				reminderCount++
 				relStr, ok := temporalFormatFallback["r"]
 				if !ok {
 					addAsRegular(&t.Tokens[ndx])
@@ -459,7 +462,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			addAsRegular(&t.Tokens[ndx])
 		}
 	}
-	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false, true, -1)))
+	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false, -1)))
 	listMetadata.idLen = max(listMetadata.idLen, len(strconv.Itoa(*t.ID)))
 	if dominantColor != "" || defaultColor != "" {
 		for _, rtk := range out.tokens {
@@ -568,7 +571,7 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 				out.WriteString(formatCategoryHeader("", list))
 			}
 
-			out.WriteString(task.stringify(true, true, sessionMetadata.maxLen))
+			out.WriteString(task.stringify(true, sessionMetadata.maxLen))
 			out.WriteRune('\n')
 		}
 		out.WriteRune('\n')

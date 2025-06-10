@@ -119,10 +119,10 @@ func appendToDoneFile(text, path string) error {
 	if err != nil {
 		return err
 	}
-	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
 	if err = mkDirs(); err != nil {
 		return err
 	}
+	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
 	path = filepath.Join(config.ConfigPath(), "todos", "_etc", path+".done")
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o655)
 	if err != nil {
@@ -157,10 +157,10 @@ func removeFromDoneFile(ids []int, path string) ([]string, error) {
 	if err != nil {
 		return tasks, err
 	}
-	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
 	if err = mkDirs(); err != nil {
 		return tasks, err
 	}
+	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
 	path = filepath.Join(config.ConfigPath(), "todos", "_etc", path+".done")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -223,7 +223,7 @@ func LoadFile(path string) error {
 	return nil
 }
 
-func LoadFiles() error {
+func ReloadFiles() error {
 	for path := range FileTasks {
 		if err := LoadFile(path); err != nil {
 			return err
@@ -286,7 +286,7 @@ func taskifyRandomFile(path string) ([]Task, error) {
 		return []Task{}, err
 	}
 	var tasks []Task
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		task, err := ParseTask(nil, line)
 		if err != nil {
 			continue

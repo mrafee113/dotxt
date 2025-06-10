@@ -61,17 +61,12 @@ var addCmd = &cobra.Command{
   adds task to todolist`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		arg := strings.Join(args, " ")
-		t, err := task.ParseTask(nil, arg)
-		if err != nil {
-			return err
-		}
-
 		path, err := task.GetTodoPathArgFromCmd(cmd, "to")
 		if err != nil {
 			return err
 		}
 		return loadorcreateFuncStoreFile(path, func() error {
-			return task.AddTask(t, path)
+			return task.AddTaskFromStr(arg, path)
 		})
 	},
 }

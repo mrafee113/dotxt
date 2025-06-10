@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/spf13/viper"
 )
@@ -127,4 +128,54 @@ func clamp01(v float64) float64 {
 	default:
 		return v
 	}
+}
+
+// AI generated
+func HexToHSL(hex string) (float64, float64, float64) {
+	if len(hex) == 7 && hex[0] == '#' {
+		hex = hex[1:]
+	}
+
+	rComp, _ := strconv.ParseUint(hex[0:2], 16, 8)
+	gComp, _ := strconv.ParseUint(hex[2:4], 16, 8)
+	bComp, _ := strconv.ParseUint(hex[4:6], 16, 8)
+
+	// Normalize to [0,1]
+	r := float64(rComp) / 255.0
+	g := float64(gComp) / 255.0
+	b := float64(bComp) / 255.0
+
+	max := math.Max(r, math.Max(g, b))
+	min := math.Min(r, math.Min(g, b))
+	delta := max - min
+
+	// Compute lightness
+	l := (max + min) / 2.0
+
+	var h, s float64
+
+	if delta == 0 {
+		// achromatic
+		h = 0
+		s = 0
+	} else {
+		// Saturation
+		s = delta / (1 - math.Abs(2*l-1))
+
+		// Hue
+		switch max {
+		case r:
+			h = (g - b) / delta
+			if g < b {
+				h += 6
+			}
+		case g:
+			h = (b-r)/delta + 2
+		case b:
+			h = (r-g)/delta + 4
+		}
+		h *= 60 // convert to degrees
+	}
+
+	return h, s * 100, l * 100
 }

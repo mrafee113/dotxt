@@ -41,10 +41,6 @@ type Progress struct {
 	DoneCount int
 }
 
-// TODO(2025-05-03T20-00)
-// change *time.Time to a struct which holds `Ref` for relative fields...
-// that way e.g. for when updating a field or deleting it, you know
-// which field is related to which field and so on and so forth...
 type Temporal struct {
 	CreationDate *time.Time
 	LastUpdated  *time.Time
@@ -144,24 +140,38 @@ func (t *Task) String() string {
 	return fmt.Sprintf("%-2d %s", *t.ID, t.PText)
 }
 
-func (t *Task) update(new *Task) {
-	creationDate := t.Temporal.CreationDate
-	creationDateText := fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*creationDate))
-	*t = *new
-	t.Temporal.CreationDate = creationDate
-	for ndx := range t.Tokens {
-		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == "c" {
-			t.Tokens[ndx].Raw = creationDateText
-			t.Tokens[ndx].Value = creationDate
-		}
+func (t *Task) update(new *Task) error {
+	creationDateText := fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*new.Temporal.CreationDate))
+	*new.Text = strings.ReplaceAll(*new.Text, creationDateText, "")
+	// minus the last 'second' part in case the datetime is in another form
+	*new.Text = strings.ReplaceAll(*new.Text, creationDateText[:len(creationDateText)-3], "")
+	creationDateText = fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*t.Temporal.CreationDate))
+	new, err := ParseTask(new.ID, *new.Text+" "+creationDateText)
+	if err != nil {
+		return err
 	}
-	t.updateLud()
+	id := t.ID
+	*t = *new
+	t.ID = id
+	t.renewLud()
+	return nil
 }
 
-func (t *Task) updateLud() {
-	lud := t.Temporal.LastUpdated
+func (t *Task) updateFromText(new string) error {
+	dummy, err := ParseTask(nil, new)
+	if err != nil {
+		return err
+	}
+	err = t.update(dummy)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *Task) renewLud() {
 	t.Temporal.LastUpdated = &rightNow
-	ludText := fmt.Sprintf("$lud=%s", unparseRelativeDatetime(*lud, *t.Temporal.CreationDate))
+	ludText := fmt.Sprintf("$lud=%s", unparseRelativeDatetime(rightNow, *t.Temporal.CreationDate))
 
 	var token *Token
 	for ndx := range t.Tokens {
@@ -170,15 +180,21 @@ func (t *Task) updateLud() {
 			break
 		}
 	}
+	var oldLudText string
 	if token == nil {
 		t.Tokens = append(t.Tokens, Token{
 			Type: TokenDate, Key: "lud",
 			Raw: ludText, Value: &rightNow,
 		})
-		return
+	} else {
+		token.Value = &rightNow
+		oldLudText = token.Raw
+		token.Raw = ludText
 	}
-	*t.Text = strings.Replace(*t.Text, token.Raw, ludText, 1)
-	t.PText = strings.Replace(t.PText, token.Raw, ludText, 1)
+	*t.Text = strings.Replace(*t.Text, oldLudText, "", 1)
+	*t.Text += " " + ludText
+	t.PText = strings.Replace(t.PText, oldLudText, "", 1)
+	t.PText += " " + ludText
 }
 
 func (t *Task) updateDate(field string, newDt *time.Time) error {
@@ -220,21 +236,21 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 
 // A reduced form of the raw string that represents tasks
 // more rigidly used for comparison
+// :: everything besides $c and $lud
 func (t *Task) Norm() string {
 	var out []string
 	for _, token := range t.Tokens {
-		if slices.Contains([]TokenType{
-			TokenHint, TokenPriority,
-			TokenProgress, TokenText,
-		}, token.Type) {
-			out = append(out, token.Raw)
+		if token.Type == TokenDate && slices.Contains([]string{"c", "lud"}, token.Key) {
+			continue
 		}
+		out = append(out, token.Raw)
 	}
 	return strings.Join(out, " ")
 }
 
 // A reduced form of the raw string that represents tasks
 // more rigidly via only regular texts used for comparison
+// :: only non-special text
 func (t *Task) NormRegular() string {
 	var out []string
 	for _, token := range t.Tokens {
@@ -245,6 +261,7 @@ func (t *Task) NormRegular() string {
 	return strings.Join(out, " ")
 }
 
+// the text of the task joined in from the tokens
 func (t *Task) Raw() string {
 	var out []string
 	for _, token := range t.Tokens {

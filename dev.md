@@ -6,7 +6,7 @@
         => visible tasks
     * what do I need to do at some point?
         => backlogs
-    * include the eisenhower matrix as well TODO
+    * include the eisenhower matrix as well
 * temporal
     * calendar
         * for calendar I to need divide time-bound tasks based on how far away they are.
@@ -98,23 +98,3 @@
     - unless it had an end date or a deadline that has not passed yet
         - if there was an end date and the end date has not passed the default texts should be changed to another color
         - if there was a deadline and it has not passed then only the task should be shown normally except that `$due` and `$dead` are colored differently
-
-## todo
-- create field `$done=<absoluteDt>`
-- allow parsing partial absolute datetimes, like `2025-05-07`, `2025-05`, `2025`
-- develop a reporting system
-- reimagine the priority coloring system
-- consider progress-percentage for prioritizing tasks
-- validate negative count and doneCount
-- introduce a `$` variable that allows to set a date from which task will be shown!
-- setup a reminder system
-- write test cases
-- refactor this shit show so we can develop further
-    - the update task functions are severely out of hand...
-- autodone based on count/doneCount
-- ponder calendar view
-- fix width. there should be a minimum width. and a strict maximum width ... folding...
-- integrate the second conky shit properly
-- validate: when `every` is provided, `due` should be provided as well
-    - if there's `end` as well, then `due`+`every`>`end`
-    - if there's `dead` as well, then `due`+`dead`>`dead`

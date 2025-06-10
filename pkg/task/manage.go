@@ -5,9 +5,53 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 	"to-dotxt/pkg/terrors"
+	"to-dotxt/pkg/utils"
 )
+
+func cleanupIDs(path string) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	n := len(FileTasks[path])
+	ndxs := make(map[int]bool)
+	for _, task := range FileTasks[path] {
+		if task.ID != nil {
+			if _, ok := ndxs[*task.ID]; *task.ID >= n || *task.ID < 0 || ok {
+				task.ID = nil
+			}
+		}
+		if task.ID != nil {
+			ndxs[*task.ID] = true
+		}
+	}
+	var stack []int
+	for ndx := range n {
+		_, ok := ndxs[ndx]
+		if !ok {
+			stack = append(stack, ndx)
+		}
+	}
+	for _, task := range FileTasks[path] {
+		if task.ID == nil {
+			task.ID = utils.MkPtr(stack[0])
+			stack = stack[1:]
+		}
+	}
+
+	idSortFunc := func(l, r *Task) int {
+		if *l.ID < *r.ID {
+			return -1
+		} else if *l.ID > *r.ID {
+			return 1
+		} else {
+			return 0
+		}
+	}
+	slices.SortFunc(FileTasks[path], idSortFunc)
+	return nil
+}
 
 func AddTask(task *Task, path string) error {
 	path, err := prepFileTaskFromPath(path)
@@ -15,11 +59,20 @@ func AddTask(task *Task, path string) error {
 		return err
 	}
 	FileTasks[path] = append(FileTasks[path], task)
-	if task.ID == nil {
-		id := len(FileTasks[path]) - 1
-		task.ID = &id
-	}
+	cleanupIDs(path)
 	return nil
+}
+
+func AddTaskFromStr(task, path string) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	t, err := ParseTask(nil, task)
+	if err != nil {
+		return err
+	}
+	return AddTask(t, path)
 }
 
 func getTaskIndexFromId(id int, path string) (int, error) {
@@ -57,12 +110,10 @@ func AppendToTask(id int, text, path string) error {
 		return err
 	}
 
-	newText := *task.Text + " " + text
-	dummy, err := ParseTask(nil, newText)
+	err = task.updateFromText(*task.Text + " " + text)
 	if err != nil {
-		return fmt.Errorf("failed creating dummy task with updated text: %w", err)
+		return err
 	}
-	task.update(dummy)
 	task.ID = &id
 	return nil
 }
@@ -76,15 +127,14 @@ func PrependToTask(id int, text, path string) error {
 	var newText string
 	if task.Priority != "" {
 		newText = (*task.Text)[strings.IndexRune(*task.Text, ')')+1:]
-		newText = fmt.Sprintf("(%s) ", task.Priority) + text + " " + newText
+		newText = fmt.Sprintf("(%s) %s %s", task.Priority, text, newText)
 	} else {
 		newText = text + " " + *task.Text
 	}
-	dummy, err := ParseTask(nil, newText)
+	err = task.updateFromText(newText)
 	if err != nil {
-		return fmt.Errorf("failed creating dummy task with updated text: %w", err)
+		return err
 	}
-	task.update(dummy)
 	task.ID = &id
 	return nil
 }
@@ -95,11 +145,10 @@ func ReplaceTask(id int, text, path string) error {
 		return err
 	}
 
-	dummy, err := ParseTask(nil, text)
+	err = task.updateFromText(text)
 	if err != nil {
-		return fmt.Errorf("failed creating dummy task with updated text: %w", err)
+		return err
 	}
-	task.update(dummy)
 	task.ID = &id
 	return nil
 }
@@ -159,15 +208,15 @@ func PrioritizeTask(id int, priority, path string) error {
 		return err
 	}
 
-	if !strings.HasPrefix(priority, "(") || !strings.HasSuffix(priority, ")") {
-		priority = fmt.Sprintf("(%s)", priority)
+	if len(priority) > 2 && priority[0] == '(' && priority[len(priority)-1] == ')' {
+		priority = priority[1 : len(priority)-1]
 	}
 	hadPriority := task.Priority != ""
 	task.Priority = priority
 	*task.Text = task.Priority + " " + *task.Text
 	task.PText = task.Priority + " " + task.PText
 	pToken := Token{
-		Type: TokenPriority, Raw: priority, Key: "priority",
+		Type: TokenPriority, Raw: fmt.Sprintf("(%s)", priority), Key: "priority",
 		Value: strings.TrimSuffix(strings.TrimPrefix(priority, "("), ")"),
 	}
 	if hadPriority {
@@ -188,6 +237,9 @@ func getIndexesFromIds(ids []int, path string) ([]int, error) {
 	if err != nil {
 		return []int{}, err
 	}
+	if len(ids) == 0 {
+		return []int{}, nil
+	}
 
 	var idsMap map[int]bool = make(map[int]bool)
 	for _, val := range ids {
@@ -203,13 +255,13 @@ func getIndexesFromIds(ids []int, path string) ([]int, error) {
 		}
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(indexes)))
-	if len(indexes) != len(ids) {
+	if len(indexes) != len(idsMap) {
 		var ndxMap map[int]bool = make(map[int]bool)
 		for _, val := range indexes {
 			ndxMap[val] = true
 		}
 		var notFound []string
-		for _, ndx := range ids {
+		for ndx := range idsMap {
 			if _, ok := ndxMap[ndx]; !ok {
 				notFound = append(notFound, fmt.Sprintf("%d", ndx))
 			}
@@ -237,6 +289,10 @@ func DeleteTasks(ids []int, path string) error {
 			FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
 		}
 	}
+	err = cleanupIDs(path)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -250,9 +306,23 @@ func DoneTask(ids []int, path string) error {
 		return err
 	}
 	var tasks []*Task
+	var eids []int
 	for _, ndx := range indexes {
+		if eid := FileTasks[path][ndx].EID; eid != nil {
+			eids = append(eids, *eid)
+		}
 		tasks = append(tasks, FileTasks[path][ndx])
 		FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
+	}
+	// remove orphans
+	for ndx := len(FileTasks[path]) - 1; ndx >= 0; ndx-- {
+		if p := FileTasks[path][ndx].Parent; p != nil && slices.Contains(eids, *p) {
+			FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
+		}
+	}
+	err = cleanupIDs(path)
+	if err != nil {
+		return err
 	}
 
 	var out []string
@@ -279,9 +349,11 @@ func MoveTask(from string, id int, to string) error {
 	if err != nil {
 		return err
 	}
-
+	// TODO: remove orphans
 	FileTasks[to] = append(FileTasks[to], FileTasks[from][taskNdx])
+	cleanupIDs(to)
 	FileTasks[from] = slices.Delete(FileTasks[from], taskNdx, taskNdx+1)
+	cleanupIDs(from)
 	return nil
 }
 
@@ -331,7 +403,8 @@ func IncrementProgressCount(id int, path string, value int) error {
 	if task.Progress.DoneCount == 0 {
 		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
 	}
-	task.Progress.Count = min(task.Progress.Count+value, task.Progress.DoneCount)
+	rVal := task.Progress.Count + value
+	task.Progress.Count = max(min(rVal, task.Progress.DoneCount), 0)
 	var pToken *Token
 	for ndx := range task.Tokens {
 		if task.Tokens[ndx].Type == TokenProgress {
@@ -351,15 +424,9 @@ func IncrementProgressCount(id int, path string, value int) error {
 	*task.Text = strings.Replace(*task.Text, prevRaw, progText, 1)
 	task.PText = strings.Replace(task.PText, prevRaw, progText, 1)
 	pToken.Raw = progText
+	pToken.Value = new(Progress)
+	*pToken.Value.(*Progress) = prog
 	return nil
-}
-
-func incrementDateUntil(dt *time.Time, every *time.Duration) *time.Time {
-	newDt := *dt
-	for newDt.Before(rightNow) {
-		newDt = newDt.Add(*every)
-	}
-	return &newDt
 }
 
 func CheckAndRecurTasks(path string) error {
@@ -372,9 +439,12 @@ func CheckAndRecurTasks(path string) error {
 			task.Temporal.DueDate != nil &&
 			task.Temporal.DueDate.Before(rightNow) {
 
-			newDt := incrementDateUntil(task.Temporal.DueDate, task.Temporal.Every)
+			newDt := *task.Temporal.DueDate
+			for newDt.Before(rightNow) {
+				newDt = newDt.Add(*task.Temporal.Every)
+			}
 			diff := newDt.Sub(*task.Temporal.DueDate) // must be before update!
-			err := task.updateDate("due", newDt)
+			err := task.updateDate("due", &newDt)
 			if err != nil {
 				return err
 			}

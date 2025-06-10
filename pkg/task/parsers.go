@@ -1,9 +1,9 @@
 package task
 
-// TODO: heavily validate...
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -20,12 +20,12 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 	}
 	var t time.Time
 	var err error
-	if dashCount := strings.Count(absDt, "-"); dashCount < 3 || dashCount > 4 {
-		return nil, fmt.Errorf("%w: datetime doesn't satisfy 3 <= dashCount <= 4", terrors.ErrParse)
-	} else if dashCount == 4 {
-		t, err = time.Parse("2006-01-02T15-04-05", absDt)
+	if dashCount := strings.Count(absDt, "-"); dashCount == 4 {
+		t, err = time.ParseInLocation("2006-01-02T15-04-05", absDt, time.Local)
+	} else if dashCount == 3 {
+		t, err = time.ParseInLocation("2006-01-02T15-04", absDt, time.Local)
 	} else {
-		t, err = time.Parse("2006-01-02T15-04", absDt)
+		return nil, fmt.Errorf("%w: datetime doesn't satisfy 3 <= dashCount <= 4", terrors.ErrParse)
 	}
 	if err != nil {
 		return nil, err
@@ -38,6 +38,9 @@ func unparseAbsoluteDatetime(absDt time.Time) string {
 }
 
 func parseDuration(dur string) (*time.Duration, error) {
+	if err := validateEmptyText(dur); err != nil {
+		return nil, err
+	}
 	sign := 1
 	if dur[0] == '-' {
 		sign = -1
@@ -54,12 +57,9 @@ func parseDuration(dur string) (*time.Duration, error) {
 			numStr += string(char)
 			continue
 		}
-		if numStr == "" {
-			return nil, fmt.Errorf("%w: expected a number before %q", terrors.ErrParse, char)
-		}
 		num, err := strconv.Atoi(numStr)
 		if err != nil {
-			return nil, fmt.Errorf("%w: number conversion of %s failed", terrors.ErrParse, numStr)
+			return nil, fmt.Errorf("%w: number conversion of '%s' failed", terrors.ErrParse, numStr)
 		}
 		var multiplier time.Duration
 		switch char {
@@ -122,19 +122,19 @@ func unparseDuration(dur time.Duration) string {
 		parts = append(parts, fmt.Sprintf("%dy", years))
 	}
 	if months > 0 {
-		parts = append(parts, fmt.Sprintf("%02dm", months))
+		parts = append(parts, fmt.Sprintf("%dm", months))
 	}
 	if days > 0 {
-		parts = append(parts, fmt.Sprintf("%02dd", days))
+		parts = append(parts, fmt.Sprintf("%dd", days))
 	}
 	if hours > 0 {
-		parts = append(parts, fmt.Sprintf("%02dh", hours))
+		parts = append(parts, fmt.Sprintf("%dh", hours))
 	}
 	if mins > 0 {
-		parts = append(parts, fmt.Sprintf("%02dM", mins))
+		parts = append(parts, fmt.Sprintf("%dM", mins))
 	}
 	if secs > 0 || len(parts) == 0 {
-		parts = append(parts, fmt.Sprintf("%02dS", secs))
+		parts = append(parts, fmt.Sprintf("%dS", secs))
 	}
 
 	return strings.Join(parts, "")
@@ -158,6 +158,10 @@ func getTemporalFallback(field, dt string) (string, string, error) {
 			return "", "", fmt.Errorf("%w: did not find ';'", terrors.ErrParse)
 		}
 		fallback = dt[len("variable="):ndx]
+		_, ok := temporalFallback[fallback]
+		if !ok {
+			return "", "", fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, fallback)
+		}
 		dt = dt[ndx+1:]
 	}
 	return fallback, dt, nil
@@ -195,10 +199,17 @@ func parseProgress(token string) (*Progress, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w: $progress: doneCount to int: %w", terrors.ErrParse, terrors.ErrValue, err)
 	}
+	if doneCountInt < 1 {
+		return nil, fmt.Errorf("%w: %w: $progress: doneCount minimum is 1: %d", terrors.ErrParse, terrors.ErrValue, doneCountInt)
+	}
 	countInt, err := strconv.Atoi(count)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w: $progress: count to int: %w", terrors.ErrParse, terrors.ErrValue, err)
 	}
+	if countInt < 0 {
+		return nil, fmt.Errorf("%w: %w: $progress: count minimum is 0: %d", terrors.ErrParse, terrors.ErrValue, countInt)
+	}
+	countInt = min(countInt, doneCountInt)
 	return &Progress{
 		Unit: unit, Category: category,
 		Count: countInt, DoneCount: doneCountInt,
@@ -209,8 +220,14 @@ func unparseProgress(progress Progress) (string, error) {
 	if progress.Unit == "" {
 		return "", fmt.Errorf("%w: progress unit cannot be empty", terrors.ErrValue)
 	}
-	if progress.DoneCount == 0 {
-		return "", fmt.Errorf("%w: progress doneCount cannot be empty", terrors.ErrValue)
+	if progress.DoneCount <= 0 {
+		return "", fmt.Errorf("%w: progress doneCount cannot be less than 1: %d", terrors.ErrValue, progress.DoneCount)
+	}
+	if progress.Count < 0 {
+		return "", fmt.Errorf("%w: progress count cannot be less than 0: %d", terrors.ErrValue, progress.Count)
+	}
+	if progress.Count > progress.DoneCount {
+		return "", fmt.Errorf("%w: progress count cannot be greater than doneCount: %d > %d", terrors.ErrValue, progress.Count, progress.DoneCount)
 	}
 	if progress.Category != "" && progress.Count > 0 {
 		return fmt.Sprintf(
@@ -230,17 +247,29 @@ func unparseProgress(progress Progress) (string, error) {
 }
 
 func parsePriority(line string) (int, int, error) {
-	if j := strings.IndexRune(line, ')'); j > 0 &&
-		strings.IndexFunc(line[1:j], unicode.IsSpace) == -1 {
-		return 1, j, nil
+	if len(line) == 0 {
+		return -1, -1, terrors.ErrEmptyText
 	}
-	return -1, -1, fmt.Errorf("%w: %w: priority", terrors.ErrParse, terrors.ErrNotFound)
+	if line[0] != '(' {
+		return -1, -1, fmt.Errorf("%w: %w: (", terrors.ErrParse, terrors.ErrNotFound)
+	}
+	j := strings.IndexRune(line, ')')
+	if j < 2 {
+		return -1, -1, fmt.Errorf("%w: %w: priority", terrors.ErrParse, terrors.ErrNotFound)
+	}
+	if strings.IndexFunc(line[1:j], unicode.IsSpace) != -1 {
+		return -1, -1, fmt.Errorf("%w: has spaces, not a priority", terrors.ErrParse)
+	}
+	return 1, j, nil
 }
 
 func parseID(token string) (int, error) {
 	val, err := strconv.Atoi(token)
 	if err != nil {
 		return -1, fmt.Errorf("%w: %w: %w", terrors.ErrParse, terrors.ErrValue, err)
+	}
+	if val < 0 {
+		return -1, fmt.Errorf("%w: %w: negative id: %d", terrors.ErrParse, terrors.ErrValue, val)
 	}
 	return val, nil
 }
@@ -313,16 +342,21 @@ func resolveDates(tokens []Token) []error {
 	return errs
 }
 
+func dateToTextToken(dt *Token) {
+	dt.Key = ""
+	dt.Type = TokenText
+	dt.Value = dt.Raw
+}
+
 func tokenizeLine(line string) ([]Token, []error) {
 	specialFields := make(map[string]bool)
-	// TODO: validate multiple tokens...
 	var tokens []Token
 	var errs []error
 	handleTokenText := func(tokenStr string, err error) {
 		if err != nil {
 			errs = append(errs, err)
 		}
-		tokens = append(tokens, Token{Type: TokenText, Raw: tokenStr})
+		tokens = append(tokens, Token{Type: TokenText, Raw: tokenStr, Value: tokenStr})
 	}
 	if i, j, err := parsePriority(line); err == nil {
 		p := line[i:j]
@@ -389,7 +423,9 @@ func tokenizeLine(line string) ([]Token, []error) {
 				})
 			case "every":
 				duration, err := parseDuration(value)
-				if err != nil {
+				oneDay := 24 * 60 * 60 * time.Second
+				tenYears := 10 * 365 * 24 * 60 * 60 * time.Second
+				if err != nil || *duration < oneDay || tenYears <= *duration {
 					handleTokenText(tokenStr, fmt.Errorf("%w: $every: %w", terrors.ErrParse, err))
 					continue
 				}
@@ -427,7 +463,8 @@ func ParseTask(id *int, line string) (*Task, error) {
 
 	task := &Task{ID: id, Text: &line}
 	tokens, errs := tokenizeLine(line)
-	for _, token := range tokens {
+	for ndx := range tokens {
+		token := tokens[ndx]
 		switch token.Type {
 		case TokenText:
 			task.PText += token.Raw
@@ -444,12 +481,21 @@ func ParseTask(id *int, line string) (*Task, error) {
 		case TokenPriority:
 			task.Priority = token.Value.(string)
 		case TokenDate:
-			// TODO(2025-05-03T20-00)
 			switch token.Key {
 			case "c":
-				task.CreationDate = token.Value.(*time.Time)
+				val := token.Value.(*time.Time)
+				if val.After(rightNow) {
+					dateToTextToken(&tokens[ndx])
+					continue
+				}
+				task.CreationDate = val
 			case "lud":
-				task.LastUpdated = token.Value.(*time.Time)
+				val := token.Value.(*time.Time)
+				if val.After(rightNow) {
+					dateToTextToken(&tokens[ndx])
+					continue
+				}
+				task.LastUpdated = val
 			case "due":
 				task.DueDate = token.Value.(*time.Time)
 			case "r":
@@ -475,10 +521,86 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 	if task.Temporal.LastUpdated == nil {
 		task.Temporal.LastUpdated = &rightNow
+		ludVal := rightNow.Add(time.Second)
 		task.Tokens = append(task.Tokens, Token{
-			Type: TokenDate, Raw: fmt.Sprintf("$lud=%s", unparseRelativeDatetime(rightNow, *task.Temporal.CreationDate)),
-			Key: "c", Value: &rightNow,
+			Type: TokenDate, Raw: "$lud=1S",
+			Key: "lud", Value: &ludVal,
 		})
+	}
+	findToken := func(tipe TokenType, key string) (*Token, int) {
+		for ndx := range task.Tokens {
+			if task.Tokens[ndx].Type == tipe && task.Tokens[ndx].Key == key {
+				return &task.Tokens[ndx], ndx
+			}
+		}
+		return nil, -1
+	}
+	if task.DueDate != nil && !task.DueDate.After(*task.CreationDate) {
+		tk, _ := findToken(TokenDate, "due")
+		if tk != nil {
+			dateToTextToken(tk)
+			task.DueDate = nil
+		} else {
+			errs = append(errs, fmt.Errorf("%w: due date token", terrors.ErrNotFound))
+		}
+	}
+	if task.Deadline != nil && (task.DueDate == nil || !task.Deadline.After(*task.DueDate)) {
+		tk, _ := findToken(TokenDate, "dead")
+		if tk != nil {
+			dateToTextToken(tk)
+			task.Deadline = nil
+		} else {
+			errs = append(errs, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
+		}
+	}
+	if task.EndDate != nil && (task.DueDate == nil || !task.EndDate.After(*task.DueDate)) {
+		tk, _ := findToken(TokenDate, "end")
+		if tk != nil {
+			dateToTextToken(tk)
+			task.EndDate = nil
+		} else {
+			errs = append(errs, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
+		}
+	}
+	if task.EndDate != nil && task.Deadline != nil {
+		tk, _ := findToken(TokenDate, "dead")
+		if tk != nil {
+			dateToTextToken(tk)
+			task.Deadline = nil
+		} else {
+			errs = append(errs, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
+		}
+		tk, _ = findToken(TokenDate, "end")
+		if tk != nil {
+			dateToTextToken(tk)
+			task.EndDate = nil
+		} else {
+			errs = append(errs, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
+		}
+	}
+	if !task.LastUpdated.After(*task.CreationDate) {
+		tk, _ := findToken(TokenDate, "lud")
+		if tk != nil {
+			tk.Raw = "$lud=1S"
+			ludVal := task.CreationDate.Add(time.Second)
+			tk.Value = &ludVal
+			task.LastUpdated = &ludVal
+		} else {
+			errs = append(errs, fmt.Errorf("%w: lud date token", terrors.ErrNotFound))
+		}
+	}
+	for ndx := len(task.Reminders) - 1; ndx >= 0; ndx-- {
+		if !task.Reminders[ndx].After(*task.CreationDate) {
+			for ndxTk := range task.Tokens {
+				if task.Tokens[ndxTk].Type == TokenDate &&
+					strings.HasPrefix(task.Tokens[ndxTk].Key, "r") &&
+					*task.Tokens[ndxTk].Value.(*time.Time) == task.Reminders[ndx] {
+					task.Reminders = slices.Delete(task.Reminders, ndx, ndx+1)
+					dateToTextToken(&task.Tokens[ndxTk])
+					break
+				}
+			}
+		}
 	}
 	if viper.GetBool("debug") {
 		for _, err := range errs {

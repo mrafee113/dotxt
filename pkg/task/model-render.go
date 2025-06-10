@@ -18,7 +18,7 @@ type rToken struct {
 // Used to carry intermediary info for a task
 type rTask struct {
 	tsk          *Task
-	tokens       []*rToken // TODO: flatten
+	tokens       []*rToken
 	id           int
 	idColor      string
 	idLen        int
@@ -26,7 +26,7 @@ type rTask struct {
 	doneCountLen int // progress doneCount
 }
 
-func (r *rTask) stringify(color bool, withIndex bool, maxWidth int) string {
+func (r *rTask) stringify(color bool, maxWidth int) string {
 	var out strings.Builder
 	var length int
 	var fold func(string) string
@@ -40,10 +40,11 @@ func (r *rTask) stringify(color bool, withIndex bool, maxWidth int) string {
 			return str
 		}
 		if n > maxWidth {
+			oldLen := length
 			length = r.idLen + 1
-			return str[:maxWidth-length-1] + "\\\n" +
+			return str[:maxWidth-oldLen-1] + "\\\n" +
 				strings.Repeat(" ", r.idLen+1) +
-				fold(str[maxWidth:])
+				fold(str[maxWidth-oldLen-1:])
 		}
 		if r.idLen+1+len(str) > maxWidth {
 			length = 0
@@ -53,15 +54,13 @@ func (r *rTask) stringify(color bool, withIndex bool, maxWidth int) string {
 		return "\n" + strings.Repeat(" ", r.idLen+1) + str
 	}
 
-	if withIndex {
-		idTxt := fmt.Sprintf("%0*d", r.idLen, r.id)
-		if color {
-			out.WriteString(colorize(r.idColor, fold(idTxt)))
-		} else {
-			out.WriteString(fold(idTxt))
-		}
-		out.WriteString(fold(" "))
+	idTxt := fmt.Sprintf("%0*d", r.idLen, r.id)
+	if color {
+		out.WriteString(colorize(r.idColor, fold(idTxt)))
+	} else {
+		out.WriteString(fold(idTxt))
 	}
+	out.WriteString(fold(" "))
 
 	for _, tk := range r.tokens {
 		if tk.color == "" {

@@ -5,18 +5,28 @@ import (
 	"strings"
 )
 
-func sortHelper(l, r *Task) int {
+func sortNil(l, r *Task) int {
 	if l == nil && r != nil {
 		return 1
 	} else if l != nil && r == nil {
 		return -1
 	} else if l == nil && r == nil {
 		return 0
-	} else if l.DoneCount > 0 && r.DoneCount == 0 {
+	}
+	return 2
+}
+
+func sortDoneCount(l, r *Task) int {
+	if l.DoneCount > 0 && r.DoneCount == 0 {
 		return -1
 	} else if l.DoneCount == 0 && r.DoneCount > 0 {
 		return 1
-	} else if l.Category != "" && r.Category == "" {
+	}
+	return 2
+}
+
+func sortCategory(l, r *Task) int {
+	if l.Category != "" && r.Category == "" {
 		return -1
 	} else if l.Category == "" && r.Category != "" {
 		return 1
@@ -24,7 +34,12 @@ func sortHelper(l, r *Task) int {
 		return -1
 	} else if l.Category > r.Category {
 		return 1
-	} else if l.Priority != "" && r.Priority == "" {
+	}
+	return 2
+}
+
+func sortPriority(l, r *Task) int {
+	if l.Priority != "" && r.Priority == "" {
 		return -1
 	} else if l.Priority == "" && r.Priority != "" {
 		return 1
@@ -33,6 +48,10 @@ func sortHelper(l, r *Task) int {
 	} else if l.Priority != "" && r.Priority != "" && l.Priority > r.Priority {
 		return 1
 	}
+	return 2
+}
+
+func sortHints(l, r *Task) int {
 	extractPlus := func(hints []string) []string {
 		var out []string
 		for _, h := range hints {
@@ -54,6 +73,10 @@ func sortHelper(l, r *Task) int {
 	} else if len(lHints) > 0 && len(rHints) > 0 && lHint > rHint {
 		return 1
 	}
+	return 2
+}
+
+func sortText(l, r *Task) int {
 	lText, rText := l.NormRegular(), r.NormRegular()
 	if len(lText) > 0 && len(rText) == 0 {
 		return -1
@@ -64,6 +87,23 @@ func sortHelper(l, r *Task) int {
 	} else if len(lText) > 0 && len(rText) > 0 && lText > rText {
 		return 1
 	}
+	return 2
+}
+
+func sortHelper(l, r *Task) int {
+	if v := sortNil(l, r); v != 2 {
+		return v
+	} else if v = sortDoneCount(l, r); v != 2 {
+		return v
+	} else if v = sortCategory(l, r); v != 2 {
+		return v
+	} else if v = sortPriority(l, r); v != 2 {
+		return v
+	} else if v = sortHints(l, r); v != 2 {
+		return v
+	} else if v = sortText(l, r); v != 2 {
+		return v
+	}
 	return 0
 }
 
@@ -72,6 +112,9 @@ func sortTasks(tasks []*Task) []*Task {
 		parents := make(map[*Task][]*Task)
 		parentIds := make(map[int]*Task)
 		for _, task := range tasks {
+			if task == nil {
+				continue
+			}
 			if task.EID != nil {
 				parentIds[*task.EID] = task
 				parents[task] = make([]*Task, 0)
@@ -93,6 +136,9 @@ func sortTasks(tasks []*Task) []*Task {
 
 	var out []*Task
 	for _, task := range tasks {
+		if task == nil {
+			continue
+		}
 		out = append(out, task)
 		children, ok := parentsToChildren[task]
 		if !ok {
