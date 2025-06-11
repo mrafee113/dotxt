@@ -143,7 +143,6 @@ func (t *Task) String() string {
 func (t *Task) update(new *Task) error {
 	creationDateText := fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*new.Temporal.CreationDate))
 	*new.Text = strings.ReplaceAll(*new.Text, creationDateText, "")
-	// minus the last 'second' part in case the datetime is in another form
 	*new.Text = strings.ReplaceAll(*new.Text, creationDateText[:len(creationDateText)-3], "")
 	creationDateText = fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*t.Temporal.CreationDate))
 	new, err := ParseTask(new.ID, *new.Text+" "+creationDateText)
