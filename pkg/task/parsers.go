@@ -92,6 +92,9 @@ func parseDuration(dur string) (*time.Duration, error) {
 
 func unparseDuration(dur time.Duration) string {
 	totalSec := int(dur.Seconds())
+	if totalSec == 0 {
+		return "0S"
+	}
 	var sign string
 	if totalSec < 0 {
 		sign = "-"
@@ -141,9 +144,6 @@ func unparseDuration(dur time.Duration) string {
 }
 
 func unparseRelativeDatetime(dt, rel time.Time) string {
-	if dt == rel {
-		return "1S"
-	}
 	return unparseDuration(dt.Sub(rel))
 }
 
@@ -527,7 +527,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		task.Temporal.LastUpdated = &rightNow
 		ludVal := rightNow.Add(time.Second)
 		task.Tokens = append(task.Tokens, Token{
-			Type: TokenDate, Raw: "$lud=1S",
+			Type: TokenDate, Raw: "$lud=" + unparseDuration(time.Duration(0)),
 			Key: "lud", Value: &ludVal,
 		})
 	}
@@ -585,7 +585,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	if !task.LastUpdated.After(*task.CreationDate) {
 		tk, _ := findToken(TokenDate, "lud")
 		if tk != nil {
-			tk.Raw = "$lud=1S"
+			tk.Raw = "$lud=" + unparseDuration(time.Duration(0))
 			ludVal := task.CreationDate.Add(time.Second)
 			tk.Value = &ludVal
 			task.LastUpdated = &ludVal

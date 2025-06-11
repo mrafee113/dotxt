@@ -143,7 +143,7 @@ func TestRenewLud(t *testing.T) {
 			}
 		}
 		assert.True(found, "not found")
-		assert.Contains(*task.Text, "$lud=1S")
+		assert.Contains(*task.Text, "$lud=0S")
 	})
 }
 

@@ -505,7 +505,7 @@ func TestParseTask(t *testing.T) {
 		assert.True(task.LastUpdated.After(*task.CreationDate))
 		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05")
 		*dt = dt.Add(time.Second)
-		assert.Exactly(*dt, *task.LastUpdated) // when lud <= c: lud=c+1S
+		assert.Exactly(*dt, *task.LastUpdated) // when lud <= c: lud=c+0S
 	})
 	t.Run("validate date semantics: due-c value dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$c=2025-05-05T05-05 $due=2023-05-05T05-05")
@@ -641,6 +641,13 @@ func TestParsePriority(t *testing.T) {
 func TestParseDuration(t *testing.T) {
 	assert := assert.New(t)
 	var err error
+	t.Run("zero value", func(t *testing.T) {
+		for _, each := range "ymwdhMS" {
+			d, err := parseDuration("0" + string(each))
+			require.NoError(t, err)
+			assert.Equal(time.Duration(0), *d)
+		}
+	})
 	t.Run("invalid: empty", func(t *testing.T) {
 		_, err = parseDuration("")
 		if assert.NotNil(err) {
@@ -711,6 +718,10 @@ func TestUnparseDuration(t *testing.T) {
 	t.Run("negative", func(t *testing.T) {
 		dur := unparseDuration(-1 * day)
 		assert.Equal("-1d", dur)
+	})
+	t.Run("zero", func(t *testing.T) {
+		dur := unparseDuration(time.Duration(0))
+		assert.Equal("0S", dur)
 	})
 }
 
