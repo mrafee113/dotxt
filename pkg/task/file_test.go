@@ -116,6 +116,62 @@ func TestLocateFiles(t *testing.T) {
 	// assert.True(ok)
 }
 
+func TestReolveSymlinkPath(t *testing.T) {
+	assert := assert.New(t)
+	prevConfig := config.ConfigPath()
+	defer config.SelectConfigFile(prevConfig)
+	tmpDir, err := os.MkdirTemp(prevConfig, "")
+	require.Nil(t, err)
+	config.SelectConfigFile(tmpDir)
+	mkDirs()
+
+	t.Run("sym -> regular target", func(t *testing.T) {
+		target := filepath.Join(tmpDir, "target")
+		err = os.WriteFile(target, []byte(""), 0644)
+		require.NoError(t, err)
+		sym := filepath.Join(tmpDir, "sym")
+		err = os.Symlink(target, sym)
+		require.NoError(t, err)
+		path, err := resolveSymlinkPath(sym)
+		require.NoError(t, err)
+		assert.Equal(path, target)
+	})
+	t.Run("regular file", func(t *testing.T) {
+		target := filepath.Join(tmpDir, "target")
+		err = os.WriteFile(target, []byte(""), 0644)
+		require.NoError(t, err)
+		path, err := resolveSymlinkPath(target)
+		require.NoError(t, err)
+		assert.Equal(path, target)
+	})
+	t.Run("non existing", func(t *testing.T) {
+		target := filepath.Join(tmpDir, "random")
+		path, err := resolveSymlinkPath(target)
+		require.NoError(t, err)
+		assert.Equal(path, target)
+	})
+	t.Run("sym -> non existing", func(t *testing.T) {
+		target := filepath.Join(tmpDir, "non-existing")
+		sym := filepath.Join(tmpDir, "fail-sym")
+		err = os.Symlink(target, sym)
+		require.NoError(t, err)
+		_, err := resolveSymlinkPath(sym)
+		require.Error(t, err)
+		assert.ErrorContains(err, "could not resolve")
+	})
+	t.Run("sym -> dir", func(t *testing.T) {
+		target := filepath.Join(tmpDir, "dir")
+		err = os.MkdirAll(target, 0755)
+		require.NoError(t, err)
+		sym := filepath.Join(tmpDir, "sym-dir")
+		err = os.Symlink(target, sym)
+		require.NoError(t, err)
+		_, err := resolveSymlinkPath(sym)
+		require.Error(t, err)
+		assert.ErrorContains(err, "non-regular")
+	})
+}
+
 func TestAppendToDoneFile(t *testing.T) {
 	assert := assert.New(t)
 	prevConfig := config.ConfigPath()
@@ -129,7 +185,8 @@ func TestAppendToDoneFile(t *testing.T) {
 		randName := filepath.Base(tmpDir)
 		path := filepath.Join(config.ConfigPath(), "todos", "_etc", randName+".done")
 		assert.NoFileExists(path)
-		appendToDoneFile("text", randName)
+		err := appendToDoneFile("text", randName)
+		require.NoError(t, err)
 		rawData, err := os.ReadFile(path)
 		require.Nil(t, err)
 		assert.Equal("text", string(rawData))

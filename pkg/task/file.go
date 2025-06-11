@@ -103,7 +103,17 @@ func locateFiles() error {
 		return fmt.Errorf("failed listing files from %s: %w", todoPath, err)
 	}
 	for _, entry := range files {
-		if entry.Type().IsRegular() {
+		fpath := filepath.Join(todoPath, entry.Name())
+		isRegular := entry.Type().IsRegular()
+		isSymlink := false
+		if entry.Type()&os.ModeSymlink != 0 {
+			targetInfo, err := os.Stat(fpath)
+			if err != nil {
+				continue
+			}
+			isSymlink = targetInfo.Mode().IsRegular()
+		}
+		if isRegular || isSymlink {
 			key := filepath.Join(todoPath, entry.Name())
 			_, ok := FileTasks[key]
 			if !ok {
@@ -112,6 +122,33 @@ func locateFiles() error {
 		}
 	}
 	return nil
+}
+
+func resolveSymlinkPath(path string) (string, error) {
+	info, err := os.Lstat(path)
+	if err != nil && os.IsNotExist(err) {
+		return path, nil
+	} else if err != nil {
+		return "", fmt.Errorf("%w: could not lstat %q", err, path)
+	}
+	if info.Mode().IsRegular() {
+		return path, nil
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		targetPath, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			return "", fmt.Errorf("%w: could not resolve symlink %q", err, path)
+		}
+		targetInfo, err := os.Stat(targetPath)
+		if err != nil {
+			return "", fmt.Errorf("%w: could not stat target %q", err, targetPath)
+		}
+		if targetInfo.Mode().IsRegular() {
+			return targetPath, nil
+		}
+		return "", fmt.Errorf("symlink %q points to non-regular file %q", path, targetPath)
+	}
+	return "", fmt.Errorf("%q is neither a regular file nor a symlink to one", path)
 }
 
 func appendToDoneFile(text, path string) error {
@@ -124,7 +161,11 @@ func appendToDoneFile(text, path string) error {
 	}
 	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
 	path = filepath.Join(config.ConfigPath(), "todos", "_etc", path+".done")
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o655)
+	tpath, err := resolveSymlinkPath(path)
+	if err != nil {
+		return err
+	}
+	file, err := os.OpenFile(tpath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o655)
 	if err != nil {
 		return err
 	}
@@ -162,7 +203,11 @@ func removeFromDoneFile(ids []int, path string) ([]string, error) {
 	}
 	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
 	path = filepath.Join(config.ConfigPath(), "todos", "_etc", path+".done")
-	data, err := os.ReadFile(path)
+	tpath, err := resolveSymlinkPath(path)
+	if err != nil {
+		return tasks, err
+	}
+	data, err := os.ReadFile(tpath)
 	if err != nil {
 		return tasks, err
 	}
@@ -178,7 +223,7 @@ func removeFromDoneFile(ids []int, path string) ([]string, error) {
 			tasks = append(tasks, text)
 		}
 	}
-	err = os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644)
+	err = os.WriteFile(tpath, []byte(strings.Join(lines, "\n")), 0644)
 	if err != nil {
 		return tasks, err
 	}
@@ -265,7 +310,11 @@ func StoreFile(path string) error {
 	if err = mkDirs(); err != nil {
 		return err
 	}
-	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+	tpath, err := resolveSymlinkPath(path)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(tpath, []byte(strings.Join(lines, "\n")), 0644); err != nil {
 		return err
 	}
 	return nil
@@ -281,6 +330,10 @@ func StoreFiles() error {
 }
 
 func taskifyRandomFile(path string) ([]Task, error) {
+	path, err := resolveSymlinkPath(path)
+	if err != nil {
+		return []Task{}, err
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return []Task{}, err
