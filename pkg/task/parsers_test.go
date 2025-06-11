@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const dtFormat = "2006-01-02T15-04"
@@ -617,7 +618,8 @@ func TestParsePriority(t *testing.T) {
 	t.Run("invalid: (some )", func(t *testing.T) {
 		_, _, err = parsePriority("(some )")
 		assert.ErrorIs(err, terrors.ErrParse, "(some )")
-		assert.ErrorContains(err, "has spaces", "(some )")
+		assert.ErrorIs(err, terrors.ErrNotFound)
+		assert.ErrorContains(err, "priority", "(some )")
 	})
 	t.Run("valid: (eyo!!)", func(t *testing.T) {
 		line := "(eyo!!) some things"
@@ -626,6 +628,13 @@ func TestParsePriority(t *testing.T) {
 		assert.Equal(1, i, "start-index")
 		assert.Equal(5+1, j, "end-index")
 		assert.Equal("eyo!!", line[i:j])
+	})
+	t.Run("invalid: (some))eyo", func(t *testing.T) {
+		line := "(some))eyo"
+		_, _, err := parsePriority(line)
+		require.Error(t, err)
+		assert.ErrorIs(err, terrors.ErrParse)
+
 	})
 }
 
@@ -871,6 +880,6 @@ func TestResolveDates(t *testing.T) {
 	// TODO
 }
 
-func TestParseTaskS(t *testing.T) {
+func TestParseTasks(t *testing.T) {
 	// TODO
 }

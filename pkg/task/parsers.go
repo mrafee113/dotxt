@@ -253,14 +253,17 @@ func parsePriority(line string) (int, int, error) {
 	if line[0] != '(' {
 		return -1, -1, fmt.Errorf("%w: %w: (", terrors.ErrParse, terrors.ErrNotFound)
 	}
-	j := strings.IndexRune(line, ')')
-	if j < 2 {
+	ndx := 1
+	n := len(line)
+	for ; ndx < n && line[ndx] != ' '; ndx++ {
+
+	}
+	ndx--
+	if line[ndx] == ')' {
+		return 1, ndx, nil
+	} else {
 		return -1, -1, fmt.Errorf("%w: %w: priority", terrors.ErrParse, terrors.ErrNotFound)
 	}
-	if strings.IndexFunc(line[1:j], unicode.IsSpace) != -1 {
-		return -1, -1, fmt.Errorf("%w: has spaces, not a priority", terrors.ErrParse)
-	}
-	return 1, j, nil
 }
 
 func parseID(token string) (int, error) {
