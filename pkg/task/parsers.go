@@ -48,6 +48,9 @@ func parseDuration(dur string) (*time.Duration, error) {
 	} else if dur[0] == '+' {
 		dur = dur[1:]
 	}
+	if dur == "0" {
+		return utils.MkPtr(time.Duration(0)), nil
+	}
 
 	const day = 24 * time.Hour
 	var duration time.Duration

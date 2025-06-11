@@ -647,6 +647,11 @@ func TestParseDuration(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(time.Duration(0), *d)
 		}
+		for _, each := range []string{"0", "+0", "-0"} {
+			d, err := parseDuration(each)
+			require.NoError(t, err)
+			assert.Equal(time.Duration(0), *d)
+		}
 	})
 	t.Run("invalid: empty", func(t *testing.T) {
 		_, err = parseDuration("")
