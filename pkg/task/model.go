@@ -127,7 +127,6 @@ type Task struct {
 	ID       *int
 	EID      *int    // explicit id ($id=)
 	Text     *string // this is the line raw text
-	PText    string  // I don't know what this is, yet...
 	Hints    []string
 	Priority string
 	Parent   *int
@@ -137,7 +136,7 @@ type Task struct {
 }
 
 func (t *Task) String() string {
-	return fmt.Sprintf("%-2d %s", *t.ID, t.PText)
+	return fmt.Sprintf("%-2d %s", *t.ID, *t.Text)
 }
 
 func (t *Task) update(new *Task) error {
@@ -192,8 +191,6 @@ func (t *Task) renewLud() {
 	}
 	*t.Text = strings.Replace(*t.Text, oldLudText, "", 1)
 	*t.Text += " " + ludText
-	t.PText = strings.Replace(t.PText, oldLudText, "", 1)
-	t.PText += " " + ludText
 }
 
 func (t *Task) updateDate(field string, newDt *time.Time) error {
@@ -229,7 +226,6 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 		}
 	}
 	*t.Text = strings.Replace(*t.Text, curDtTxt, newDtTxt, 1)
-	t.PText = strings.Replace(t.PText, curDtTxt, newDtTxt, 1)
 	token.Raw = fmt.Sprintf("$%s=%s", field, newDtTxt)
 	token.Value = newDt
 	t.setField(field, newDt)

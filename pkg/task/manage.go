@@ -188,8 +188,6 @@ func DeprioritizeTask(id int, path string) error {
 	}
 
 	pString := fmt.Sprintf("(%s)", task.Priority)
-	task.PText = strings.TrimPrefix(task.PText, pString)
-	task.PText = strings.TrimPrefix(task.PText, " ")
 	*task.Text = strings.TrimPrefix(*task.Text, pString)
 	*task.Text = strings.TrimPrefix(*task.Text, " ")
 	for ndx := len(task.Tokens) - 1; ndx >= 0; ndx-- {
@@ -214,7 +212,6 @@ func PrioritizeTask(id int, priority, path string) error {
 	hadPriority := task.Priority != ""
 	task.Priority = priority
 	*task.Text = task.Priority + " " + *task.Text
-	task.PText = task.Priority + " " + task.PText
 	pToken := Token{
 		Type: TokenPriority, Raw: fmt.Sprintf("(%s)", priority), Key: "priority",
 		Value: strings.TrimSuffix(strings.TrimPrefix(priority, "("), ")"),
@@ -422,7 +419,6 @@ func IncrementProgressCount(id int, path string, value int) error {
 	}
 	progText = fmt.Sprintf("$p=%s", progText)
 	*task.Text = strings.Replace(*task.Text, prevRaw, progText, 1)
-	task.PText = strings.Replace(task.PText, prevRaw, progText, 1)
 	pToken.Raw = progText
 	pToken.Value = new(Progress)
 	*pToken.Value.(*Progress) = prog

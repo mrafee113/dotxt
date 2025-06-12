@@ -473,8 +473,6 @@ func ParseTask(id *int, line string) (*Task, error) {
 	for ndx := range tokens {
 		token := tokens[ndx]
 		switch token.Type {
-		case TokenText:
-			task.PText += token.Raw
 		case TokenID:
 			intVal := token.Value.(int)
 			switch token.Key {
