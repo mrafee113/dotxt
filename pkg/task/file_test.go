@@ -21,25 +21,25 @@ func TestGetTodoPathArgFromCmd(t *testing.T) {
 		cmd.Flags().String(key, "", "")
 		cmd.SetArgs([]string{fmt.Sprintf("--%s=%s", key, value)})
 		err := cmd.Execute()
-		assert.Nil(err)
+		assert.NoError(err)
 		return cmd
 	}
 	t.Run("with value", func(t *testing.T) {
 		cmd := helper("testarg", "file")
 		out, err := GetTodoPathArgFromCmd(cmd, "testarg")
-		assert.Nil(err)
+		assert.NoError(err)
 		assert.Equal("file", out)
 	})
 	t.Run("no value", func(t *testing.T) {
 		cmd := helper("testarg", "")
 		out, err := GetTodoPathArgFromCmd(cmd, "testarg")
-		assert.Nil(err)
+		assert.NoError(err)
 		assert.Equal(DefaultTodo, out)
 	})
 	t.Run("irrelavent arg", func(t *testing.T) {
 		cmd := helper("testarg", "")
 		out, err := GetTodoPathArgFromCmd(cmd, "irrelaventArg")
-		assert.Nil(err)
+		assert.NoError(err)
 		assert.Empty(out)
 	})
 }
@@ -68,7 +68,7 @@ func TestParseFilepath(t *testing.T) {
 	assert := assert.New(t)
 	helper := func(path string) string {
 		out, err := parseFilepath(path)
-		assert.Nil(err)
+		assert.NoError(err)
 		return out
 	}
 	t.Run("empty", func(t *testing.T) {
@@ -91,7 +91,7 @@ func TestPrepFileTaskFromPath(t *testing.T) {
 	path, _ = parseFilepath(path)
 	FileTasks[path] = make([]*Task, 0)
 	_, err = prepFileTaskFromPath(path)
-	assert.Nil(err)
+	assert.NoError(err)
 }
 
 func TestLocateFiles(t *testing.T) {
@@ -109,7 +109,7 @@ func TestLocateFiles(t *testing.T) {
 	// CreateFile(filepath.Join(tmpDir, "todos", "dir1", "file2"))
 	FileTasks = make(map[string][]*Task)
 	err = locateFiles()
-	assert.Nil(err)
+	assert.NoError(err)
 	_, ok := FileTasks[filepath.Join(tmpDir, "todos", "file1")]
 	assert.True(ok)
 	// _, ok = FileTasks[filepath.Join(tmpDir, "todos", "dir1", "file2")]
@@ -293,7 +293,7 @@ func TestLoadFile(t *testing.T) {
 
 	t.Run("non-existing", func(t *testing.T) {
 		err := LoadFile("random")
-		assert.NotNil(err)
+		assert.Error(err)
 		assert.ErrorIs(err, os.ErrNotExist)
 	})
 	t.Run("empty file", func(t *testing.T) {

@@ -223,7 +223,6 @@ func TestFormatProgress(t *testing.T) {
 	for _, each := range tokens {
 		out.WriteString(each.raw)
 	}
-	assert.Nil(nil)
 	assert.Equal("  14/   24( 58%) ====>      (unit)", out.String())
 }
 
@@ -372,10 +371,10 @@ func TestRenderList(t *testing.T) {
 	FileTasks[path] = append(FileTasks[path], task2)
 	FileTasks[path] = append(FileTasks[path], task3)
 	err := RenderList(&sm, path)
-	assert.Nil(err)
+	assert.NoError(err)
 
 	t.Run("nil metadata", func(t *testing.T) {
-		assert.NotNil(RenderList(nil, path))
+		assert.Error(RenderList(nil, path))
 	})
 	t.Run("id color", func(t *testing.T) {
 		assert.Equal("#52E052", sm.lists[path].tasks[0].tokens[8].color)

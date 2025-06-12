@@ -13,7 +13,7 @@ func TestSortTask(t *testing.T) {
 		arr = make([]*Task, len(lines))
 		for ndx, line := range lines {
 			task, err := ParseTask(&ndx, line)
-			assert.Nil(err)
+			assert.NoError(err)
 			assert.NotNil(task)
 			arr[ndx] = task
 		}

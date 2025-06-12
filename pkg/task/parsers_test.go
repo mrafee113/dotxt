@@ -40,12 +40,12 @@ func TestAdd(t *testing.T) {
 	path := "todo"
 	mockLoad(path)
 	path, err := prepFileTaskFromPath(path)
-	if assert.Nil(err) {
+	if assert.NoError(err) {
 		assert.True(strings.HasSuffix(path, "/todos/todo"))
 	}
 
 	err = AddTaskFromStr("testing", path)
-	if !assert.Nil(err) {
+	if !assert.NoError(err) {
 		assert.FailNow(err.Error())
 	}
 	task := FileTasks[path][0]
@@ -65,7 +65,7 @@ func TestParseTask(t *testing.T) {
 		weirdChars := "`!@#$%^&**()-_=+\\/'\"[]{};:.,"
 		for _, char := range weirdChars {
 			task, err = ParseTask(nil, string(char))
-			if assert.Nil(err, "ParseTask") {
+			if assert.NoError(err, "ParseTask") {
 				assert.Equalf(*task.Text, string(char), "char '%s'", string(char))
 			}
 		}
@@ -92,7 +92,7 @@ func TestParseTask(t *testing.T) {
 
 	t.Run("validate empty", func(t *testing.T) {
 		_, err = ParseTask(nil, "")
-		if !assert.NotNil(err, "ParseTask") {
+		if !assert.Error(err, "ParseTask") {
 			assert.FailNow(err.Error())
 		}
 		assert.ErrorIs(err, terrors.ErrEmptyText)
@@ -270,7 +270,7 @@ func TestParseTask(t *testing.T) {
 		dtVal := "2025-05-20T00-00"
 		dt, _ := time.ParseInLocation(dtFormat, dtVal, time.Local)
 		got, err := parseAbsoluteDatetime(dtVal)
-		if assert.Nil(err, "parseAbsoluteDatetime.err") {
+		if assert.NoError(err, "parseAbsoluteDatetime.err") {
 			assert.Exactly(dt, *got, "parseAbsoluteDatetime")
 		}
 	})
@@ -377,7 +377,7 @@ func TestParseTask(t *testing.T) {
 				continue
 			}
 			tdt, err := task.getField(key)
-			if !assert.Nil(err, key) {
+			if !assert.NoError(err, key) {
 				assert.Exactly(*dt, *tdt, key)
 			}
 		}
@@ -624,7 +624,7 @@ func TestParsePriority(t *testing.T) {
 	t.Run("valid: (eyo!!)", func(t *testing.T) {
 		line := "(eyo!!) some things"
 		i, j, err := parsePriority(line)
-		assert.Nil(err, "err")
+		assert.NoError(err, "err")
 		assert.Equal(1, i, "start-index")
 		assert.Equal(5+1, j, "end-index")
 		assert.Equal("eyo!!", line[i:j])
@@ -655,52 +655,52 @@ func TestParseDuration(t *testing.T) {
 	})
 	t.Run("invalid: empty", func(t *testing.T) {
 		_, err = parseDuration("")
-		if assert.NotNil(err) {
+		if assert.Error(err) {
 			assert.ErrorIs(err, terrors.ErrEmptyText)
 		}
 	})
 	t.Run("invalid: number conversion", func(t *testing.T) {
 		_, err = parseDuration("+1y*")
-		if assert.NotNil(err) {
+		if assert.Error(err) {
 			assert.ErrorIs(err, terrors.ErrParse)
 			assert.ErrorContains(err, "number conversion of ")
 		}
 	})
 	t.Run("invalid: unexpected time unit", func(t *testing.T) {
 		_, err = parseDuration("+1y2*")
-		if assert.NotNil(err) {
+		if assert.Error(err) {
 			assert.ErrorIs(err, terrors.ErrParse)
 			assert.ErrorContains(err, "unexpected time unit")
 		}
 	})
 	t.Run("invalid: trailing numbers", func(t *testing.T) {
 		_, err = parseDuration("+1y23")
-		if assert.NotNil(err) {
+		if assert.Error(err) {
 			assert.ErrorIs(err, terrors.ErrParse)
 			assert.ErrorContains(err, "trailing numbers without a ")
 		}
 	})
 	t.Run("valid: positive sign", func(t *testing.T) {
 		val, err := parseDuration("+1y2m3w4d5h6M7S")
-		if assert.Nil(err, "error") {
+		if assert.NoError(err, "error") {
 			assert.Equal((7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
 	})
 	t.Run("valid: no sign", func(t *testing.T) {
 		val, err := parseDuration("1y2m3w4d5h6M7S")
-		if assert.Nil(err, "error") {
+		if assert.NoError(err, "error") {
 			assert.Equal((7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
 	})
 	t.Run("valid: negative sign", func(t *testing.T) {
 		val, err := parseDuration("-1y2m3w4d5h6M7S")
-		if assert.Nil(err, "error") {
+		if assert.NoError(err, "error") {
 			assert.Equal(-(7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
 	})
 	t.Run("valid: scrambled", func(t *testing.T) {
 		val, err := parseDuration("2m4d3w7S6M1y5h")
-		if assert.Nil(err, "error") {
+		if assert.NoError(err, "error") {
 			assert.Equal((7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
 	})
@@ -734,7 +734,7 @@ func TestParseProgress(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("valid: 4-parter", func(t *testing.T) {
 		p, err := parseProgress("unit/cat/10/100")
-		if assert.Nil(err, "err") {
+		if assert.NoError(err, "err") {
 			assert.Equal("unit", p.Unit, "Unit")
 			assert.Equal("cat", p.Category, "Category")
 			assert.Equal(10, p.Count, "Count")
@@ -743,7 +743,7 @@ func TestParseProgress(t *testing.T) {
 	})
 	t.Run("valid: 3-parter", func(t *testing.T) {
 		p, err := parseProgress("unit/10/100")
-		if assert.Nil(err, "err") {
+		if assert.NoError(err, "err") {
 			assert.Equal("unit", p.Unit, "Unit")
 			assert.Equal("", p.Category, "Category")
 			assert.Equal(10, p.Count, "Count")
@@ -752,7 +752,7 @@ func TestParseProgress(t *testing.T) {
 	})
 	t.Run("valid: 2-parter", func(t *testing.T) {
 		p, err := parseProgress("unit/100")
-		if assert.Nil(err, "err") {
+		if assert.NoError(err, "err") {
 			assert.Equal("unit", p.Unit, "Unit")
 			assert.Equal("", p.Category, "Category")
 			assert.Equal(0, p.Count, "Count")
@@ -762,7 +762,7 @@ func TestParseProgress(t *testing.T) {
 	t.Run("invalid: sep count", func(t *testing.T) {
 		for _, val := range []string{"unnit", "unit/cat/count/doneCount/extraValue"} {
 			_, err := parseProgress(val)
-			if assert.NotNil(err, "err") {
+			if assert.Error(err, "err") {
 				assert.ErrorIs(err, terrors.ErrParse)
 				assert.ErrorContains(err, "$progress: number of `/` is either less than 2 or greater than 4")
 			}
@@ -771,7 +771,7 @@ func TestParseProgress(t *testing.T) {
 	t.Run("invalid: doneCount", func(t *testing.T) {
 		for _, val := range []string{"unit/cat/10/!!", "unit/10/!!", "unit/!!"} {
 			_, err := parseProgress(val)
-			if assert.NotNil(err, "err") {
+			if assert.Error(err, "err") {
 				assert.ErrorIs(err, terrors.ErrParse)
 				assert.ErrorIs(err, terrors.ErrValue)
 				assert.ErrorContains(err, "$progress: doneCount to int")
@@ -782,7 +782,7 @@ func TestParseProgress(t *testing.T) {
 	t.Run("invalid: count", func(t *testing.T) {
 		for _, val := range []string{"unit/cat/!!/100", "unit/!!/100"} {
 			_, err := parseProgress(val)
-			if assert.NotNil(err, "err") {
+			if assert.Error(err, "err") {
 				assert.ErrorIs(err, terrors.ErrParse)
 				assert.ErrorIs(err, terrors.ErrValue)
 				assert.ErrorContains(err, "$progress: count to int")
@@ -792,7 +792,7 @@ func TestParseProgress(t *testing.T) {
 	})
 	t.Run("invalid: minimum doneCount", func(t *testing.T) {
 		_, err := parseProgress("unit/cat/10/-1000")
-		if assert.NotNil(err, "err") {
+		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrParse)
 			assert.ErrorIs(err, terrors.ErrValue)
 			assert.ErrorContains(err, "$progress: doneCount minimum is 1")
@@ -800,7 +800,7 @@ func TestParseProgress(t *testing.T) {
 	})
 	t.Run("invalid: minimum count", func(t *testing.T) {
 		_, err := parseProgress("unit/cat/-10/100")
-		if assert.NotNil(err, "err") {
+		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrParse)
 			assert.ErrorIs(err, terrors.ErrValue)
 			assert.ErrorContains(err, "$progress: count minimum is 0")
@@ -808,7 +808,7 @@ func TestParseProgress(t *testing.T) {
 	})
 	t.Run("invalid: maximum count", func(t *testing.T) {
 		p, err := parseProgress("unit/cat/200/100")
-		assert.Nil(err, "err")
+		assert.NoError(err, "err")
 		assert.Equal(p.Count, 100) // if count is greater than or equals to doneCount, it becomes doneCount
 	})
 }
@@ -817,43 +817,43 @@ func TestUnparseProgress(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("valid: 2-parter", func(t *testing.T) {
 		val, err := unparseProgress(Progress{Unit: "unit", DoneCount: 100})
-		assert.Nil(err, "err")
+		assert.NoError(err, "err")
 		assert.Equal("unit/100", val)
 	})
 	t.Run("valid: 3-parter", func(t *testing.T) {
 		val, err := unparseProgress(Progress{Unit: "unit", Count: 10, DoneCount: 100})
-		assert.Nil(err, "err")
+		assert.NoError(err, "err")
 		assert.Equal("unit/10/100", val)
 	})
 	t.Run("valid: 4-parter", func(t *testing.T) {
 		val, err := unparseProgress(Progress{Unit: "unit", Category: "cat", Count: 10, DoneCount: 100})
-		assert.Nil(err, "err")
+		assert.NoError(err, "err")
 		assert.Equal("unit/cat/10/100", val)
 	})
 	t.Run("invalid: no unit", func(t *testing.T) {
 		_, err := unparseProgress(Progress{DoneCount: 100})
-		if assert.NotNil(err, "err") {
+		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrValue)
 			assert.ErrorContains(err, "unit cannot be empty")
 		}
 	})
 	t.Run("invalid: minimum doneCount", func(t *testing.T) {
 		_, err := unparseProgress(Progress{Unit: "unit"})
-		if assert.NotNil(err, "err") {
+		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrValue)
 			assert.ErrorContains(err, "doneCount cannot be less than 1")
 		}
 	})
 	t.Run("invalid: minimum count", func(t *testing.T) {
 		_, err := unparseProgress(Progress{Unit: "unit", Count: -1, DoneCount: 100})
-		if assert.NotNil(err, "err") {
+		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrValue)
 			assert.ErrorContains(err, "count cannot be less than 0")
 		}
 	})
 	t.Run("invalid: maximum count", func(t *testing.T) {
 		_, err := unparseProgress(Progress{Unit: "unit", Count: 200, DoneCount: 100})
-		if assert.NotNil(err, "err") {
+		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrValue)
 			assert.ErrorContains(err, "count cannot be greater than doneCount")
 		}
@@ -864,19 +864,19 @@ func TestParseAbsoluteDatetime(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("valid: %H-%M", func(t *testing.T) {
 		val, err := parseAbsoluteDatetime("2025-05-05T05-05")
-		assert.Nil(err, "err")
+		assert.NoError(err, "err")
 		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05")
 		assert.Exactly(*dt, *val)
 	})
 	t.Run("valid: %H-%M-%S", func(t *testing.T) {
 		val, err := parseAbsoluteDatetime("2025-05-05T05-05-05")
-		assert.Nil(err, "err")
+		assert.NoError(err, "err")
 		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05-05")
 		assert.Exactly(*dt, *val)
 	})
 	t.Run("invalid: no T", func(t *testing.T) {
 		_, err := parseAbsoluteDatetime("2025-05-05-05-05")
-		if assert.NotNil(err, "err") {
+		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrParse)
 			assert.ErrorContains(err, "datetime doesn't have 'T'")
 		}
@@ -884,7 +884,7 @@ func TestParseAbsoluteDatetime(t *testing.T) {
 	t.Run("invalid: not enough or too many dashes", func(t *testing.T) {
 		for _, val := range []string{"2025-05-05T05", "2025-05T05-05", "2025T05-05-05", "-3000-05-05T05-05-05"} {
 			_, err := parseAbsoluteDatetime(val)
-			if assert.NotNil(err, "err") {
+			if assert.Error(err, "err") {
 				assert.ErrorIs(err, terrors.ErrParse)
 				assert.ErrorContains(err, "datetime doesn't satisfy 3 <= dashCount <= 4")
 			}
