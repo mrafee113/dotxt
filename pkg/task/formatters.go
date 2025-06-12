@@ -40,7 +40,7 @@ if year < 1:
 			if 1 < day < 2: 1d2h
 			if day < 1:
 				if 2 < hour: 3h30M
-				if hour < 2: 1h30M25S
+				if hour < 2: 1h30M25s
 */
 func formatDuration(d *time.Duration) string {
 	totalSec := d.Seconds()

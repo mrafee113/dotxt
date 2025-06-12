@@ -78,7 +78,7 @@ func parseDuration(dur string) (*time.Duration, error) {
 			multiplier = time.Hour
 		case 'M':
 			multiplier = time.Minute
-		case 'S':
+		case 's':
 			multiplier = time.Second
 		default:
 			return nil, fmt.Errorf("%w: unexpected time unit %q", terrors.ErrParse, char)
@@ -96,7 +96,7 @@ func parseDuration(dur string) (*time.Duration, error) {
 func unparseDuration(dur time.Duration) string {
 	totalSec := int(dur.Seconds())
 	if totalSec == 0 {
-		return "0S"
+		return "0s"
 	}
 	var sign string
 	if totalSec < 0 {
@@ -140,7 +140,7 @@ func unparseDuration(dur time.Duration) string {
 		parts = append(parts, fmt.Sprintf("%dM", mins))
 	}
 	if secs > 0 || len(parts) == 0 {
-		parts = append(parts, fmt.Sprintf("%dS", secs))
+		parts = append(parts, fmt.Sprintf("%ds", secs))
 	}
 
 	return strings.Join(parts, "")

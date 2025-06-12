@@ -325,7 +325,7 @@ func TestParseTask(t *testing.T) {
 	})
 
 	t.Run("validate valid relative dates: relative dates", func(t *testing.T) {
-		task, _ = ParseTask(nil, "$due=+1y2m3w4d5h6M7S")
+		task, _ = ParseTask(nil, "$due=+1y2m3w4d5h6M7s")
 		dt = rightNow.Add(38898367 * time.Second)
 		count = 0
 		for _, tk := range task.Tokens {
@@ -338,7 +338,7 @@ func TestParseTask(t *testing.T) {
 		assert.Exactly(dt, *task.DueDate)
 	})
 	t.Run("validate valid relative dates: valid", func(t *testing.T) {
-		task, _ = ParseTask(nil, "$due=variable=lud;+1y2m3w4d5h6M7S")
+		task, _ = ParseTask(nil, "$due=variable=lud;+1y2m3w4d5h6M7s")
 		dt = rightNow.Add(38898367 * time.Second)
 		count = 0
 		for _, tk := range task.Tokens {
@@ -505,7 +505,7 @@ func TestParseTask(t *testing.T) {
 		assert.True(task.LastUpdated.After(*task.CreationDate))
 		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05")
 		*dt = dt.Add(time.Second)
-		assert.Exactly(*dt, *task.LastUpdated) // when lud <= c: lud=c+0S
+		assert.Exactly(*dt, *task.LastUpdated) // when lud <= c: lud=c+0s
 	})
 	t.Run("validate date semantics: due-c value dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$c=2025-05-05T05-05 $due=2023-05-05T05-05")
@@ -541,7 +541,7 @@ func TestParseTask(t *testing.T) {
 	})
 
 	t.Run("validate every", func(t *testing.T) {
-		task, _ = ParseTask(nil, "$every=9y364d23h59M59S")
+		task, _ = ParseTask(nil, "$every=9y364d23h59M59s")
 		val := (9*365*24*60*60 + 364*24*60*60 + 23*60*60 + 59*60 + 59) * time.Second
 		assert.Exactly(val, *task.Every, "Every")
 		found = false
@@ -554,7 +554,7 @@ func TestParseTask(t *testing.T) {
 		assert.True(found, "found")
 	})
 	t.Run("validate every: minimum", func(t *testing.T) {
-		task, _ = ParseTask(nil, "$every=23h59M59S")
+		task, _ = ParseTask(nil, "$every=23h59M59s")
 		var foundDur, foundTxt bool
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDuration && tk.Key == "every" {
@@ -562,7 +562,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$every=23h59M59S", tk.Raw)
+				assert.Equal("$every=23h59M59s", tk.Raw)
 			}
 		}
 		assert.False(foundDur, "found duration")
@@ -642,7 +642,7 @@ func TestParseDuration(t *testing.T) {
 	assert := assert.New(t)
 	var err error
 	t.Run("zero value", func(t *testing.T) {
-		for _, each := range "ymwdhMS" {
+		for _, each := range "ymwdhMs" {
 			d, err := parseDuration("0" + string(each))
 			require.NoError(t, err)
 			assert.Equal(time.Duration(0), *d)
@@ -681,25 +681,25 @@ func TestParseDuration(t *testing.T) {
 		}
 	})
 	t.Run("valid: positive sign", func(t *testing.T) {
-		val, err := parseDuration("+1y2m3w4d5h6M7S")
+		val, err := parseDuration("+1y2m3w4d5h6M7s")
 		if assert.NoError(err, "error") {
 			assert.Equal((7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
 	})
 	t.Run("valid: no sign", func(t *testing.T) {
-		val, err := parseDuration("1y2m3w4d5h6M7S")
+		val, err := parseDuration("1y2m3w4d5h6M7s")
 		if assert.NoError(err, "error") {
 			assert.Equal((7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
 	})
 	t.Run("valid: negative sign", func(t *testing.T) {
-		val, err := parseDuration("-1y2m3w4d5h6M7S")
+		val, err := parseDuration("-1y2m3w4d5h6M7s")
 		if assert.NoError(err, "error") {
 			assert.Equal(-(7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
 	})
 	t.Run("valid: scrambled", func(t *testing.T) {
-		val, err := parseDuration("2m4d3w7S6M1y5h")
+		val, err := parseDuration("2m4d3w7s6M1y5h")
 		if assert.NoError(err, "error") {
 			assert.Equal((7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
@@ -718,7 +718,7 @@ func TestUnparseDuration(t *testing.T) {
 	)
 	t.Run("huge positive", func(t *testing.T) {
 		dur := unparseDuration(6*year + 1000*month + 1000*day + 1000*hour + 1000*min + 1000*sec)
-		assert.Equal("265y17d8h56M40S", dur)
+		assert.Equal("265y17d8h56M40s", dur)
 	})
 	t.Run("negative", func(t *testing.T) {
 		dur := unparseDuration(-1 * day)
@@ -726,7 +726,7 @@ func TestUnparseDuration(t *testing.T) {
 	})
 	t.Run("zero", func(t *testing.T) {
 		dur := unparseDuration(time.Duration(0))
-		assert.Equal("0S", dur)
+		assert.Equal("0s", dur)
 	})
 }
 
