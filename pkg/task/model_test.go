@@ -197,13 +197,13 @@ func TestUpdateDate(t *testing.T) {
 		dt, _ := parseAbsoluteDatetime("2025-07-05T05-05")
 		err := task.updateDate("due", dt)
 		require.NoError(t, err)
-		assert.Equal("$due=2025-07-05T05-05-00", task.Norm())
+		assert.Equal("$due=2025-07-05T05-05", task.Norm())
 		assert.Equal(*dt, *task.Time.DueDate)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
 				found = true
-				assert.Equal("$due=2025-07-05T05-05-00", tk.Raw)
+				assert.Equal("$due=2025-07-05T05-05", tk.Raw)
 				assert.Equal(*dt, *tk.Value.(*time.Time))
 			}
 		}

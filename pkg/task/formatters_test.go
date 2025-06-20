@@ -442,7 +442,7 @@ func TestPrintLists(t *testing.T) {
 	id2 := 1
 	task2, _ := ParseTask(&id2, "normal task")
 	id3 := 210
-	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500")
+	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit//223/3500")
 
 	capture := func(maxlen, minlen int) []string {
 		realStdout := os.Stdout

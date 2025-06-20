@@ -34,6 +34,10 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 }
 
 func unparseAbsoluteDatetime(absDt time.Time) string {
+	seconds, _ := strconv.Atoi(absDt.Format("05"))
+	if seconds == 0 {
+		return absDt.Format("2006-01-02T15-04")
+	}
 	return absDt.Format("2006-01-02T15-04-05")
 }
 
@@ -183,20 +187,25 @@ func parseTmpRelativeDatetime(field, dt string) (*temporalNode, error) {
 }
 
 func parseProgress(token string) (*Progress, error) {
-	subTokens := strings.Split(token, "/")
+	if strings.Count(token, "/") != 3 {
+		return nil, fmt.Errorf("%w: $progress: number of '/' does not equal 3: %s", terrors.ErrParse, token)
+	}
 	var unit, category string
 	var count, doneCount string = "0", "0"
-	if ln := len(subTokens); ln == 4 {
-		unit, category = subTokens[0], subTokens[1]
-		count, doneCount = subTokens[2], subTokens[3]
-	} else if ln == 3 {
-		unit = subTokens[0]
-		count, doneCount = subTokens[1], subTokens[2]
-	} else if ln == 2 {
-		unit = subTokens[0]
-		doneCount = subTokens[1]
-	} else {
-		return nil, fmt.Errorf("%w: $progress: number of `/` is either less than 2 or greater than 4: %s", terrors.ErrParse, token)
+	firstNdx := strings.IndexByte(token, '/')
+	secondNdx := firstNdx + 1 + strings.IndexByte(token[firstNdx+1:], '/')
+	thirdNdx := secondNdx + 1 + strings.IndexByte(token[secondNdx+1:], '/')
+	if firstNdx > 0 {
+		unit = token[0:firstNdx]
+	}
+	if secondNdx > firstNdx+1 {
+		category = token[firstNdx+1 : secondNdx]
+	}
+	if thirdNdx > secondNdx+1 {
+		count = token[secondNdx+1 : thirdNdx]
+	}
+	if thirdNdx < len(token)-1 {
+		doneCount = token[thirdNdx+1:]
 	}
 	doneCountInt, err := strconv.Atoi(doneCount)
 	if err != nil {
@@ -232,21 +241,11 @@ func unparseProgress(progress Progress) (string, error) {
 	if progress.Count > progress.DoneCount {
 		return "", fmt.Errorf("%w: progress count cannot be greater than doneCount: %d > %d", terrors.ErrValue, progress.Count, progress.DoneCount)
 	}
-	if progress.Category != "" && progress.Count > 0 {
-		return fmt.Sprintf(
-			"%s/%s/%d/%d",
-			progress.Unit, progress.Category,
-			progress.Count, progress.DoneCount,
-		), nil
-	}
-	if progress.Count > 0 {
-		return fmt.Sprintf(
-			"%s/%d/%d",
-			progress.Unit,
-			progress.Count, progress.DoneCount,
-		), nil
-	}
-	return fmt.Sprintf("%s/%d", progress.Unit, progress.DoneCount), nil
+	return fmt.Sprintf(
+		"%s/%s/%d/%d",
+		progress.Unit, progress.Category,
+		progress.Count, progress.DoneCount,
+	), nil
 }
 
 func parsePriority(line string) (int, int, error) {

@@ -490,7 +490,7 @@ func TestIncrementProgressCount(t *testing.T) {
 			if tk.Type == TokenProgress {
 				found = true
 				assert.Equal(0, tk.Value.(*Progress).Count)
-				assert.Contains(tk.Raw, "unit/100")
+				assert.Contains(tk.Raw, "unit/cat/0/100")
 			}
 		}
 		assert.True(found)

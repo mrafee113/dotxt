@@ -759,7 +759,7 @@ func TestParseProgress(t *testing.T) {
 		}
 	})
 	t.Run("valid: 3-parter", func(t *testing.T) {
-		p, err := parseProgress("unit/10/100")
+		p, err := parseProgress("unit//10/100")
 		if assert.NoError(err, "err") {
 			assert.Equal("unit", p.Unit, "Unit")
 			assert.Equal("", p.Category, "Category")
@@ -768,7 +768,7 @@ func TestParseProgress(t *testing.T) {
 		}
 	})
 	t.Run("valid: 2-parter", func(t *testing.T) {
-		p, err := parseProgress("unit/100")
+		p, err := parseProgress("unit///100")
 		if assert.NoError(err, "err") {
 			assert.Equal("unit", p.Unit, "Unit")
 			assert.Equal("", p.Category, "Category")
@@ -781,12 +781,12 @@ func TestParseProgress(t *testing.T) {
 			_, err := parseProgress(val)
 			if assert.Error(err, "err") {
 				assert.ErrorIs(err, terrors.ErrParse)
-				assert.ErrorContains(err, "$progress: number of `/` is either less than 2 or greater than 4")
+				assert.ErrorContains(err, "$progress: number of '/' does not equal 3")
 			}
 		}
 	})
 	t.Run("invalid: doneCount", func(t *testing.T) {
-		for _, val := range []string{"unit/cat/10/!!", "unit/10/!!", "unit/!!"} {
+		for _, val := range []string{"unit/cat/10/!!", "unit//10/!!", "unit///!!"} {
 			_, err := parseProgress(val)
 			if assert.Error(err, "err") {
 				assert.ErrorIs(err, terrors.ErrParse)
@@ -797,7 +797,7 @@ func TestParseProgress(t *testing.T) {
 		}
 	})
 	t.Run("invalid: count", func(t *testing.T) {
-		for _, val := range []string{"unit/cat/!!/100", "unit/!!/100"} {
+		for _, val := range []string{"unit/cat/!!/100", "unit//!!/100"} {
 			_, err := parseProgress(val)
 			if assert.Error(err, "err") {
 				assert.ErrorIs(err, terrors.ErrParse)
@@ -835,12 +835,12 @@ func TestUnparseProgress(t *testing.T) {
 	t.Run("valid: 2-parter", func(t *testing.T) {
 		val, err := unparseProgress(Progress{Unit: "unit", DoneCount: 100})
 		assert.NoError(err, "err")
-		assert.Equal("unit/100", val)
+		assert.Equal("unit//0/100", val)
 	})
 	t.Run("valid: 3-parter", func(t *testing.T) {
 		val, err := unparseProgress(Progress{Unit: "unit", Count: 10, DoneCount: 100})
 		assert.NoError(err, "err")
-		assert.Equal("unit/10/100", val)
+		assert.Equal("unit//10/100", val)
 	})
 	t.Run("valid: 4-parter", func(t *testing.T) {
 		val, err := unparseProgress(Progress{Unit: "unit", Category: "cat", Count: 10, DoneCount: 100})
