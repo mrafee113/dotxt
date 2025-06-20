@@ -90,7 +90,7 @@ func TestUpdate(t *testing.T) {
 		assert.Equal(*dt, *task.Deadline)
 		checkToken(task, "dead", dt)
 		dt, _ = parseAbsoluteDatetime("2024-05-10T05-05")
-		assert.Equal(*dt, task.Reminders[0])
+		assert.Equal(*dt, *task.Reminders[0])
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key[0] == 'r' {
 				assert.True(strings.HasPrefix(tk.Raw, "$r="))

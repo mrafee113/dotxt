@@ -280,7 +280,7 @@ func parseID(token string) (int, error) {
 	return val, nil
 }
 
-func resolveDates(tokens []Token) []error {
+func resolveDates(tokens []*Token) []error {
 	tokenKeyToNdx := make(map[string]int)
 	nodes := make(map[string]*temporalNode)
 	resolved := make(map[string]time.Time)
@@ -292,7 +292,7 @@ func resolveDates(tokens []Token) []error {
 			continue
 		}
 		if token.Key == "r" {
-			token.Key = fmt.Sprintf("r%d", ndx)
+			token.Key = fmt.Sprintf("r%d", ndx) // TODO: check whether I should return this to normal
 		}
 		totalDateCount++
 		tokenKeyToNdx[token.Key] = ndx
@@ -345,6 +345,11 @@ func resolveDates(tokens []Token) []error {
 			errs = append(errs, fmt.Errorf("%w: somehow the date '%s' was not resolved", terrors.ErrNotFound, key))
 		}
 	}
+	for _, tk := range tokens {
+		if tk.Type == TokenDate && strings.HasPrefix(tk.Key, "r") {
+			tk.Key = "r"
+		}
+	}
 	return errs
 }
 
@@ -354,19 +359,19 @@ func dateToTextToken(dt *Token) {
 	dt.Value = dt.Raw
 }
 
-func tokenizeLine(line string) ([]Token, []error) {
+func tokenizeLine(line string) ([]*Token, []error) {
 	specialFields := make(map[string]bool)
-	var tokens []Token
+	var tokens []*Token
 	var errs []error
 	handleTokenText := func(tokenStr string, err error) {
 		if err != nil {
 			errs = append(errs, err)
 		}
-		tokens = append(tokens, Token{Type: TokenText, Raw: tokenStr, Value: tokenStr})
+		tokens = append(tokens, &Token{Type: TokenText, Raw: tokenStr, Value: tokenStr})
 	}
 	if i, j, err := parsePriority(line); err == nil {
 		p := line[i:j]
-		tokens = append(tokens, Token{
+		tokens = append(tokens, &Token{
 			Type: TokenPriority, Key: "priority",
 			Value: p,
 			Raw:   fmt.Sprintf("(%s)", p),
@@ -384,7 +389,7 @@ func tokenizeLine(line string) ([]Token, []error) {
 				handleTokenText(tokenStr, nil)
 				continue
 			}
-			tokens = append(tokens, Token{
+			tokens = append(tokens, &Token{
 				Type: TokenHint, Raw: tokenStr,
 				Key: tokenStr[0:1], Value: tokenStr[1:],
 			})
@@ -409,7 +414,7 @@ func tokenizeLine(line string) ([]Token, []error) {
 					handleTokenText(tokenStr, fmt.Errorf("%w: $%s", err, key))
 					continue
 				}
-				tokens = append(tokens, Token{
+				tokens = append(tokens, &Token{
 					Type: TokenID, Raw: tokenStr,
 					Key: key, Value: intVal,
 				})
@@ -423,7 +428,7 @@ func tokenizeLine(line string) ([]Token, []error) {
 						continue
 					}
 				}
-				tokens = append(tokens, Token{
+				tokens = append(tokens, &Token{
 					Type: TokenDate, Raw: tokenStr,
 					Key: key, Value: dt,
 				})
@@ -435,7 +440,7 @@ func tokenizeLine(line string) ([]Token, []error) {
 					handleTokenText(tokenStr, fmt.Errorf("%w: $every: %w", terrors.ErrParse, err))
 					continue
 				}
-				tokens = append(tokens, Token{
+				tokens = append(tokens, &Token{
 					Type: TokenDuration, Raw: tokenStr,
 					Key: key, Value: duration,
 				})
@@ -445,7 +450,7 @@ func tokenizeLine(line string) ([]Token, []error) {
 					handleTokenText(tokenStr, err)
 					continue
 				}
-				tokens = append(tokens, Token{
+				tokens = append(tokens, &Token{
 					Type: TokenProgress, Raw: tokenStr,
 					Key: "p", Value: progress,
 				})
@@ -490,21 +495,21 @@ func ParseTask(id *int, line string) (*Task, error) {
 			case "c":
 				val := token.Value.(*time.Time)
 				if val.After(rightNow) {
-					dateToTextToken(&tokens[ndx])
+					dateToTextToken(tokens[ndx])
 					continue
 				}
 				task.CreationDate = val
 			case "lud":
 				val := token.Value.(*time.Time)
 				if val.After(rightNow) {
-					dateToTextToken(&tokens[ndx])
+					dateToTextToken(tokens[ndx])
 					continue
 				}
 				task.LastUpdated = val
 			case "due":
 				task.DueDate = token.Value.(*time.Time)
 			case "r":
-				task.Reminders = append(task.Reminders, *token.Value.(*time.Time))
+				task.Reminders = append(task.Reminders, token.Value.(*time.Time))
 			case "end":
 				task.EndDate = token.Value.(*time.Time)
 			case "dead":
@@ -519,7 +524,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	task.Tokens = tokens
 	if task.Temporal.CreationDate == nil {
 		task.Temporal.CreationDate = &rightNow
-		task.Tokens = append(task.Tokens, Token{
+		task.Tokens = append(task.Tokens, &Token{
 			Type: TokenDate, Raw: fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow)),
 			Key: "c", Value: &rightNow,
 		})
@@ -527,7 +532,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	if task.Temporal.LastUpdated == nil {
 		task.Temporal.LastUpdated = &rightNow
 		ludVal := rightNow.Add(time.Second)
-		task.Tokens = append(task.Tokens, Token{
+		task.Tokens = append(task.Tokens, &Token{
 			Type: TokenDate, Raw: "$lud=" + unparseDuration(time.Duration(0)),
 			Key: "lud", Value: &ludVal,
 		})
@@ -535,7 +540,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	findToken := func(tipe TokenType, key string) (*Token, int) {
 		for ndx := range task.Tokens {
 			if task.Tokens[ndx].Type == tipe && task.Tokens[ndx].Key == key {
-				return &task.Tokens[ndx], ndx
+				return task.Tokens[ndx], ndx
 			}
 		}
 		return nil, -1
@@ -599,9 +604,9 @@ func ParseTask(id *int, line string) (*Task, error) {
 			for ndxTk := range task.Tokens {
 				if task.Tokens[ndxTk].Type == TokenDate &&
 					strings.HasPrefix(task.Tokens[ndxTk].Key, "r") &&
-					*task.Tokens[ndxTk].Value.(*time.Time) == task.Reminders[ndx] {
+					*task.Tokens[ndxTk].Value.(*time.Time) == *task.Reminders[ndx] {
 					task.Reminders = slices.Delete(task.Reminders, ndx, ndx+1)
-					dateToTextToken(&task.Tokens[ndxTk])
+					dateToTextToken(task.Tokens[ndxTk])
 					break
 				}
 			}

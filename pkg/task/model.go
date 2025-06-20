@@ -45,7 +45,7 @@ type Temporal struct {
 	CreationDate *time.Time
 	LastUpdated  *time.Time
 	DueDate      *time.Time
-	Reminders    []time.Time
+	Reminders    []*time.Time
 	EndDate      *time.Time
 	Deadline     *time.Time
 	Every        *time.Duration
@@ -123,7 +123,7 @@ type temporalNode struct {
 }
 
 type Task struct {
-	Tokens   []Token
+	Tokens   []*Token
 	ID       *int
 	EID      *int // explicit id ($id=)
 	Hints    []string
@@ -173,12 +173,12 @@ func (t *Task) renewLud() {
 	var token *Token
 	for ndx := range t.Tokens {
 		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == "lud" {
-			token = &t.Tokens[ndx]
+			token = t.Tokens[ndx]
 			break
 		}
 	}
 	if token == nil {
-		t.Tokens = append(t.Tokens, Token{
+		t.Tokens = append(t.Tokens, &Token{
 			Type: TokenDate, Key: "lud",
 			Raw: ludText, Value: &rightNow,
 		})
@@ -193,7 +193,7 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 	var token *Token
 	for ndx := range t.Tokens {
 		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == field {
-			token = &t.Tokens[ndx]
+			token = t.Tokens[ndx]
 			break
 		}
 	}

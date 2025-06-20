@@ -320,7 +320,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 				TokenDate, TokenID, TokenDuration,
 				TokenPriority, TokenProgress,
 			}, t.Tokens[ndx].Type) {
-				out[t.Tokens[ndx].Key] = &t.Tokens[ndx]
+				out[t.Tokens[ndx].Key] = t.Tokens[ndx]
 			}
 		}
 		return out
@@ -366,12 +366,12 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			continue
 		case TokenText:
 			out.tokens = append(out.tokens, &rToken{
-				token: &t.Tokens[ndx], raw: t.Tokens[ndx].Raw,
+				token: t.Tokens[ndx], raw: t.Tokens[ndx].Raw,
 			})
 		case TokenID:
 			out.tokens = append(out.tokens, &rToken{
-				token: &t.Tokens[ndx],
-				raw:   formatID(t.Tokens[ndx]),
+				token: t.Tokens[ndx],
+				raw:   formatID(*t.Tokens[ndx]),
 				color: "",
 			})
 			listMetadata.idList[t.Tokens[ndx].Value.(int)] = true
@@ -386,24 +386,24 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 				color = "print.color-plus"
 			}
 			out.tokens = append(out.tokens, &rToken{
-				token: &t.Tokens[ndx],
+				token: t.Tokens[ndx],
 				raw:   t.Tokens[ndx].Raw, color: color,
 			})
 		case TokenDate:
 			if slices.Contains([]string{"due", "end", "dead"}, t.Tokens[ndx].Key) {
 				val, err := t.Temporal.getField(t.Tokens[ndx].Key)
 				if err != nil {
-					addAsRegular(&t.Tokens[ndx])
+					addAsRegular(t.Tokens[ndx])
 					continue
 				}
 				relStr, ok := temporalFormatFallback[t.Tokens[ndx].Key]
 				if !ok {
-					addAsRegular(&t.Tokens[ndx])
+					addAsRegular(t.Tokens[ndx])
 					continue
 				}
 				rel, err := t.Temporal.getField(relStr)
 				if err != nil {
-					addAsRegular(&t.Tokens[ndx])
+					addAsRegular(t.Tokens[ndx])
 					continue
 				}
 				color := "print.color-date-" + t.Tokens[ndx].Key
@@ -421,45 +421,45 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 					}
 				}
 				out.tokens = append(out.tokens, &rToken{
-					token: &t.Tokens[ndx],
+					token: t.Tokens[ndx],
 					raw:   fmt.Sprintf("$%s=%s", t.Tokens[ndx].Key, formatAbsoluteDatetime(val, rel)),
 					color: color,
 				})
 			}
 			if strings.HasPrefix(t.Tokens[ndx].Key, "r") {
 				if reminderCount >= len(t.Temporal.Reminders) {
-					addAsRegular(&t.Tokens[ndx])
+					addAsRegular(t.Tokens[ndx])
 					continue
 				}
 				val := t.Temporal.Reminders[reminderCount]
 				reminderCount++
 				relStr, ok := temporalFormatFallback["r"]
 				if !ok {
-					addAsRegular(&t.Tokens[ndx])
+					addAsRegular(t.Tokens[ndx])
 					continue
 				}
 				rel, err := t.Temporal.getField(relStr)
 				if err != nil {
-					addAsRegular(&t.Tokens[ndx])
+					addAsRegular(t.Tokens[ndx])
 					continue
 				}
 				if val.Sub(rightNow) < 0 {
 					continue
 				}
 				out.tokens = append(out.tokens, &rToken{
-					token: &t.Tokens[ndx],
-					raw:   fmt.Sprintf("$r=%s", formatAbsoluteDatetime(&val, rel)),
+					token: t.Tokens[ndx],
+					raw:   fmt.Sprintf("$r=%s", formatAbsoluteDatetime(val, rel)),
 					color: "print.color-date-r",
 				})
 			}
 		case TokenDuration:
 			out.tokens = append(out.tokens, &rToken{
-				token: &t.Tokens[ndx],
+				token: t.Tokens[ndx],
 				raw:   fmt.Sprintf("$every=%s", formatDuration(t.Every)),
 				color: "print.color-every",
 			})
 		default:
-			addAsRegular(&t.Tokens[ndx])
+			addAsRegular(t.Tokens[ndx])
 		}
 	}
 	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false, -1)))

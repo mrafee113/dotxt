@@ -215,11 +215,11 @@ func PrioritizeTask(id int, priority, path string) error {
 	if hadPriority {
 		for ndx := range task.Tokens {
 			if task.Tokens[ndx].Type == TokenPriority {
-				task.Tokens[ndx] = pToken
+				task.Tokens[ndx] = &pToken
 			}
 		}
 	} else {
-		task.Tokens = append([]Token{pToken}, task.Tokens...)
+		task.Tokens = append([]*Token{&pToken}, task.Tokens...)
 	}
 	return nil
 }
@@ -401,7 +401,7 @@ func IncrementProgressCount(id int, path string, value int) error {
 	var pToken *Token
 	for ndx := range task.Tokens {
 		if task.Tokens[ndx].Type == TokenProgress {
-			pToken = &task.Tokens[ndx]
+			pToken = task.Tokens[ndx]
 		}
 	}
 	if pToken == nil {

@@ -361,7 +361,13 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$r=-2d $due=1w $end=4m")
 		assert.Exactly(rightNow.Add(7*24*60*60*time.Second), *task.DueDate, "DueDate")
 		assert.Exactly(rightNow.Add((7*24*60*60+4*30*24*60*60)*time.Second), *task.EndDate, "EndDate")
-		assert.Contains(task.Reminders, rightNow.Add((7-2)*24*60*60*time.Second), "Reminders")
+		found = false
+		for _, r := range task.Reminders {
+			if r.Equal(rightNow.Add((7 - 2) * 24 * 60 * 60 * time.Second)) {
+				found = true
+			}
+		}
+		assert.True(found)
 	})
 
 	t.Run("validate date semantics: maximum count", func(t *testing.T) {
@@ -372,8 +378,13 @@ func TestParseTask(t *testing.T) {
 			dt, _ := parseAbsoluteDatetime("2026-06-06T00-00")
 			if key == "r" {
 				assert.Equal(2, len(task.Reminders), "r count")
-				assert.Contains(task.Reminders, *dt, "Reminders")
-				assert.Contains(task.Reminders, dt.Add(365*24*60*60*time.Second), "Reminders")
+				rCount := 0
+				for _, r := range task.Reminders {
+					if r.Equal(*dt) || r.Equal(dt.Add(365*24*60*60*time.Second)) {
+						rCount++
+					}
+				}
+				assert.Equal(2, rCount)
 				continue
 			}
 			tdt, err := task.getField(key)
@@ -528,7 +539,7 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$r=variable=c;-1w $r=variable=c;1w $c=2025-05-05T05-05")
 		dt, _ := parseAbsoluteDatetime("2025-05-12T05-05")
 		if assert.Len(task.Reminders, 1, "r count") {
-			assert.Exactly(*dt, task.Reminders[0], "Reminders")
+			assert.Exactly(*dt, *task.Reminders[0], "Reminders")
 		}
 		found = false
 		for _, tk := range task.Tokens {
