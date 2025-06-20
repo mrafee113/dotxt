@@ -139,7 +139,7 @@ func TestAppendToTask(t *testing.T) {
 	require.Nil(t, err)
 	task := FileTasks[path][1]
 	dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
-	assert.Equal(*dt, *task.DueDate)
+	assert.Equal(*dt, *task.Time.DueDate)
 	assert.Len(task.Hints, 3)
 	assert.Equal([]string{"+prj", "@at", "#tag"}, func() []string {
 		var out []string
@@ -165,7 +165,7 @@ func TestPrependToTask(t *testing.T) {
 	require.Nil(t, err)
 	task := FileTasks[path][1]
 	dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
-	assert.Equal(*dt, *task.DueDate)
+	assert.Equal(*dt, *task.Time.DueDate)
 	assert.Len(task.Hints, 3)
 	assert.Equal([]string{"+prj", "@at", "#tag"}, func() []string {
 		var out []string
@@ -196,7 +196,7 @@ func TestReplaceTask(t *testing.T) {
 	require.Nil(t, err)
 	task := FileTasks[path][1]
 	dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
-	assert.Equal(*dt, *task.DueDate)
+	assert.Equal(*dt, *task.Time.DueDate)
 	assert.Len(task.Hints, 3)
 	assert.Equal([]string{"+prj", "@at", "#tag"}, func() []string {
 		var out []string
@@ -225,7 +225,7 @@ func TestDeduplicateList(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(FileTasks[path], 3)
 	dt, _ := parseAbsoluteDatetime("2024-05-05T05-05")
-	assert.Equal(*dt, *FileTasks[path][1].CreationDate)
+	assert.Equal(*dt, *FileTasks[path][1].Time.CreationDate)
 	assert.Equal("0", FileTasks[path][0].Norm())
 	assert.Equal("3", FileTasks[path][2].Norm())
 }
@@ -522,8 +522,8 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		for dt.Before(rightNow) {
 			dt = utils.MkPtr(dt.Add(365 * 24 * 60 * 60 * time.Second))
 		}
-		assert.Equal(*dt, *FileTasks[path][0].DueDate)
-		dueStr := unparseRelativeDatetime(*FileTasks[path][0].DueDate, *FileTasks[path][0].CreationDate)
+		assert.Equal(*dt, *FileTasks[path][0].Time.DueDate)
+		dueStr := unparseRelativeDatetime(*FileTasks[path][0].Time.DueDate, *FileTasks[path][0].Time.CreationDate)
 		found := false
 		for _, tk := range FileTasks[path][0].Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
@@ -545,8 +545,8 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		for dt.Before(rightNow) {
 			dt = utils.MkPtr(dt.Add(365 * 24 * 60 * 60 * time.Second))
 		}
-		assert.Equal(*dt, *FileTasks[path][6].DueDate)
-		dueStr := unparseRelativeDatetime(*FileTasks[path][6].DueDate, *FileTasks[path][6].CreationDate)
+		assert.Equal(*dt, *FileTasks[path][6].Time.DueDate)
+		dueStr := unparseRelativeDatetime(*FileTasks[path][6].Time.DueDate, *FileTasks[path][6].Time.CreationDate)
 		found := false
 		for _, tk := range FileTasks[path][6].Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
@@ -555,6 +555,6 @@ func TestCheckAndRecurTasks(t *testing.T) {
 			}
 		}
 		assert.True(found)
-		assert.Equal(dt.Add(30*24*60*60*time.Second), *FileTasks[path][6].Deadline)
+		assert.Equal(dt.Add(30*24*60*60*time.Second), *FileTasks[path][6].Time.Deadline)
 	})
 }

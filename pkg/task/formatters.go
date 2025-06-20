@@ -339,18 +339,18 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 	}
 
 	var dominantColor, defaultColor string = func() (string, string) {
-		if t.Temporal.DueDate != nil && t.Temporal.DueDate.Sub(rightNow) <= 0 {
-			if t.Temporal.EndDate == nil && t.Temporal.Deadline == nil {
+		if t.Time.DueDate != nil && t.Time.DueDate.Sub(rightNow) <= 0 {
+			if t.Time.EndDate == nil && t.Time.Deadline == nil {
 				return "print.color-burnt", ""
 			}
-			if t.Temporal.EndDate != nil {
-				if t.Temporal.EndDate.Sub(rightNow) <= 0 {
+			if t.Time.EndDate != nil {
+				if t.Time.EndDate.Sub(rightNow) <= 0 {
 					return "print.color-burnt", ""
 				}
 				return "", "print.color-running-event-text"
 			}
-			if t.Temporal.Deadline != nil {
-				if t.Temporal.Deadline.Sub(rightNow) <= 0 {
+			if t.Time.Deadline != nil {
+				if t.Time.Deadline.Sub(rightNow) <= 0 {
 					return "print.color-burnt", ""
 				}
 				return "", ""
@@ -391,7 +391,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			})
 		case TokenDate:
 			if slices.Contains([]string{"due", "end", "dead"}, t.Tokens[ndx].Key) {
-				val, err := t.Temporal.getField(t.Tokens[ndx].Key)
+				val, err := t.Time.getField(t.Tokens[ndx].Key)
 				if err != nil {
 					addAsRegular(t.Tokens[ndx])
 					continue
@@ -401,21 +401,21 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 					addAsRegular(t.Tokens[ndx])
 					continue
 				}
-				rel, err := t.Temporal.getField(relStr)
+				rel, err := t.Time.getField(relStr)
 				if err != nil {
 					addAsRegular(t.Tokens[ndx])
 					continue
 				}
 				color := "print.color-date-" + t.Tokens[ndx].Key
-				if t.Temporal.DueDate != nil && t.Temporal.DueDate.Sub(rightNow) <= 0 {
+				if t.Time.DueDate != nil && t.Time.DueDate.Sub(rightNow) <= 0 {
 					if t.Tokens[ndx].Key == "due" {
 						color = "print.color-burnt"
 					}
-					if t.Temporal.Deadline != nil && t.Temporal.Deadline.Sub(rightNow) > 0 &&
+					if t.Time.Deadline != nil && t.Time.Deadline.Sub(rightNow) > 0 &&
 						t.Tokens[ndx].Key == "dead" {
 						color = "print.color-imminent-deadline"
 					}
-					if t.Temporal.EndDate != nil && t.Temporal.EndDate.Sub(rightNow) > 0 &&
+					if t.Time.EndDate != nil && t.Time.EndDate.Sub(rightNow) > 0 &&
 						t.Tokens[ndx].Key == "end" {
 						color = "print.color-running-event"
 					}
@@ -427,18 +427,18 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 				})
 			}
 			if strings.HasPrefix(t.Tokens[ndx].Key, "r") {
-				if reminderCount >= len(t.Temporal.Reminders) {
+				if reminderCount >= len(t.Time.Reminders) {
 					addAsRegular(t.Tokens[ndx])
 					continue
 				}
-				val := t.Temporal.Reminders[reminderCount]
+				val := t.Time.Reminders[reminderCount]
 				reminderCount++
 				relStr, ok := temporalFormatFallback["r"]
 				if !ok {
 					addAsRegular(t.Tokens[ndx])
 					continue
 				}
-				rel, err := t.Temporal.getField(relStr)
+				rel, err := t.Time.getField(relStr)
 				if err != nil {
 					addAsRegular(t.Tokens[ndx])
 					continue
@@ -455,7 +455,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 		case TokenDuration:
 			out.tokens = append(out.tokens, &rToken{
 				token: t.Tokens[ndx],
-				raw:   fmt.Sprintf("$every=%s", formatDuration(t.Every)),
+				raw:   fmt.Sprintf("$every=%s", formatDuration(t.Time.Every)),
 				color: "print.color-every",
 			})
 		default:

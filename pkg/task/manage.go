@@ -425,27 +425,27 @@ func CheckAndRecurTasks(path string) error {
 		return err
 	}
 	for _, task := range FileTasks[path] {
-		if task.Temporal.Every != nil &&
-			task.Temporal.DueDate != nil &&
-			task.Temporal.DueDate.Before(rightNow) {
+		if task.Time.Every != nil &&
+			task.Time.DueDate != nil &&
+			task.Time.DueDate.Before(rightNow) {
 
-			newDt := *task.Temporal.DueDate
+			newDt := *task.Time.DueDate
 			for newDt.Before(rightNow) {
-				newDt = newDt.Add(*task.Temporal.Every)
+				newDt = newDt.Add(*task.Time.Every)
 			}
-			diff := newDt.Sub(*task.Temporal.DueDate) // must be before update!
+			diff := newDt.Sub(*task.Time.DueDate) // must be before update!
 			err := task.updateDate("due", &newDt)
 			if err != nil {
 				return err
 			}
 
-			if task.Temporal.EndDate != nil && task.Temporal.EndDate.Before(rightNow) {
-				err = task.updateDate("end", utils.MkPtr(task.Temporal.EndDate.Add(diff)))
+			if task.Time.EndDate != nil && task.Time.EndDate.Before(rightNow) {
+				err = task.updateDate("end", utils.MkPtr(task.Time.EndDate.Add(diff)))
 				if err != nil {
 					return err
 				}
-			} else if task.Temporal.Deadline != nil && task.Temporal.Deadline.Before(rightNow) {
-				err = task.updateDate("dead", utils.MkPtr(task.Temporal.Deadline.Add(diff)))
+			} else if task.Time.Deadline != nil && task.Time.Deadline.Before(rightNow) {
+				err = task.updateDate("dead", utils.MkPtr(task.Time.Deadline.Add(diff)))
 				if err != nil {
 					return err
 				}

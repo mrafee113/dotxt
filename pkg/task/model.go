@@ -130,7 +130,7 @@ type Task struct {
 	Priority *string
 	Parent   *int
 
-	Temporal
+	Time *Temporal
 	Progress
 }
 
@@ -139,10 +139,10 @@ func (t *Task) String() string {
 }
 
 func (t *Task) update(new *Task) error {
-	creationDateText := fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*new.Temporal.CreationDate))
+	creationDateText := fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*new.Time.CreationDate))
 	text := strings.ReplaceAll(new.Raw(), creationDateText, "")
 	text = strings.ReplaceAll(text, creationDateText[:len(creationDateText)-3], "")
-	creationDateText = fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*t.Temporal.CreationDate))
+	creationDateText = fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*t.Time.CreationDate))
 	new, err := ParseTask(new.ID, text+" "+creationDateText)
 	if err != nil {
 		return err
@@ -167,8 +167,8 @@ func (t *Task) updateFromText(new string) error {
 }
 
 func (t *Task) renewLud() {
-	t.Temporal.LastUpdated = &rightNow
-	ludText := fmt.Sprintf("$lud=%s", unparseRelativeDatetime(rightNow, *t.Temporal.CreationDate))
+	t.Time.LastUpdated = &rightNow
+	ludText := fmt.Sprintf("$lud=%s", unparseRelativeDatetime(rightNow, *t.Time.CreationDate))
 
 	var token *Token
 	for ndx := range t.Tokens {
@@ -210,7 +210,7 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 		if err != nil {
 			return err
 		}
-		rel, err := t.getField(fallback)
+		rel, err := t.Time.getField(fallback)
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 	}
 	token.Raw = fmt.Sprintf("$%s=%s", field, newDtTxt)
 	token.Value = newDt
-	t.setField(field, newDt)
+	t.Time.setField(field, newDt)
 	return nil
 }
 
@@ -287,5 +287,6 @@ func DebugTask(t *Task) {
 		return
 	}
 	print("id: %v, explicitId: %v\ntext: %v\nhints: %v\npriority: %v\nparent: %v\n\ncreationDate: %v\nlastUpdated: %v\n\ndueDate: %v\nreminders: %v\nendDate: %v\ndeadline: %v\nevery: %v\n\nprogress: %v\n",
-		t.ID, t.EID, t.Raw(), t.Hints, t.Priority, t.Parent, t.CreationDate, t.LastUpdated, t.DueDate, t.Reminders, t.EndDate, t.Deadline, t.Every, t.Progress)
+		t.ID, t.EID, t.Raw(), t.Hints, t.Priority, t.Parent, t.Time.CreationDate, t.Time.LastUpdated,
+		t.Time.DueDate, t.Time.Reminders, t.Time.EndDate, t.Time.Deadline, t.Time.Every, t.Progress)
 }

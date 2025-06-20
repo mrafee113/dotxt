@@ -29,7 +29,7 @@ func TestUpdate(t *testing.T) {
 		assert.Equal("B", *task.Priority)
 		assert.Equal(90, task.Count)
 		dt, _ := parseAbsoluteDatetime("2024-05-05T05-05")
-		assert.Exactly(*dt, *task.CreationDate)
+		assert.Exactly(*dt, *task.Time.CreationDate)
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenPriority {
 				assert.Equal("B", *tk.Value.(*string))
@@ -46,7 +46,7 @@ func TestUpdate(t *testing.T) {
 		ntask, _ := ParseTask(nil, "$due=1w")
 		task.update(ntask)
 		dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
-		assert.Equal(*dt, *task.DueDate)
+		assert.Equal(*dt, *task.Time.DueDate)
 		checkToken(task, "due", dt)
 	})
 	t.Run("new due + old c", func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestUpdate(t *testing.T) {
 		ntask, _ := ParseTask(nil, "$due=2w")
 		task.update(ntask)
 		dt, _ := parseAbsoluteDatetime("2024-05-19T05-05")
-		assert.Equal(*dt, *task.DueDate)
+		assert.Equal(*dt, *task.Time.DueDate)
 		checkToken(task, "due", dt)
 	})
 	t.Run("irrelavent new c", func(t *testing.T) {
@@ -62,17 +62,17 @@ func TestUpdate(t *testing.T) {
 		ntask, _ := ParseTask(nil, "$due=1w $c=2025-03-03T03-03")
 		task.update(ntask)
 		dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
-		assert.Equal(*dt, *task.DueDate)
+		assert.Equal(*dt, *task.Time.DueDate)
 		checkToken(task, "due", dt)
 		dt, _ = parseAbsoluteDatetime("2024-05-05T05-05")
-		assert.Equal(*dt, *task.CreationDate)
+		assert.Equal(*dt, *task.Time.CreationDate)
 		checkToken(task, "c", dt)
 	})
 	t.Run("renewed lud", func(t *testing.T) {
 		task, _ := ParseTask(nil, "$c=2024-05-05T05-05 $lud=2024-06-06T06-06")
 		ntask, _ := ParseTask(nil, "$lud=2025-02-02T02-02")
 		task.update(ntask)
-		assert.Equal(rightNow, *task.LastUpdated)
+		assert.Equal(rightNow, *task.Time.LastUpdated)
 		checkToken(task, "lud", &rightNow)
 	})
 	t.Run("general", func(t *testing.T) {
@@ -80,18 +80,18 @@ func TestUpdate(t *testing.T) {
 		ntask, _ := ParseTask(nil, "$c=2024-06-05T05-05 $due=1w $dead=1w $r=-2d")
 		task.update(ntask)
 		dt, _ := parseAbsoluteDatetime("2024-05-05T05-05")
-		assert.Equal(*dt, *task.CreationDate)
+		assert.Equal(*dt, *task.Time.CreationDate)
 		checkToken(task, "c", dt)
-		assert.Equal(rightNow, *task.LastUpdated)
+		assert.Equal(rightNow, *task.Time.LastUpdated)
 		checkToken(task, "lud", &rightNow)
 		dt, _ = parseAbsoluteDatetime("2024-05-12T05-05")
-		assert.Equal(*dt, *task.DueDate)
+		assert.Equal(*dt, *task.Time.DueDate)
 		checkToken(task, "due", dt)
 		dt, _ = parseAbsoluteDatetime("2024-05-19T05-05")
-		assert.Equal(*dt, *task.Deadline)
+		assert.Equal(*dt, *task.Time.Deadline)
 		checkToken(task, "dead", dt)
 		dt, _ = parseAbsoluteDatetime("2024-05-10T05-05")
-		assert.Equal(*dt, *task.Reminders[0])
+		assert.Equal(*dt, *task.Time.Reminders[0])
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key[0] == 'r' {
 				assert.True(strings.HasPrefix(tk.Raw, "$r="))
@@ -121,7 +121,7 @@ func TestRenewLud(t *testing.T) {
 	t.Run("past", func(t *testing.T) {
 		task, _ := ParseTask(nil, "task $c=-1w")
 		task.renewLud()
-		assert.Exactly(rightNow, *task.LastUpdated)
+		assert.Exactly(rightNow, *task.Time.LastUpdated)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "lud" {
@@ -135,7 +135,7 @@ func TestRenewLud(t *testing.T) {
 	t.Run("present", func(t *testing.T) {
 		task, _ := ParseTask(nil, "task")
 		task.renewLud()
-		assert.Exactly(rightNow, *task.LastUpdated)
+		assert.Exactly(rightNow, *task.Time.LastUpdated)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "lud" {
@@ -164,7 +164,7 @@ func TestUpdateDate(t *testing.T) {
 		err := task.updateDate("due", &dt)
 		require.NoError(t, err)
 		assert.Equal("$due=7d", task.Norm())
-		assert.Equal(dt, *task.DueDate)
+		assert.Equal(dt, *task.Time.DueDate)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
@@ -181,7 +181,7 @@ func TestUpdateDate(t *testing.T) {
 		err := task.updateDate("dead", &dt)
 		require.NoError(t, err)
 		assert.Equal("$due=1m $dead=variable=c;3m", task.Norm())
-		assert.Equal(dt, *task.Deadline)
+		assert.Equal(dt, *task.Time.Deadline)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "dead" {
@@ -198,7 +198,7 @@ func TestUpdateDate(t *testing.T) {
 		err := task.updateDate("due", dt)
 		require.NoError(t, err)
 		assert.Equal("$due=2025-07-05T05-05-00", task.Norm())
-		assert.Equal(*dt, *task.DueDate)
+		assert.Equal(*dt, *task.Time.DueDate)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {

@@ -253,23 +253,23 @@ func TestParseTask(t *testing.T) {
 
 	t.Run("validate invalid absolute dates: %Y", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=2025")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 	t.Run("validate invalid absolute dates: %Y-%m", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=2025-04")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 	t.Run("validate invalid absolute dates: %Y-%m-%d", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=2025-04-02")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 	t.Run("validate invalid absolute dates: %Y-%m-%d", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=2025-04-02T")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 	t.Run("validate invalid absolute dates: %Y-%m-%dT%H", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=2025-04-02T20")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 
 	t.Run("validate absolute dates", func(t *testing.T) {
@@ -291,7 +291,7 @@ func TestParseTask(t *testing.T) {
 			}
 		}
 		assert.Equal(1, count, "count")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 	t.Run("validate invalid relative dates: unknown unit", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=+2a")
@@ -303,7 +303,7 @@ func TestParseTask(t *testing.T) {
 			}
 		}
 		assert.Equal(1, count, "count")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 	t.Run("validate invalid relative dates: unknown relation", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=variable=abc;1y")
@@ -315,7 +315,7 @@ func TestParseTask(t *testing.T) {
 			}
 		}
 		assert.Equal(1, count, "count")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 	t.Run("validate invalid relative dates: wrong syntax", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=variable=c123")
@@ -327,7 +327,7 @@ func TestParseTask(t *testing.T) {
 			}
 		}
 		assert.Equal(1, count, "count")
-		assert.Nil(task.Temporal.DueDate)
+		assert.Nil(task.Time.DueDate)
 	})
 
 	t.Run("validate valid relative dates: relative dates", func(t *testing.T) {
@@ -341,7 +341,7 @@ func TestParseTask(t *testing.T) {
 			}
 		}
 		assert.Equal(1, count, "count")
-		assert.Exactly(dt, *task.DueDate)
+		assert.Exactly(dt, *task.Time.DueDate)
 	})
 	t.Run("validate valid relative dates: valid", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=variable=lud;+1y2m3w4d5h6M7s")
@@ -354,21 +354,21 @@ func TestParseTask(t *testing.T) {
 			}
 		}
 		assert.Equal(1, count, "count")
-		assert.Exactly(dt, *task.DueDate)
+		assert.Exactly(dt, *task.Time.DueDate)
 	})
 	t.Run("validate valid relative dates: resolve function #1", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$dead=6m $due=1w $c=2020-01-01T01-01")
 		dt, _ := parseAbsoluteDatetime("2020-01-01T01-01")
-		assert.Exactly(*dt, *task.CreationDate, "CreationDate")
-		assert.Exactly(dt.Add(7*24*60*60*time.Second), *task.DueDate, "DueDate")
-		assert.Exactly(dt.Add((7*24*60*60+6*30*24*60*60)*time.Second), *task.Deadline, "Deadline")
+		assert.Exactly(*dt, *task.Time.CreationDate, "CreationDate")
+		assert.Exactly(dt.Add(7*24*60*60*time.Second), *task.Time.DueDate, "DueDate")
+		assert.Exactly(dt.Add((7*24*60*60+6*30*24*60*60)*time.Second), *task.Time.Deadline, "Deadline")
 	})
 	t.Run("validate valid relative dates: resolve function #2", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$r=-2d $due=1w $end=4m")
-		assert.Exactly(rightNow.Add(7*24*60*60*time.Second), *task.DueDate, "DueDate")
-		assert.Exactly(rightNow.Add((7*24*60*60+4*30*24*60*60)*time.Second), *task.EndDate, "EndDate")
+		assert.Exactly(rightNow.Add(7*24*60*60*time.Second), *task.Time.DueDate, "DueDate")
+		assert.Exactly(rightNow.Add((7*24*60*60+4*30*24*60*60)*time.Second), *task.Time.EndDate, "EndDate")
 		found = false
-		for _, r := range task.Reminders {
+		for _, r := range task.Time.Reminders {
 			if r.Equal(rightNow.Add((7 - 2) * 24 * 60 * 60 * time.Second)) {
 				found = true
 			}
@@ -383,9 +383,9 @@ func TestParseTask(t *testing.T) {
 			task, _ = ParseTask(nil, fmt.Sprintf("$%s=2026-06-06T00-00 $%s=2027-06-06T00-00", key, key))
 			dt, _ := parseAbsoluteDatetime("2026-06-06T00-00")
 			if key == "r" {
-				assert.Equal(2, len(task.Reminders), "r count")
+				assert.Equal(2, len(task.Time.Reminders), "r count")
 				rCount := 0
-				for _, r := range task.Reminders {
+				for _, r := range task.Time.Reminders {
 					if r.Equal(*dt) || r.Equal(dt.Add(365*24*60*60*time.Second)) {
 						rCount++
 					}
@@ -393,7 +393,7 @@ func TestParseTask(t *testing.T) {
 				assert.Equal(2, rCount)
 				continue
 			}
-			tdt, err := task.getField(key)
+			tdt, err := task.Time.getField(key)
 			if !assert.NoError(err, key) {
 				assert.Exactly(*dt, *tdt, key)
 			}
@@ -414,7 +414,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.True(foundDt, "found date")
 		assert.True(foundTxt, "found text")
-		assert.Exactly(rightNow, *task.CreationDate, "CreationDate")
+		assert.Exactly(rightNow, *task.Time.CreationDate, "CreationDate")
 	})
 	t.Run("validate date semantics: lud maximum value", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$lud=1y")
@@ -431,7 +431,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.True(foundDt, "found date")
 		assert.True(foundTxt, "found text")
-		assert.Exactly(rightNow.Add(time.Second), *task.LastUpdated, "LastUpdated")
+		assert.Exactly(rightNow.Add(time.Second), *task.Time.LastUpdated, "LastUpdated")
 	})
 	t.Run("validate date semantics: dead-due existence dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$dead=2026-06-06T00-00")
@@ -447,7 +447,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.False(foundDt, "found date")
 		assert.True(foundTxt, "found text")
-		assert.Nil(task.Deadline, "Deadline") // when there's deadline but no due, deadline loses depth
+		assert.Nil(task.Time.Deadline, "Deadline") // when there's deadline but no due, deadline loses depth
 	})
 	t.Run("validate date semantics: end-due existence dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$end=1w")
@@ -463,7 +463,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.False(foundDt, "found date")
 		assert.True(foundTxt, "found text")
-		assert.Nil(task.EndDate, "EndDate") // when there's end but no due, end loses depth
+		assert.Nil(task.Time.EndDate, "EndDate") // when there's end but no due, end loses depth
 	})
 	t.Run("validate date semantics: dead-due value dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=10d $dead=variable=c;2d")
@@ -479,7 +479,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.False(foundDt, "found date")
 		assert.True(foundTxt, "found text")
-		assert.Nil(task.Deadline, "Deadline") // when deadline <= due, deadline loses depth
+		assert.Nil(task.Time.Deadline, "Deadline") // when deadline <= due, deadline loses depth
 	})
 	t.Run("validate date semantics: end-due value dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=10d $end=variable=c;2d")
@@ -495,7 +495,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.False(foundDt, "found date")
 		assert.True(foundTxt, "found text")
-		assert.Nil(task.EndDate, "EndDate") // when end <= due, end loses depth
+		assert.Nil(task.Time.EndDate, "EndDate") // when end <= due, end loses depth
 	})
 	t.Run("validate date semantics: dead-end existence dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$dead=10d $end=1w $due=2w")
@@ -513,20 +513,20 @@ func TestParseTask(t *testing.T) {
 			}
 		}
 		assert.True(foundDead, "found dead")
-		assert.Nil(task.Deadline, "Deadline")
+		assert.Nil(task.Time.Deadline, "Deadline")
 		assert.True(foundEnd, "found end")
-		assert.Nil(task.EndDate, "EndDate") // when end & dead, then both lose depth
+		assert.Nil(task.Time.EndDate, "EndDate") // when end & dead, then both lose depth
 	})
 	t.Run("validate date semantics: lud-c value dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$c=2025-05-05T05-05 $lud=2025-05-04T05-05")
-		assert.True(task.LastUpdated.After(*task.CreationDate))
+		assert.True(task.Time.LastUpdated.After(*task.Time.CreationDate))
 		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05")
 		*dt = dt.Add(time.Second)
-		assert.Exactly(*dt, *task.LastUpdated) // when lud <= c: lud=c+0s
+		assert.Exactly(*dt, *task.Time.LastUpdated) // when lud <= c: lud=c+0s
 	})
 	t.Run("validate date semantics: due-c value dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$c=2025-05-05T05-05 $due=2023-05-05T05-05")
-		assert.Nil(task.DueDate, "DueDate")
+		assert.Nil(task.Time.DueDate, "DueDate")
 		var foundDt, foundTxt bool
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
@@ -539,13 +539,13 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.True(foundTxt, "found text")
 		assert.False(foundDt, "found date")
-		assert.Nil(task.DueDate, "DueDate") // when due <= c, due loses depth
+		assert.Nil(task.Time.DueDate, "DueDate") // when due <= c, due loses depth
 	})
 	t.Run("validate date semantics: r-c value dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$r=variable=c;-1w $r=variable=c;1w $c=2025-05-05T05-05")
 		dt, _ := parseAbsoluteDatetime("2025-05-12T05-05")
-		if assert.Len(task.Reminders, 1, "r count") {
-			assert.Exactly(*dt, *task.Reminders[0], "Reminders")
+		if assert.Len(task.Time.Reminders, 1, "r count") {
+			assert.Exactly(*dt, *task.Time.Reminders[0], "Reminders")
 		}
 		found = false
 		for _, tk := range task.Tokens {
@@ -560,7 +560,7 @@ func TestParseTask(t *testing.T) {
 	t.Run("validate every", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$every=9y364d23h59M59s")
 		val := (9*365*24*60*60 + 364*24*60*60 + 23*60*60 + 59*60 + 59) * time.Second
-		assert.Exactly(val, *task.Every, "Every")
+		assert.Exactly(val, *task.Time.Every, "Every")
 		found = false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDuration && tk.Key == "every" {
@@ -584,7 +584,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.False(foundDur, "found duration")
 		assert.True(foundTxt, "found text")
-		assert.Nil(task.Every, "Every")
+		assert.Nil(task.Time.Every, "Every")
 	})
 	t.Run("validate every: maximum", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$every=10y")
@@ -600,7 +600,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.False(foundDur, "found duration")
 		assert.True(foundTxt, "found text")
-		assert.Nil(task.Every, "Every")
+		assert.Nil(task.Time.Every, "Every")
 	})
 	t.Run("validate every: negative", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$every=-1w")
@@ -616,7 +616,7 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.False(foundDur, "found duration")
 		assert.True(foundTxt, "found text")
-		assert.Nil(task.Every, "Every")
+		assert.Nil(task.Time.Every, "Every")
 	})
 }
 

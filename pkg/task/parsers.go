@@ -473,7 +473,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		return nil, err
 	}
 
-	task := &Task{ID: id}
+	task := &Task{ID: id, Time: utils.MkPtr(Temporal{})}
 	tokens, errs := tokenizeLine(line)
 	for ndx := range tokens {
 		token := tokens[ndx]
@@ -498,39 +498,39 @@ func ParseTask(id *int, line string) (*Task, error) {
 					dateToTextToken(tokens[ndx])
 					continue
 				}
-				task.CreationDate = val
+				task.Time.CreationDate = val
 			case "lud":
 				val := token.Value.(*time.Time)
 				if val.After(rightNow) {
 					dateToTextToken(tokens[ndx])
 					continue
 				}
-				task.LastUpdated = val
+				task.Time.LastUpdated = val
 			case "due":
-				task.DueDate = token.Value.(*time.Time)
+				task.Time.DueDate = token.Value.(*time.Time)
 			case "r":
-				task.Reminders = append(task.Reminders, token.Value.(*time.Time))
+				task.Time.Reminders = append(task.Time.Reminders, token.Value.(*time.Time))
 			case "end":
-				task.EndDate = token.Value.(*time.Time)
+				task.Time.EndDate = token.Value.(*time.Time)
 			case "dead":
-				task.Deadline = token.Value.(*time.Time)
+				task.Time.Deadline = token.Value.(*time.Time)
 			}
 		case TokenDuration:
-			task.Every = token.Value.(*time.Duration)
+			task.Time.Every = token.Value.(*time.Duration)
 		case TokenProgress:
 			task.Progress = *token.Value.(*Progress)
 		}
 	}
 	task.Tokens = tokens
-	if task.Temporal.CreationDate == nil {
-		task.Temporal.CreationDate = &rightNow
+	if task.Time.CreationDate == nil {
+		task.Time.CreationDate = &rightNow
 		task.Tokens = append(task.Tokens, &Token{
 			Type: TokenDate, Raw: fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow)),
 			Key: "c", Value: &rightNow,
 		})
 	}
-	if task.Temporal.LastUpdated == nil {
-		task.Temporal.LastUpdated = &rightNow
+	if task.Time.LastUpdated == nil {
+		task.Time.LastUpdated = &rightNow
 		ludVal := rightNow.Add(time.Second)
 		task.Tokens = append(task.Tokens, &Token{
 			Type: TokenDate, Raw: "$lud=" + unparseDuration(time.Duration(0)),
@@ -545,67 +545,67 @@ func ParseTask(id *int, line string) (*Task, error) {
 		}
 		return nil, -1
 	}
-	if task.DueDate != nil && !task.DueDate.After(*task.CreationDate) {
+	if task.Time.DueDate != nil && !task.Time.DueDate.After(*task.Time.CreationDate) {
 		tk, _ := findToken(TokenDate, "due")
 		if tk != nil {
 			dateToTextToken(tk)
-			task.DueDate = nil
+			task.Time.DueDate = nil
 		} else {
 			errs = append(errs, fmt.Errorf("%w: due date token", terrors.ErrNotFound))
 		}
 	}
-	if task.Deadline != nil && (task.DueDate == nil || !task.Deadline.After(*task.DueDate)) {
+	if task.Time.Deadline != nil && (task.Time.DueDate == nil || !task.Time.Deadline.After(*task.Time.DueDate)) {
 		tk, _ := findToken(TokenDate, "dead")
 		if tk != nil {
 			dateToTextToken(tk)
-			task.Deadline = nil
+			task.Time.Deadline = nil
 		} else {
 			errs = append(errs, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
 		}
 	}
-	if task.EndDate != nil && (task.DueDate == nil || !task.EndDate.After(*task.DueDate)) {
+	if task.Time.EndDate != nil && (task.Time.DueDate == nil || !task.Time.EndDate.After(*task.Time.DueDate)) {
 		tk, _ := findToken(TokenDate, "end")
 		if tk != nil {
 			dateToTextToken(tk)
-			task.EndDate = nil
+			task.Time.EndDate = nil
 		} else {
 			errs = append(errs, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
 		}
 	}
-	if task.EndDate != nil && task.Deadline != nil {
+	if task.Time.EndDate != nil && task.Time.Deadline != nil {
 		tk, _ := findToken(TokenDate, "dead")
 		if tk != nil {
 			dateToTextToken(tk)
-			task.Deadline = nil
+			task.Time.Deadline = nil
 		} else {
 			errs = append(errs, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
 		}
 		tk, _ = findToken(TokenDate, "end")
 		if tk != nil {
 			dateToTextToken(tk)
-			task.EndDate = nil
+			task.Time.EndDate = nil
 		} else {
 			errs = append(errs, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
 		}
 	}
-	if !task.LastUpdated.After(*task.CreationDate) {
+	if !task.Time.LastUpdated.After(*task.Time.CreationDate) {
 		tk, _ := findToken(TokenDate, "lud")
 		if tk != nil {
 			tk.Raw = "$lud=" + unparseDuration(time.Duration(0))
-			ludVal := task.CreationDate.Add(time.Second)
+			ludVal := task.Time.CreationDate.Add(time.Second)
 			tk.Value = &ludVal
-			task.LastUpdated = &ludVal
+			task.Time.LastUpdated = &ludVal
 		} else {
 			errs = append(errs, fmt.Errorf("%w: lud date token", terrors.ErrNotFound))
 		}
 	}
-	for ndx := len(task.Reminders) - 1; ndx >= 0; ndx-- {
-		if !task.Reminders[ndx].After(*task.CreationDate) {
+	for ndx := len(task.Time.Reminders) - 1; ndx >= 0; ndx-- {
+		if !task.Time.Reminders[ndx].After(*task.Time.CreationDate) {
 			for ndxTk := range task.Tokens {
 				if task.Tokens[ndxTk].Type == TokenDate &&
 					strings.HasPrefix(task.Tokens[ndxTk].Key, "r") &&
-					*task.Tokens[ndxTk].Value.(*time.Time) == *task.Reminders[ndx] {
-					task.Reminders = slices.Delete(task.Reminders, ndx, ndx+1)
+					*task.Tokens[ndxTk].Value.(*time.Time) == *task.Time.Reminders[ndx] {
+					task.Time.Reminders = slices.Delete(task.Time.Reminders, ndx, ndx+1)
 					dateToTextToken(task.Tokens[ndxTk])
 					break
 				}
