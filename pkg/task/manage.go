@@ -440,14 +440,12 @@ func CheckAndRecurTasks(path string) error {
 			}
 
 			if task.Temporal.EndDate != nil && task.Temporal.EndDate.Before(rightNow) {
-				newDt := task.Temporal.EndDate.Add(diff)
-				err = task.updateDate("end", &newDt)
+				err = task.updateDate("end", utils.MkPtr(task.Temporal.EndDate.Add(diff)))
 				if err != nil {
 					return err
 				}
 			} else if task.Temporal.Deadline != nil && task.Temporal.Deadline.Before(rightNow) {
-				newDt := task.Temporal.Deadline.Add(diff)
-				err = task.updateDate("dead", &newDt)
+				err = task.updateDate("dead", utils.MkPtr(task.Temporal.Deadline.Add(diff)))
 				if err != nil {
 					return err
 				}
