@@ -131,7 +131,7 @@ type Task struct {
 	Parent   *int
 
 	Time *Temporal
-	Progress
+	Prog *Progress
 }
 
 func (t *Task) String() string {
@@ -288,5 +288,5 @@ func DebugTask(t *Task) {
 	}
 	print("id: %v, explicitId: %v\ntext: %v\nhints: %v\npriority: %v\nparent: %v\n\ncreationDate: %v\nlastUpdated: %v\n\ndueDate: %v\nreminders: %v\nendDate: %v\ndeadline: %v\nevery: %v\n\nprogress: %v\n",
 		t.ID, t.EID, t.Raw(), t.Hints, t.Priority, t.Parent, t.Time.CreationDate, t.Time.LastUpdated,
-		t.Time.DueDate, t.Time.Reminders, t.Time.EndDate, t.Time.Deadline, t.Time.Every, t.Progress)
+		t.Time.DueDate, t.Time.Reminders, t.Time.EndDate, t.Time.Deadline, t.Time.Every, t.Prog)
 }

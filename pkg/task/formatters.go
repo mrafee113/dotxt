@@ -326,10 +326,10 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 		return out
 	}()
 
-	if t.Progress.DoneCount > 0 {
+	if t.Prog != nil {
 		out.tokens = append(out.tokens, &rToken{token: specialTokenMap["p"]})
-		listMetadata.countLen = max(listMetadata.countLen, len(strconv.Itoa(t.Progress.Count)))
-		listMetadata.doneCountLen = max(listMetadata.doneCountLen, len(strconv.Itoa(t.Progress.DoneCount)))
+		listMetadata.countLen = max(listMetadata.countLen, len(strconv.Itoa(t.Prog.Count)))
+		listMetadata.doneCountLen = max(listMetadata.doneCountLen, len(strconv.Itoa(t.Prog.DoneCount)))
 	}
 	if t.Priority != nil && *t.Priority != "" {
 		out.tokens = append(out.tokens, &rToken{
@@ -545,11 +545,11 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 		emptyCatThere := false
 		categories := make(map[string]bool)
 		for _, task := range list.tasks {
-			if task.tsk.DoneCount > 0 {
-				if task.tsk.Category == "" {
+			if task.tsk.Prog != nil {
+				if task.tsk.Prog.Category == "" {
 					emptyCatThere = true
 				}
-				categories[task.tsk.Category] = true
+				categories[task.tsk.Prog.Category] = true
 			}
 		}
 		useCatHeader := !((len(categories) == 1 && emptyCatThere) || len(categories) == 0)
@@ -558,15 +558,15 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 
 		out.WriteString(formatListHeader(list))
 		for _, task := range list.tasks {
-			if useCatHeader && task.tsk.DoneCount > 0 && task.tsk.Category != lastCat {
-				cat := task.tsk.Category
+			if useCatHeader && task.tsk.Prog != nil && task.tsk.Prog.Category != lastCat {
+				cat := task.tsk.Prog.Category
 				if cat == "" {
 					cat = "*"
 				}
 				out.WriteString(formatCategoryHeader(cat, list))
-				lastCat = task.tsk.Category
+				lastCat = task.tsk.Prog.Category
 			}
-			if useCatHeader && task.tsk.DoneCount == 0 && firstNonCat {
+			if useCatHeader && task.tsk.Prog == nil && firstNonCat {
 				firstNonCat = false
 				out.WriteString(formatCategoryHeader("", list))
 			}

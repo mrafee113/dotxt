@@ -393,11 +393,11 @@ func IncrementProgressCount(id int, path string, value int) error {
 	if err != nil {
 		return err
 	}
-	if task.Progress.DoneCount == 0 {
+	if task.Prog == nil {
 		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
 	}
-	rVal := task.Progress.Count + value
-	task.Progress.Count = max(min(rVal, task.Progress.DoneCount), 0)
+	rVal := task.Prog.Count + value
+	task.Prog.Count = max(min(rVal, task.Prog.DoneCount), 0)
 	var pToken *Token
 	for ndx := range task.Tokens {
 		if task.Tokens[ndx].Type == TokenProgress {
@@ -407,15 +407,14 @@ func IncrementProgressCount(id int, path string, value int) error {
 	if pToken == nil {
 		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
 	}
-	prog := task.Progress
-	progText, err := unparseProgress(prog)
+	prog := task.Prog
+	progText, err := unparseProgress(*prog)
 	if err != nil {
 		return err
 	}
 	progText = fmt.Sprintf("$p=%s", progText)
 	pToken.Raw = progText
-	pToken.Value = new(Progress)
-	*pToken.Value.(*Progress) = prog
+	pToken.Value = utils.MkPtr(*prog)
 	return nil
 }
 

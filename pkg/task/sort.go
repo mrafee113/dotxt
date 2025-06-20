@@ -17,22 +17,36 @@ func sortNil(l, r *Task) int {
 }
 
 func sortDoneCount(l, r *Task) int {
-	if l.DoneCount > 0 && r.DoneCount == 0 {
+	if l.Prog != nil && r.Prog == nil {
 		return -1
-	} else if l.DoneCount == 0 && r.DoneCount > 0 {
+	} else if l.Prog == nil && r.Prog != nil {
+		return 1
+	} else if l.Prog == nil && r.Prog == nil {
+		return 2
+	}
+	if l.Prog.DoneCount > 0 && r.Prog.DoneCount == 0 {
+		return -1
+	} else if l.Prog.DoneCount == 0 && r.Prog.DoneCount > 0 {
 		return 1
 	}
 	return 2
 }
 
 func sortCategory(l, r *Task) int {
-	if l.Category != "" && r.Category == "" {
+	if l.Prog != nil && r.Prog == nil {
 		return -1
-	} else if l.Category == "" && r.Category != "" {
+	} else if l.Prog == nil && r.Prog != nil {
 		return 1
-	} else if l.Category < r.Category {
+	} else if l.Prog == nil && r.Prog == nil {
+		return 2
+	}
+	if l.Prog.Category != "" && r.Prog.Category == "" {
 		return -1
-	} else if l.Category > r.Category {
+	} else if l.Prog.Category == "" && r.Prog.Category != "" {
+		return 1
+	} else if l.Prog.Category < r.Prog.Category {
+		return -1
+	} else if l.Prog.Category > r.Prog.Category {
 		return 1
 	}
 	return 2

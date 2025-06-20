@@ -518,7 +518,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		case TokenDuration:
 			task.Time.Every = token.Value.(*time.Duration)
 		case TokenProgress:
-			task.Progress = *token.Value.(*Progress)
+			task.Prog = token.Value.(*Progress)
 		}
 	}
 	task.Tokens = tokens

@@ -27,7 +27,7 @@ func TestUpdate(t *testing.T) {
 		newTask, _ := ParseTask(nil, "(B) +p #t @a $p=unit/cat/90/100 $due=1w $dead=1w")
 		task.update(newTask)
 		assert.Equal("B", *task.Priority)
-		assert.Equal(90, task.Count)
+		assert.Equal(90, task.Prog.Count)
 		dt, _ := parseAbsoluteDatetime("2024-05-05T05-05")
 		assert.Exactly(*dt, *task.Time.CreationDate)
 		for _, tk := range task.Tokens {

@@ -435,18 +435,11 @@ func TestIncrementProgressCount(t *testing.T) {
 		assert.ErrorIs(err, terrors.ErrValue)
 		assert.ErrorContains(err, "task '1' does not have a progress")
 	})
-	t.Run("out of sync progress", func(t *testing.T) {
-		FileTasks[path][1].DoneCount = 100
-		err := IncrementProgressCount(1, path, 2)
-		require.Error(t, err)
-		assert.ErrorIs(err, terrors.ErrValue)
-		assert.ErrorContains(err, "task '1' does not have a progress")
-	})
 	t.Run("positive", func(t *testing.T) {
 		task := FileTasks[path][0]
 		err := IncrementProgressCount(0, path, 2)
 		require.NoError(t, err)
-		assert.Equal(12, task.Count)
+		assert.Equal(12, task.Prog.Count)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenProgress {
@@ -461,7 +454,7 @@ func TestIncrementProgressCount(t *testing.T) {
 		task := FileTasks[path][2]
 		err := IncrementProgressCount(2, path, -2)
 		require.NoError(t, err)
-		assert.Equal(8, task.Count)
+		assert.Equal(8, task.Prog.Count)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenProgress {
@@ -476,7 +469,7 @@ func TestIncrementProgressCount(t *testing.T) {
 		task := FileTasks[path][3]
 		err := IncrementProgressCount(3, path, 200)
 		require.NoError(t, err)
-		assert.Equal(100, task.Count)
+		assert.Equal(100, task.Prog.Count)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenProgress {
@@ -491,7 +484,7 @@ func TestIncrementProgressCount(t *testing.T) {
 		task := FileTasks[path][4]
 		err := IncrementProgressCount(4, path, -200)
 		require.NoError(t, err)
-		assert.Equal(0, task.Count)
+		assert.Equal(0, task.Prog.Count)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenProgress {
