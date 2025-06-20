@@ -52,11 +52,11 @@ func sortPriority(l, r *Task) int {
 }
 
 func sortHints(l, r *Task) int {
-	extractPlus := func(hints []string) []string {
+	extractPlus := func(hints []*string) []string {
 		var out []string
 		for _, h := range hints {
-			if len(h) > 0 && h[0] == '+' {
-				out = append(out, h)
+			if len(*h) > 0 && (*h)[0] == '+' {
+				out = append(out, *h)
 			}
 		}
 		slices.Sort(out)

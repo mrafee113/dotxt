@@ -141,7 +141,13 @@ func TestAppendToTask(t *testing.T) {
 	dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
 	assert.Equal(*dt, *task.DueDate)
 	assert.Len(task.Hints, 3)
-	assert.Equal(task.Hints, []string{"+prj", "@at", "#tag"})
+	assert.Equal([]string{"+prj", "@at", "#tag"}, func() []string {
+		var out []string
+		for _, h := range task.Hints {
+			out = append(out, *h)
+		}
+		return out
+	}())
 	assert.Equal("1 new data", task.NormRegular())
 	if assert.NotNil(task.ID) {
 		assert.Equal(1, *task.ID)
@@ -161,7 +167,13 @@ func TestPrependToTask(t *testing.T) {
 	dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
 	assert.Equal(*dt, *task.DueDate)
 	assert.Len(task.Hints, 3)
-	assert.Equal(task.Hints, []string{"+prj", "@at", "#tag"})
+	assert.Equal([]string{"+prj", "@at", "#tag"}, func() []string {
+		var out []string
+		for _, h := range task.Hints {
+			out = append(out, *h)
+		}
+		return out
+	}())
 	assert.Equal("new data 1", task.NormRegular())
 	if assert.NotNil(task.ID) {
 		assert.Equal(1, *task.ID)
@@ -186,7 +198,13 @@ func TestReplaceTask(t *testing.T) {
 	dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
 	assert.Equal(*dt, *task.DueDate)
 	assert.Len(task.Hints, 3)
-	assert.Equal(task.Hints, []string{"+prj", "@at", "#tag"})
+	assert.Equal([]string{"+prj", "@at", "#tag"}, func() []string {
+		var out []string
+		for _, h := range task.Hints {
+			out = append(out, *h)
+		}
+		return out
+	}())
 	assert.Equal("new data", task.NormRegular())
 	if assert.NotNil(task.ID) {
 		assert.Equal(1, *task.ID)

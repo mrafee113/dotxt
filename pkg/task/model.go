@@ -126,7 +126,7 @@ type Task struct {
 	Tokens   []*Token
 	ID       *int
 	EID      *int // explicit id ($id=)
-	Hints    []string
+	Hints    []*string
 	Priority string
 	Parent   *int
 

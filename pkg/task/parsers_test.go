@@ -124,7 +124,13 @@ func TestParseTask(t *testing.T) {
 			}
 		}
 		assert.Equal(3, count)
-		assert.Equal([]string{"#hint", "+hint", "@hint"}, task.Hints)
+		assert.Equal([]string{"#hint", "+hint", "@hint"}, func() []string {
+			var out []string
+			for _, h := range task.Hints {
+				out = append(out, *h)
+			}
+			return out
+		}())
 	})
 
 	t.Run("validate invalid key value: no key", func(t *testing.T) {

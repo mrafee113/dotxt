@@ -487,7 +487,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 				task.Parent = &intVal
 			}
 		case TokenHint:
-			task.Hints = append(task.Hints, fmt.Sprintf("%s%s", token.Key, token.Value.(string)))
+			task.Hints = append(task.Hints, utils.MkPtr(fmt.Sprintf("%s%s", token.Key, token.Value.(string))))
 		case TokenPriority:
 			task.Priority = token.Value.(string)
 		case TokenDate:
