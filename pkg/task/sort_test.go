@@ -26,8 +26,8 @@ func TestSortTask(t *testing.T) {
 			"random", "$p=unit/100",
 		}} {
 			prep(lineSet)
-			assert.Equal("$p=unit/100", *arr[0].Text)
-			assert.Equal("random", *arr[1].Text)
+			assert.Equal("$p=unit/100", arr[0].Norm())
+			assert.Equal("random", arr[1].Norm())
 		}
 	})
 	t.Run("category", func(t *testing.T) {
@@ -39,10 +39,10 @@ func TestSortTask(t *testing.T) {
 			"$p=unit/catB/0/100", "$p=unit/catA/0/100",
 		}} {
 			prep(lineSet)
-			assert.Equal("$p=unit/cat/0/100", *arr[0].Text)
-			assert.Equal("$p=unit/100", *arr[3].Text)
-			assert.Equal("$p=unit/catA/0/100", *arr[1].Text)
-			assert.Equal("$p=unit/catB/0/100", *arr[2].Text)
+			assert.Equal("$p=unit/cat/0/100", arr[0].Norm())
+			assert.Equal("$p=unit/100", arr[3].Norm())
+			assert.Equal("$p=unit/catA/0/100", arr[1].Norm())
+			assert.Equal("$p=unit/catB/0/100", arr[2].Norm())
 		}
 	})
 	t.Run("priority", func(t *testing.T) {
@@ -54,10 +54,10 @@ func TestSortTask(t *testing.T) {
 			"(C) s", "(B) s",
 		}} {
 			prep(lineSet)
-			assert.Equal("(A) s", *arr[0].Text)
-			assert.Equal("s", *arr[3].Text)
-			assert.Equal("(B) s", *arr[1].Text)
-			assert.Equal("(C) s", *arr[2].Text)
+			assert.Equal("(A) s", arr[0].Norm())
+			assert.Equal("s", arr[3].Norm())
+			assert.Equal("(B) s", arr[1].Norm())
+			assert.Equal("(C) s", arr[2].Norm())
 		}
 	})
 	t.Run("hints", func(t *testing.T) {
@@ -69,10 +69,10 @@ func TestSortTask(t *testing.T) {
 			"+z +b +0", "+b +a +z",
 		}} {
 			prep(lineSet)
-			assert.Equal("+z +b +0", *arr[0].Text)
-			assert.Equal("+b +a", *arr[1].Text)
-			assert.Equal("+b +a +z", *arr[2].Text)
-			assert.Equal("s", *arr[3].Text)
+			assert.Equal("+z +b +0", arr[0].Norm())
+			assert.Equal("+b +a", arr[1].Norm())
+			assert.Equal("+b +a +z", arr[2].Norm())
+			assert.Equal("s", arr[3].Norm())
 		}
 	})
 	t.Run("texts", func(t *testing.T) {
@@ -84,10 +84,10 @@ func TestSortTask(t *testing.T) {
 			"d", "c",
 		}} {
 			prep(lineSet)
-			assert.Equal("a +b", *arr[0].Text)
-			assert.Equal("+b", *arr[1].Text)
-			assert.Equal("c", *arr[2].Text)
-			assert.Equal("d", *arr[3].Text)
+			assert.Equal("a +b", arr[0].Norm())
+			assert.Equal("+b", arr[1].Norm())
+			assert.Equal("c", arr[2].Norm())
+			assert.Equal("d", arr[3].Norm())
 		}
 	})
 	t.Run("parent children", func(t *testing.T) {
@@ -111,11 +111,11 @@ func TestSortTask(t *testing.T) {
 			"a.2 $P=1",
 		}} {
 			prep(lineSet)
-			assert.Equal("a", *arr[0].Text)
-			assert.Equal("b $id=1", *arr[1].Text)
-			assert.Equal("a.2 $P=1", *arr[2].Text)
-			assert.Equal("z.1 $P=1", *arr[3].Text)
-			assert.Equal("c", *arr[4].Text)
+			assert.Equal("a", arr[0].Norm())
+			assert.Equal("b $id=1", arr[1].Norm())
+			assert.Equal("a.2 $P=1", arr[2].Norm())
+			assert.Equal("z.1 $P=1", arr[3].Norm())
+			assert.Equal("c", arr[4].Norm())
 		}
 	})
 }

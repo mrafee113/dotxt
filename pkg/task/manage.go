@@ -110,7 +110,7 @@ func AppendToTask(id int, text, path string) error {
 		return err
 	}
 
-	err = task.updateFromText(*task.Text + " " + text)
+	err = task.updateFromText(task.Raw() + " " + text)
 	if err != nil {
 		return err
 	}
@@ -126,10 +126,10 @@ func PrependToTask(id int, text, path string) error {
 
 	var newText string
 	if task.Priority != "" {
-		newText = (*task.Text)[strings.IndexRune(*task.Text, ')')+1:]
+		newText = task.Raw()[strings.IndexRune(task.Raw(), ')')+1:]
 		newText = fmt.Sprintf("(%s) %s %s", task.Priority, text, newText)
 	} else {
-		newText = text + " " + *task.Text
+		newText = text + " " + task.Raw()
 	}
 	err = task.updateFromText(newText)
 	if err != nil {
@@ -187,9 +187,6 @@ func DeprioritizeTask(id int, path string) error {
 		return nil
 	}
 
-	pString := fmt.Sprintf("(%s)", task.Priority)
-	*task.Text = strings.TrimPrefix(*task.Text, pString)
-	*task.Text = strings.TrimPrefix(*task.Text, " ")
 	for ndx := len(task.Tokens) - 1; ndx >= 0; ndx-- {
 		if task.Tokens[ndx].Type == TokenPriority {
 			task.Tokens = slices.Delete(task.Tokens, ndx, ndx+1)
@@ -211,7 +208,6 @@ func PrioritizeTask(id int, priority, path string) error {
 	}
 	hadPriority := task.Priority != ""
 	task.Priority = priority
-	*task.Text = task.Priority + " " + *task.Text
 	pToken := Token{
 		Type: TokenPriority, Raw: fmt.Sprintf("(%s)", priority), Key: "priority",
 		Value: strings.TrimSuffix(strings.TrimPrefix(priority, "("), ")"),
@@ -411,14 +407,12 @@ func IncrementProgressCount(id int, path string, value int) error {
 	if pToken == nil {
 		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
 	}
-	prevRaw := pToken.Raw
 	prog := task.Progress
 	progText, err := unparseProgress(prog)
 	if err != nil {
 		return err
 	}
 	progText = fmt.Sprintf("$p=%s", progText)
-	*task.Text = strings.Replace(*task.Text, prevRaw, progText, 1)
 	pToken.Raw = progText
 	pToken.Value = new(Progress)
 	*pToken.Value.(*Progress) = prog

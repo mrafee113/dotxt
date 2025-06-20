@@ -123,10 +123,10 @@ type temporalNode struct {
 }
 
 type Task struct {
-	Tokens   []Token
-	ID       *int
-	EID      *int    // explicit id ($id=)
-	Text     *string // this is the line raw text
+	Tokens []Token
+	ID     *int
+	EID    *int // explicit id ($id=)
+	// Text     *string // this is the line raw text
 	Hints    []string
 	Priority string
 	Parent   *int
@@ -136,15 +136,15 @@ type Task struct {
 }
 
 func (t *Task) String() string {
-	return fmt.Sprintf("%-2d %s", *t.ID, *t.Text)
+	return fmt.Sprintf("%-2d %s", *t.ID, t.Raw())
 }
 
 func (t *Task) update(new *Task) error {
 	creationDateText := fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*new.Temporal.CreationDate))
-	*new.Text = strings.ReplaceAll(*new.Text, creationDateText, "")
-	*new.Text = strings.ReplaceAll(*new.Text, creationDateText[:len(creationDateText)-3], "")
+	text := strings.ReplaceAll(new.Raw(), creationDateText, "")
+	text = strings.ReplaceAll(text, creationDateText[:len(creationDateText)-3], "")
 	creationDateText = fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*t.Temporal.CreationDate))
-	new, err := ParseTask(new.ID, *new.Text+" "+creationDateText)
+	new, err := ParseTask(new.ID, text+" "+creationDateText)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,6 @@ func (t *Task) renewLud() {
 			break
 		}
 	}
-	var oldLudText string
 	if token == nil {
 		t.Tokens = append(t.Tokens, Token{
 			Type: TokenDate, Key: "lud",
@@ -186,11 +185,8 @@ func (t *Task) renewLud() {
 		})
 	} else {
 		token.Value = &rightNow
-		oldLudText = token.Raw
 		token.Raw = ludText
 	}
-	*t.Text = strings.Replace(*t.Text, oldLudText, "", 1)
-	*t.Text += " " + ludText
 }
 
 func (t *Task) updateDate(field string, newDt *time.Time) error {
@@ -225,7 +221,6 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 			newDtTxt = fmt.Sprintf("variable=%s;%s", fallback, newDtTxt)
 		}
 	}
-	*t.Text = strings.Replace(*t.Text, curDtTxt, newDtTxt, 1)
 	token.Raw = fmt.Sprintf("$%s=%s", field, newDtTxt)
 	token.Value = newDt
 	t.setField(field, newDt)
@@ -293,5 +288,5 @@ func DebugTask(t *Task) {
 		return
 	}
 	print("id: %v, explicitId: %v\ntext: %v\nhints: %v\npriority: %v\nparent: %v\n\ncreationDate: %v\nlastUpdated: %v\n\ndueDate: %v\nreminders: %v\nendDate: %v\ndeadline: %v\nevery: %v\n\nprogress: %v\n",
-		t.ID, t.EID, t.Text, t.Hints, t.Priority, t.Parent, t.CreationDate, t.LastUpdated, t.DueDate, t.Reminders, t.EndDate, t.Deadline, t.Every, t.Progress)
+		t.ID, t.EID, t.Raw(), t.Hints, t.Priority, t.Parent, t.CreationDate, t.LastUpdated, t.DueDate, t.Reminders, t.EndDate, t.Deadline, t.Every, t.Progress)
 }

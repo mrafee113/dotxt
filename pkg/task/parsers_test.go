@@ -50,7 +50,7 @@ func TestAdd(t *testing.T) {
 	}
 	task := FileTasks[path][0]
 	assert.Equal(*task.ID, 0)
-	assert.Equal(*task.Text, "testing")
+	assert.Equal(task.Norm(), "testing")
 }
 
 func TestParseTask(t *testing.T) {
@@ -66,7 +66,7 @@ func TestParseTask(t *testing.T) {
 		for _, char := range weirdChars {
 			task, err = ParseTask(nil, string(char))
 			if assert.NoError(err, "ParseTask") {
-				assert.Equalf(*task.Text, string(char), "char '%s'", string(char))
+				assert.Equalf(task.Norm(), string(char), "char '%s'", string(char))
 			}
 		}
 	})

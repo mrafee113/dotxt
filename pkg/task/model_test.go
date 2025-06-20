@@ -126,10 +126,10 @@ func TestRenewLud(t *testing.T) {
 			if tk.Type == TokenDate && tk.Key == "lud" {
 				found = true
 				assert.Exactly(rightNow, *tk.Value.(*time.Time))
+				assert.Equal("$lud=7d", tk.Raw)
 			}
 		}
 		assert.True(found, "not found")
-		assert.Contains(*task.Text, "$lud=7d")
 	})
 	t.Run("present", func(t *testing.T) {
 		task, _ := ParseTask(nil, "task")
@@ -140,10 +140,10 @@ func TestRenewLud(t *testing.T) {
 			if tk.Type == TokenDate && tk.Key == "lud" {
 				found = true
 				assert.Exactly(rightNow, *tk.Value.(*time.Time))
+				assert.Equal("$lud=0s", tk.Raw)
 			}
 		}
 		assert.True(found, "not found")
-		assert.Contains(*task.Text, "$lud=0s")
 	})
 }
 
@@ -163,7 +163,6 @@ func TestUpdateDate(t *testing.T) {
 		err := task.updateDate("due", &dt)
 		require.NoError(t, err)
 		assert.Equal("$due=7d", task.Norm())
-		assert.Contains(*task.Text, "$due=7d")
 		assert.Equal(dt, *task.DueDate)
 		found := false
 		for _, tk := range task.Tokens {
@@ -181,7 +180,6 @@ func TestUpdateDate(t *testing.T) {
 		err := task.updateDate("dead", &dt)
 		require.NoError(t, err)
 		assert.Equal("$due=1m $dead=variable=c;3m", task.Norm())
-		assert.Contains(*task.Text, "$dead=variable=c;3m")
 		assert.Equal(dt, *task.Deadline)
 		found := false
 		for _, tk := range task.Tokens {
@@ -199,7 +197,6 @@ func TestUpdateDate(t *testing.T) {
 		err := task.updateDate("due", dt)
 		require.NoError(t, err)
 		assert.Equal("$due=2025-07-05T05-05-00", task.Norm())
-		assert.Contains(*task.Text, "$due=2025-07-05T05-05-00")
 		assert.Equal(*dt, *task.DueDate)
 		found := false
 		for _, tk := range task.Tokens {

@@ -468,7 +468,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		return nil, err
 	}
 
-	task := &Task{ID: id, Text: &line}
+	task := &Task{ID: id}
 	tokens, errs := tokenizeLine(line)
 	for ndx := range tokens {
 		token := tokens[ndx]
