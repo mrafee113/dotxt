@@ -157,8 +157,8 @@ func formatPriorities(tasks []*rTask) {
 		prefixes := make([]string, 0, n)
 		for _, t := range tasks {
 			p := ""
-			if len(t.tsk.Priority) > depth {
-				p = t.tsk.Priority[:depth+1]
+			if len(*t.tsk.Priority) > depth {
+				p = (*t.tsk.Priority)[:depth+1]
 			}
 			if len(groups) == 0 || prefixes[len(prefixes)-1] != p {
 				groups = append(groups, []*rTask{t})
@@ -184,7 +184,7 @@ func formatPriorities(tasks []*rTask) {
 	assignHue(func() []*rTask {
 		var out []*rTask
 		for _, t := range tasks {
-			if t.tsk != nil && t.tsk.Priority != "" {
+			if t.tsk != nil && t.tsk.Priority != nil && *t.tsk.Priority != "" {
 				out = append(out, t)
 			}
 		}
@@ -289,7 +289,7 @@ func colorizeIds(ids map[int]bool) map[int]string {
 }
 
 func formatID(tk Token) string {
-	return fmt.Sprintf("$%s=%d", tk.Key, tk.Value.(int))
+	return fmt.Sprintf("$%s=%d", tk.Key, *tk.Value.(*int))
 }
 
 func formatCategoryHeader(category string, list *rList) string {
@@ -331,10 +331,10 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 		listMetadata.countLen = max(listMetadata.countLen, len(strconv.Itoa(t.Progress.Count)))
 		listMetadata.doneCountLen = max(listMetadata.doneCountLen, len(strconv.Itoa(t.Progress.DoneCount)))
 	}
-	if t.Priority != "" {
+	if t.Priority != nil && *t.Priority != "" {
 		out.tokens = append(out.tokens, &rToken{
 			token: specialTokenMap["priority"],
-			raw:   fmt.Sprintf("(%s)", t.Priority),
+			raw:   fmt.Sprintf("(%s)", *t.Priority),
 		})
 	}
 
@@ -374,7 +374,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 				raw:   formatID(*t.Tokens[ndx]),
 				color: "",
 			})
-			listMetadata.idList[t.Tokens[ndx].Value.(int)] = true
+			listMetadata.idList[*t.Tokens[ndx].Value.(*int)] = true
 		case TokenHint:
 			var color string
 			switch t.Tokens[ndx].Key {
@@ -495,7 +495,7 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 	for _, task := range listMetadata.tasks {
 		for _, tk := range task.tokens {
 			if tk.token.Type == TokenID {
-				tk.color = idColors[tk.token.Value.(int)]
+				tk.color = idColors[*tk.token.Value.(*int)]
 			}
 		}
 	}

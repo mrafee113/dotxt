@@ -181,7 +181,7 @@ func TestPrependToTask(t *testing.T) {
 	err = PrependToTask(2, "something new", path)
 	require.Nil(t, err)
 	task = FileTasks[path][2]
-	assert.Equal("A", task.Priority)
+	assert.Equal("A", *task.Priority)
 	assert.Equal("(A) something new 2", task.Norm())
 }
 
@@ -237,16 +237,16 @@ func TestDeprioritizeTask(t *testing.T) {
 	AddTaskFromStr("no priority", path)
 	AddTaskFromStr("(with) priority", path)
 	t.Run("no priority", func(t *testing.T) {
-		assert.Equal("", FileTasks[path][0].Priority)
+		assert.Nil(FileTasks[path][0].Priority)
 		err := DeprioritizeTask(0, path)
 		assert.NoError(err)
-		assert.Equal("", FileTasks[path][0].Priority)
+		assert.Nil(FileTasks[path][0].Priority)
 	})
 	t.Run("priority", func(t *testing.T) {
-		assert.Equal("with", FileTasks[path][1].Priority)
+		assert.Equal("with", *FileTasks[path][1].Priority)
 		err := DeprioritizeTask(1, path)
 		assert.NoError(err)
-		assert.Equal("", FileTasks[path][1].Priority)
+		assert.Nil(FileTasks[path][1].Priority)
 		found := false
 		for _, tk := range FileTasks[path][1].Tokens {
 			if tk.Type == TokenPriority {
@@ -264,23 +264,23 @@ func TestPrioritizeTask(t *testing.T) {
 	AddTaskFromStr("no priority", path)
 	AddTaskFromStr("(with) priority", path)
 	t.Run("no prior priority", func(t *testing.T) {
-		assert.Equal("", FileTasks[path][0].Priority)
+		assert.Nil(FileTasks[path][0].Priority)
 		err := PrioritizeTask(0, "prio", path)
 		assert.NoError(err)
-		assert.Equal("prio", FileTasks[path][0].Priority)
+		assert.Equal("prio", *FileTasks[path][0].Priority)
 		assert.Equal("(prio)", FileTasks[path][0].Tokens[0].Raw)
 	})
 	t.Run("prior priority", func(t *testing.T) {
-		assert.Equal("with", FileTasks[path][1].Priority)
+		assert.Equal("with", *FileTasks[path][1].Priority)
 		err := PrioritizeTask(1, "prio", path)
 		assert.NoError(err)
-		assert.Equal("prio", FileTasks[path][1].Priority)
+		assert.Equal("prio", *FileTasks[path][1].Priority)
 		assert.Equal("(prio)", FileTasks[path][1].Tokens[0].Raw)
 	})
 	t.Run("ineffective parentheses", func(t *testing.T) {
 		err := PrioritizeTask(1, "(NewPrio)", path)
 		assert.NoError(err)
-		assert.Equal("NewPrio", FileTasks[path][1].Priority)
+		assert.Equal("NewPrio", *FileTasks[path][1].Priority)
 		assert.Equal("(NewPrio)", FileTasks[path][1].Tokens[0].Raw)
 	})
 }

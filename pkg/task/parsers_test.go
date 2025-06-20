@@ -100,7 +100,7 @@ func TestParseTask(t *testing.T) {
 
 	t.Run("validate priority #4", func(t *testing.T) {
 		task, _ = ParseTask(nil, "(!@`#$$%^&*([]{}./';\",)")
-		assert.Equal("!@`#$$%^&*([]{}./';\",", task.Priority)
+		assert.Equal("!@`#$$%^&*([]{}./';\",", *task.Priority)
 	})
 
 	t.Run("validate hints #1", func(t *testing.T) {
@@ -119,7 +119,7 @@ func TestParseTask(t *testing.T) {
 		count = 0
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenHint {
-				assert.Equal("hint", tk.Value.(string))
+				assert.Equal("hint", *tk.Value.(*string))
 				count++
 			}
 		}
@@ -234,11 +234,11 @@ func TestParseTask(t *testing.T) {
 			if tk.Type == TokenID {
 				if strings.HasPrefix(tk.Raw, "$id=") {
 					count++
-					assert.Equal(20002, tk.Value.(int), "$id")
+					assert.Equal(20002, *tk.Value.(*int), "$id")
 				}
 				if strings.HasPrefix(tk.Raw, "$P=") {
 					count++
-					assert.Equal(534, tk.Value.(int), "$P")
+					assert.Equal(534, *tk.Value.(*int), "$P")
 				}
 			}
 		}

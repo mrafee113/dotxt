@@ -373,7 +373,7 @@ func tokenizeLine(line string) ([]*Token, []error) {
 		p := line[i:j]
 		tokens = append(tokens, &Token{
 			Type: TokenPriority, Key: "priority",
-			Value: p,
+			Value: &p,
 			Raw:   fmt.Sprintf("(%s)", p),
 		})
 		line = line[j+1:]
@@ -391,7 +391,7 @@ func tokenizeLine(line string) ([]*Token, []error) {
 			}
 			tokens = append(tokens, &Token{
 				Type: TokenHint, Raw: tokenStr,
-				Key: tokenStr[0:1], Value: tokenStr[1:],
+				Key: tokenStr[0:1], Value: utils.MkPtr(tokenStr[1:]),
 			})
 		case '$':
 			keyValue := strings.SplitN(tokenStr[1:], "=", 2)
@@ -416,7 +416,7 @@ func tokenizeLine(line string) ([]*Token, []error) {
 				}
 				tokens = append(tokens, &Token{
 					Type: TokenID, Raw: tokenStr,
-					Key: key, Value: intVal,
+					Key: key, Value: &intVal,
 				})
 			case "c", "lud", "due", "end", "dead", "r":
 				var dt any
@@ -479,17 +479,17 @@ func ParseTask(id *int, line string) (*Task, error) {
 		token := tokens[ndx]
 		switch token.Type {
 		case TokenID:
-			intVal := token.Value.(int)
+			intVal := token.Value.(*int)
 			switch token.Key {
 			case "id":
-				task.EID = &intVal
+				task.EID = intVal
 			case "P":
-				task.Parent = &intVal
+				task.Parent = intVal
 			}
 		case TokenHint:
-			task.Hints = append(task.Hints, utils.MkPtr(fmt.Sprintf("%s%s", token.Key, token.Value.(string))))
+			task.Hints = append(task.Hints, utils.MkPtr(fmt.Sprintf("%s%s", token.Key, *token.Value.(*string))))
 		case TokenPriority:
-			task.Priority = token.Value.(string)
+			task.Priority = token.Value.(*string)
 		case TokenDate:
 			switch token.Key {
 			case "c":

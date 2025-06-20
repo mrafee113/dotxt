@@ -2,6 +2,7 @@ package task
 
 import (
 	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"strings"
 	"testing"
 	"time"
@@ -25,13 +26,13 @@ func TestUpdate(t *testing.T) {
 		task, _ := ParseTask(nil, "(A) +p #t @a $p=unit/cat/10/100 $due=1w $dead=1w $c=2024-05-05T05-05")
 		newTask, _ := ParseTask(nil, "(B) +p #t @a $p=unit/cat/90/100 $due=1w $dead=1w")
 		task.update(newTask)
-		assert.Equal("B", task.Priority)
+		assert.Equal("B", *task.Priority)
 		assert.Equal(90, task.Count)
 		dt, _ := parseAbsoluteDatetime("2024-05-05T05-05")
 		assert.Exactly(*dt, *task.CreationDate)
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenPriority {
-				assert.Equal("B", tk.Value.(string))
+				assert.Equal("B", *tk.Value.(*string))
 			} else if tk.Type == TokenProgress {
 				assert.Equal(90, tk.Value.(*Progress).Count)
 			} else if tk.Type == TokenDate && tk.Key == "c" {
@@ -208,4 +209,33 @@ func TestUpdateDate(t *testing.T) {
 		}
 		assert.True(found)
 	})
+}
+
+func TestTokenValueTypes(t *testing.T) {
+	assert := assert.New(t)
+	task, _ := ParseTask(utils.MkPtr(2), "(prio) $c=2025-05-05T05-05 $lud=1s $due=1w $dead=1w +prj #tag @at $id=1 $P=2 $every=1m $p=unit/cat/10/100")
+	_, ok := task.Tokens[0].Value.(*string)
+	assert.True(ok)
+	_, ok = task.Tokens[1].Value.(*time.Time)
+	assert.True(ok)
+	_, ok = task.Tokens[2].Value.(*time.Time)
+	assert.True(ok)
+	_, ok = task.Tokens[3].Value.(*time.Time)
+	assert.True(ok)
+	_, ok = task.Tokens[4].Value.(*time.Time)
+	assert.True(ok)
+	_, ok = task.Tokens[5].Value.(*string)
+	assert.True(ok)
+	_, ok = task.Tokens[6].Value.(*string)
+	assert.True(ok)
+	_, ok = task.Tokens[7].Value.(*string)
+	assert.True(ok)
+	_, ok = task.Tokens[8].Value.(*int)
+	assert.True(ok)
+	_, ok = task.Tokens[9].Value.(*int)
+	assert.True(ok)
+	_, ok = task.Tokens[10].Value.(*time.Duration)
+	assert.True(ok)
+	_, ok = task.Tokens[11].Value.(*Progress)
+	assert.True(ok)
 }

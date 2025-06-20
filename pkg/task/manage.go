@@ -125,9 +125,9 @@ func PrependToTask(id int, text, path string) error {
 	}
 
 	var newText string
-	if task.Priority != "" {
+	if task.Priority != nil && *task.Priority != "" {
 		newText = task.Raw()[strings.IndexRune(task.Raw(), ')')+1:]
-		newText = fmt.Sprintf("(%s) %s %s", task.Priority, text, newText)
+		newText = fmt.Sprintf("(%s) %s %s", *task.Priority, text, newText)
 	} else {
 		newText = text + " " + task.Raw()
 	}
@@ -183,7 +183,7 @@ func DeprioritizeTask(id int, path string) error {
 	if err != nil {
 		return err
 	}
-	if task.Priority == "" {
+	if (task.Priority != nil && *task.Priority == "") || task.Priority == nil {
 		return nil
 	}
 
@@ -193,7 +193,7 @@ func DeprioritizeTask(id int, path string) error {
 			break
 		}
 	}
-	task.Priority = ""
+	task.Priority = nil
 	return nil
 }
 
@@ -206,8 +206,8 @@ func PrioritizeTask(id int, priority, path string) error {
 	if len(priority) > 2 && priority[0] == '(' && priority[len(priority)-1] == ')' {
 		priority = priority[1 : len(priority)-1]
 	}
-	hadPriority := task.Priority != ""
-	task.Priority = priority
+	hadPriority := task.Priority != nil && *task.Priority != ""
+	task.Priority = &priority
 	pToken := Token{
 		Type: TokenPriority, Raw: fmt.Sprintf("(%s)", priority), Key: "priority",
 		Value: strings.TrimSuffix(strings.TrimPrefix(priority, "("), ")"),

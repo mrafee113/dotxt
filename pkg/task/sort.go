@@ -39,13 +39,20 @@ func sortCategory(l, r *Task) int {
 }
 
 func sortPriority(l, r *Task) int {
-	if l.Priority != "" && r.Priority == "" {
+	if l.Priority != nil && r.Priority == nil {
 		return -1
-	} else if l.Priority == "" && r.Priority != "" {
+	} else if l.Priority == nil && r.Priority != nil {
 		return 1
-	} else if l.Priority != "" && r.Priority != "" && l.Priority < r.Priority {
+	} else if l.Priority == nil && r.Priority == nil {
+		return 2
+	}
+	if *l.Priority != "" && *r.Priority == "" {
 		return -1
-	} else if l.Priority != "" && r.Priority != "" && l.Priority > r.Priority {
+	} else if *l.Priority == "" && *r.Priority != "" {
+		return 1
+	} else if *l.Priority != "" && *r.Priority != "" && *l.Priority < *r.Priority {
+		return -1
+	} else if *l.Priority != "" && *r.Priority != "" && *l.Priority > *r.Priority {
 		return 1
 	}
 	return 2
