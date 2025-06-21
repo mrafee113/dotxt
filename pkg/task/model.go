@@ -128,7 +128,7 @@ type Task struct {
 	EID      *string // explicit id ($id=)
 	Hints    []*string
 	Priority *string
-	PID      *string
+	PID      *string // parent id ($P=)
 
 	Time *Temporal
 	Prog *Progress
