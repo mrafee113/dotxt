@@ -268,17 +268,6 @@ func parsePriority(line string) (int, int, error) {
 	}
 }
 
-func parseID(token string) (int, error) {
-	val, err := strconv.Atoi(token)
-	if err != nil {
-		return -1, fmt.Errorf("%w: %w: %w", terrors.ErrParse, terrors.ErrValue, err)
-	}
-	if val < 0 {
-		return -1, fmt.Errorf("%w: %w: negative id: %d", terrors.ErrParse, terrors.ErrValue, val)
-	}
-	return val, nil
-}
-
 func resolveDates(tokens []*Token) []error {
 	tokenKeyToNdx := make(map[string]int)
 	nodes := make(map[string]*temporalNode)
@@ -400,6 +389,10 @@ func tokenizeLine(line string) ([]*Token, []error) {
 				continue
 			}
 			key, value := keyValue[0], keyValue[1]
+			if validateEmptyText(value) != nil {
+				handleTokenText(tokenStr, nil)
+				continue
+			}
 			_, seenKey := specialFields[key]
 			if key != "r" && seenKey {
 				continue
@@ -408,14 +401,9 @@ func tokenizeLine(line string) ([]*Token, []error) {
 			}
 			switch key {
 			case "id", "P":
-				intVal, err := parseID(value)
-				if err != nil {
-					handleTokenText(tokenStr, fmt.Errorf("%w: $%s", err, key))
-					continue
-				}
 				tokens = append(tokens, &Token{
 					Type: TokenID, Raw: tokenStr,
-					Key: key, Value: &intVal,
+					Key: key, Value: utils.MkPtr(value),
 				})
 			case "c", "lud", "due", "end", "dead", "r":
 				var dt any
@@ -478,12 +466,12 @@ func ParseTask(id *int, line string) (*Task, error) {
 		token := tokens[ndx]
 		switch token.Type {
 		case TokenID:
-			intVal := token.Value.(*int)
+			val := token.Value.(*string)
 			switch token.Key {
 			case "id":
-				task.EID = intVal
+				task.EID = val
 			case "P":
-				task.Parent = intVal
+				task.Parent = val
 			}
 		case TokenHint:
 			task.Hints = append(task.Hints, utils.MkPtr(fmt.Sprintf("%s%s", token.Key, *token.Value.(*string))))

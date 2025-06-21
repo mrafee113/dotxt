@@ -189,43 +189,28 @@ func TestParseTask(t *testing.T) {
 		assert.True(found, "not found")
 	})
 
-	t.Run("validate $id $P: NaN", func(t *testing.T) {
+	t.Run("validate $id $P: strings", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$id=noway $P=nada")
 		count = 0
 		for _, tk := range task.Tokens {
-			if tk.Type == TokenText {
+			if tk.Type == TokenID {
 				if strings.HasPrefix(tk.Raw, "$id=") {
 					count++
-					assert.Equal("$id=noway", tk.Value.(string), "$id")
+					assert.Equal("noway", *tk.Value.(*string), "$id")
 				}
 				if strings.HasPrefix(tk.Raw, "$P=") {
 					count++
-					assert.Equal("$P=nada", tk.Value.(string), "$P")
+					assert.Equal("nada", *tk.Value.(*string), "$P")
 				}
 			}
 		}
 		assert.Equal(2, count, "count")
-		assert.Nil(task.EID, "EID")
-		assert.Nil(task.Parent, "Parent")
-	})
-	t.Run("validate $id $P: negative", func(t *testing.T) {
-		task, _ = ParseTask(nil, "$id=-1 $P=-224")
-		count = 0
-		for _, tk := range task.Tokens {
-			if tk.Type == TokenText {
-				if strings.HasPrefix(tk.Raw, "$id=") {
-					count++
-					assert.Equal("$id=-1", tk.Value.(string), "$id")
-				}
-				if strings.HasPrefix(tk.Raw, "$P=") {
-					count++
-					assert.Equal("$P=-224", tk.Value.(string), "$P")
-				}
-			}
+		if assert.NotNil(task.EID) {
+			assert.Equal("noway", *task.EID, "EID")
 		}
-		assert.Equal(2, count, "count")
-		assert.Nil(task.EID, "EID")
-		assert.Nil(task.Parent, "Parent")
+		if assert.NotNil(task.Parent) {
+			assert.Equal("nada", *task.Parent, "Parent")
+		}
 	})
 	t.Run("validate $id $P: valid", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$id=20002 $P=534")
@@ -234,20 +219,20 @@ func TestParseTask(t *testing.T) {
 			if tk.Type == TokenID {
 				if strings.HasPrefix(tk.Raw, "$id=") {
 					count++
-					assert.Equal(20002, *tk.Value.(*int), "$id")
+					assert.Equal("20002", *tk.Value.(*string), "$id")
 				}
 				if strings.HasPrefix(tk.Raw, "$P=") {
 					count++
-					assert.Equal(534, *tk.Value.(*int), "$P")
+					assert.Equal("534", *tk.Value.(*string), "$P")
 				}
 			}
 		}
 		assert.Equal(2, count, "count")
 		if assert.NotNil(task.EID, "EID") {
-			assert.Equal(20002, *task.EID, "EID")
+			assert.Equal("20002", *task.EID, "EID")
 		}
 		if assert.NotNil(task.Parent, "Parent") {
-			assert.Equal(534, *task.Parent, "Parent")
+			assert.Equal("534", *task.Parent, "Parent")
 		}
 	})
 

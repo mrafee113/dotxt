@@ -261,11 +261,11 @@ func TestColorizeToken(t *testing.T) {
 
 func TestColorIds(t *testing.T) {
 	assert := assert.New(t)
-	out := colorizeIds(map[int]bool{1: true, 2: true, 3: true})
+	out := colorizeIds(map[string]bool{"1": true, "2": true, "3": true})
 	// 1:"#E09952", 2:"#99E052", 3:"#52E099"
-	assert.Equal("#E09952", out[1])
-	assert.Equal("#99E052", out[2])
-	assert.Equal("#52E099", out[3])
+	assert.Equal("#E09952", out["1"])
+	assert.Equal("#99E052", out["2"])
+	assert.Equal("#52E099", out["3"])
 }
 
 func TestFormatCategoryHeader(t *testing.T) {
@@ -282,7 +282,7 @@ func TestRender(t *testing.T) {
 	id := 1
 
 	t.Run("normal", func(t *testing.T) {
-		l := rList{path: "/tmp/file", idList: make(map[int]bool)}
+		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1w $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
 		rtask := task.Render(&l)
 		assert.Equal(1, l.idLen)
@@ -318,7 +318,7 @@ func TestRender(t *testing.T) {
 		assert.Equal("print.color-every", rtask.tokens[12].color)
 	})
 	t.Run("after due", func(t *testing.T) {
-		l := rList{path: "/tmp/file", idList: make(map[int]bool)}
+		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
@@ -330,7 +330,7 @@ func TestRender(t *testing.T) {
 		}
 	})
 	t.Run("after due before end", func(t *testing.T) {
-		l := rList{path: "/tmp/file", idList: make(map[int]bool)}
+		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $end=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
@@ -343,7 +343,7 @@ func TestRender(t *testing.T) {
 		assert.Equal("print.color-burnt", rtask.tokens[5].color)
 	})
 	t.Run("after due before dead", func(t *testing.T) {
-		l := rList{path: "/tmp/file", idList: make(map[int]bool)}
+		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
@@ -397,7 +397,7 @@ func TestStringify(t *testing.T) {
 	id1 := 12
 	helper := func(line string) string {
 		task, _ := ParseTask(&id1, line)
-		l := rList{path: "/tmp/file", idList: make(map[int]bool)}
+		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		rtask := task.Render(&l)
 		return rtask.stringify(false, 50)
 	}

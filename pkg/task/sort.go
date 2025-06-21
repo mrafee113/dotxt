@@ -131,7 +131,7 @@ func sortHelper(l, r *Task) int {
 func sortTasks(tasks []*Task) []*Task {
 	parentsToChildren := func() map[*Task][]*Task {
 		parents := make(map[*Task][]*Task)
-		parentIds := make(map[int]*Task)
+		parentIds := make(map[string]*Task)
 		for _, task := range tasks {
 			if task == nil {
 				continue

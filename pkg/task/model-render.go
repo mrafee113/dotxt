@@ -94,9 +94,9 @@ type rList struct {
 	path         string
 	maxLen       int
 	idLen        int
-	countLen     int          // progress count
-	doneCountLen int          // progress doneCount
-	idList       map[int]bool // a set of available ids
+	countLen     int             // progress count
+	doneCountLen int             // progress doneCount
+	idList       map[string]bool // a set of available ids
 }
 
 // Used to carry intermediary info for a printing session

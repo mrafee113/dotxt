@@ -125,10 +125,10 @@ type temporalNode struct {
 type Task struct {
 	Tokens   []*Token
 	ID       *int
-	EID      *int // explicit id ($id=)
+	EID      *string // explicit id ($id=)
 	Hints    []*string
 	Priority *string
-	Parent   *int
+	Parent   *string
 
 	Time *Temporal
 	Prog *Progress

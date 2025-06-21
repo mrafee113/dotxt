@@ -269,8 +269,8 @@ func colorizeToken(raw, color, dominantColor string) string {
 	return colorize(color, raw)
 }
 
-func colorizeIds(ids map[int]bool) map[int]string {
-	out := make(map[int]string)
+func colorizeIds(ids map[string]bool) map[string]string {
+	out := make(map[string]string)
 	if len(ids) == 0 {
 		return out
 	}
@@ -289,7 +289,7 @@ func colorizeIds(ids map[int]bool) map[int]string {
 }
 
 func formatID(tk Token) string {
-	return fmt.Sprintf("$%s=%d", tk.Key, *tk.Value.(*int))
+	return fmt.Sprintf("$%s=%s", tk.Key, *tk.Value.(*string))
 }
 
 func formatCategoryHeader(category string, list *rList) string {
@@ -307,7 +307,7 @@ func formatCategoryHeader(category string, list *rList) string {
 
 func (t *Task) Render(listMetadata *rList) *rTask {
 	if listMetadata == nil {
-		listMetadata = &rList{idList: make(map[int]bool)}
+		listMetadata = &rList{idList: make(map[string]bool)}
 	}
 	out := rTask{tsk: t, id: *t.ID, idColor: "print.color-index"}
 	addAsRegular := func(token *Token) {
@@ -374,7 +374,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 				raw:   formatID(*t.Tokens[ndx]),
 				color: "",
 			})
-			listMetadata.idList[*t.Tokens[ndx].Value.(*int)] = true
+			listMetadata.idList[*t.Tokens[ndx].Value.(*string)] = true
 		case TokenHint:
 			var color string
 			switch t.Tokens[ndx].Key {
@@ -485,7 +485,7 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 	}
 
 	FileTasks[path] = sortTasks(FileTasks[path])
-	listMetadata := rList{path: path, idList: make(map[int]bool)}
+	listMetadata := rList{path: path, idList: make(map[string]bool)}
 	sessionMetadata.lists[path] = &listMetadata
 	for _, task := range FileTasks[path] {
 		rtask := task.Render(&listMetadata)
@@ -495,7 +495,7 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 	for _, task := range listMetadata.tasks {
 		for _, tk := range task.tokens {
 			if tk.token.Type == TokenID {
-				tk.color = idColors[*tk.token.Value.(*int)]
+				tk.color = idColors[*tk.token.Value.(*string)]
 			}
 		}
 	}

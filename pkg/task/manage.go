@@ -269,18 +269,8 @@ func DeleteTasks(ids []int, path string) error {
 	if err != nil {
 		return err
 	}
-	var eids []int
 	for _, ndx := range indexes {
-		if eid := FileTasks[path][ndx].EID; eid != nil {
-			eids = append(eids, *eid)
-		}
 		FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
-	}
-	// remove orphans
-	for ndx := len(FileTasks[path]) - 1; ndx >= 0; ndx-- {
-		if p := FileTasks[path][ndx].Parent; p != nil && slices.Contains(eids, *p) {
-			FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
-		}
 	}
 	err = cleanupIDs(path)
 	if err != nil {
@@ -299,19 +289,9 @@ func DoneTask(ids []int, path string) error {
 		return err
 	}
 	var tasks []*Task
-	var eids []int
 	for _, ndx := range indexes {
-		if eid := FileTasks[path][ndx].EID; eid != nil {
-			eids = append(eids, *eid)
-		}
 		tasks = append(tasks, FileTasks[path][ndx])
 		FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
-	}
-	// remove orphans
-	for ndx := len(FileTasks[path]) - 1; ndx >= 0; ndx-- {
-		if p := FileTasks[path][ndx].Parent; p != nil && slices.Contains(eids, *p) {
-			FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
-		}
 	}
 	err = cleanupIDs(path)
 	if err != nil {
