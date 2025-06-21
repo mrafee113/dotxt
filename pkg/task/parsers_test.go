@@ -208,8 +208,8 @@ func TestParseTask(t *testing.T) {
 		if assert.NotNil(task.EID) {
 			assert.Equal("noway", *task.EID, "EID")
 		}
-		if assert.NotNil(task.Parent) {
-			assert.Equal("nada", *task.Parent, "Parent")
+		if assert.NotNil(task.PID) {
+			assert.Equal("nada", *task.PID, "PID")
 		}
 	})
 	t.Run("validate $id $P: valid", func(t *testing.T) {
@@ -231,8 +231,8 @@ func TestParseTask(t *testing.T) {
 		if assert.NotNil(task.EID, "EID") {
 			assert.Equal("20002", *task.EID, "EID")
 		}
-		if assert.NotNil(task.Parent, "Parent") {
-			assert.Equal("534", *task.Parent, "Parent")
+		if assert.NotNil(task.PID, "PID") {
+			assert.Equal("534", *task.PID, "PID")
 		}
 	})
 

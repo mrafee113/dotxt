@@ -131,19 +131,19 @@ func sortHelper(l, r *Task) int {
 func sortTasks(tasks []*Task) []*Task {
 	parentsToChildren := func() map[*Task][]*Task {
 		parents := make(map[*Task][]*Task)
-		parentIds := make(map[string]*Task)
+		PIDs := make(map[string]*Task)
 		for _, task := range tasks {
 			if task == nil {
 				continue
 			}
 			if task.EID != nil {
-				parentIds[*task.EID] = task
+				PIDs[*task.EID] = task
 				parents[task] = make([]*Task, 0)
 			}
 		}
 		for ndx := len(tasks) - 1; ndx >= 0; ndx-- {
-			if tasks[ndx].Parent != nil {
-				parent, ok := parentIds[*tasks[ndx].Parent]
+			if tasks[ndx].PID != nil {
+				parent, ok := PIDs[*tasks[ndx].PID]
 				if !ok {
 					continue
 				}

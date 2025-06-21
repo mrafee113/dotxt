@@ -128,7 +128,7 @@ type Task struct {
 	EID      *string // explicit id ($id=)
 	Hints    []*string
 	Priority *string
-	Parent   *string
+	PID      *string
 
 	Time *Temporal
 	Prog *Progress
@@ -287,6 +287,6 @@ func DebugTask(t *Task) {
 		return
 	}
 	print("id: %v, explicitId: %v\ntext: %v\nhints: %v\npriority: %v\nparent: %v\n\ncreationDate: %v\nlastUpdated: %v\n\ndueDate: %v\nreminders: %v\nendDate: %v\ndeadline: %v\nevery: %v\n\nprogress: %v\n",
-		t.ID, t.EID, t.Raw(), t.Hints, t.Priority, t.Parent, t.Time.CreationDate, t.Time.LastUpdated,
+		t.ID, t.EID, t.Raw(), t.Hints, t.Priority, t.PID, t.Time.CreationDate, t.Time.LastUpdated,
 		t.Time.DueDate, t.Time.Reminders, t.Time.EndDate, t.Time.Deadline, t.Time.Every, t.Prog)
 }

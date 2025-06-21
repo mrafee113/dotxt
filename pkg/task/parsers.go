@@ -471,7 +471,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 			case "id":
 				task.EID = val
 			case "P":
-				task.Parent = val
+				task.PID = val
 			}
 		case TokenHint:
 			task.Hints = append(task.Hints, utils.MkPtr(fmt.Sprintf("%s%s", token.Key, *token.Value.(*string))))
