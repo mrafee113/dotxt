@@ -74,8 +74,7 @@ func prepFileTaskFromPath(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, ok := FileTasks[path]
-	if !ok {
+	if !Lists.Exists(path) {
 		return "", fmt.Errorf("%w: %s", terrors.ErrListNotInMemory, path)
 	}
 	return path, nil
@@ -115,10 +114,7 @@ func locateFiles() error {
 		}
 		if isRegular || isSymlink {
 			key := filepath.Join(todoPath, entry.Name())
-			_, ok := FileTasks[key]
-			if !ok {
-				FileTasks[key] = make([]*Task, 0)
-			}
+			Lists.Init(key)
 		}
 	}
 	return nil
@@ -257,19 +253,20 @@ func LoadFile(path string) error {
 	if err != nil {
 		return err
 	}
-	if _, ok := FileTasks[path]; !ok || !utils.FileExists(path) {
+	if !Lists.Exists(path) || !utils.FileExists(path) {
 		return os.ErrNotExist
 	}
 	fileTasks, err := ParseTasks(path)
 	if err != nil {
 		return err
 	}
-	FileTasks[path] = fileTasks
+	Lists[path].Tasks = fileTasks
+	cleanupRelations(path)
 	return nil
 }
 
 func ReloadFiles() error {
-	for path := range FileTasks {
+	for path := range Lists {
 		if err := LoadFile(path); err != nil {
 			return err
 		}
@@ -295,7 +292,7 @@ func StoreFile(path string) error {
 	if err != nil {
 		return err
 	}
-	fileTasks, ok := FileTasks[path]
+	fileTasks, ok := Lists.Tasks(path)
 	if !ok {
 		return fmt.Errorf("%w: %s", terrors.ErrListNotInMemory, path)
 	}
@@ -321,7 +318,7 @@ func StoreFile(path string) error {
 }
 
 func StoreFiles() error {
-	for path := range FileTasks {
+	for path := range Lists {
 		if err := StoreFile(path); err != nil {
 			return err
 		}

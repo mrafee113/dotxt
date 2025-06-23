@@ -14,9 +14,9 @@ func cleanupIDs(path string) error {
 	if err != nil {
 		return err
 	}
-	n := len(FileTasks[path])
+	n := Lists.Len(path)
 	ndxs := make(map[int]bool)
-	for _, task := range FileTasks[path] {
+	for _, task := range Lists[path].Tasks {
 		if task.ID != nil {
 			if _, ok := ndxs[*task.ID]; *task.ID >= n || *task.ID < 0 || ok {
 				task.ID = nil
@@ -33,7 +33,7 @@ func cleanupIDs(path string) error {
 			stack = append(stack, ndx)
 		}
 	}
-	for _, task := range FileTasks[path] {
+	for _, task := range Lists[path].Tasks {
 		if task.ID == nil {
 			task.ID = utils.MkPtr(stack[0])
 			stack = stack[1:]
@@ -49,7 +49,35 @@ func cleanupIDs(path string) error {
 			return 0
 		}
 	}
-	slices.SortFunc(FileTasks[path], idSortFunc)
+	Lists.SortFunc(path, idSortFunc)
+	return nil
+}
+
+func cleanupRelations(path string) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	Lists[path].EIDs = make(map[string]*Task)
+	Lists[path].PIDs = make(map[*Task]string)
+	for _, task := range Lists[path].Tasks {
+		if task.EID != nil {
+			Lists[path].EIDs[*task.EID] = task
+		}
+		if task.PID != nil {
+			Lists[path].PIDs[task] = *task.PID
+		}
+		task.Children = make([]*Task, 0)
+		task.Parent = nil
+	}
+	for task, pid := range Lists[path].PIDs {
+		parent, ok := Lists[path].EIDs[pid]
+		if !ok {
+			continue
+		}
+		task.Parent = parent
+		parent.Children = append(parent.Children, task)
+	}
 	return nil
 }
 
@@ -58,8 +86,9 @@ func AddTask(task *Task, path string) error {
 	if err != nil {
 		return err
 	}
-	FileTasks[path] = append(FileTasks[path], task)
+	Lists.Append(path, task)
 	cleanupIDs(path)
+	cleanupRelations(path)
 	return nil
 }
 
@@ -81,7 +110,7 @@ func getTaskIndexFromId(id int, path string) (int, error) {
 		return -1, err
 	}
 	taskNdx := -1
-	for ndx, t := range FileTasks[path] {
+	for ndx, t := range Lists[path].Tasks {
 		if *t.ID == id {
 			taskNdx = ndx
 		}
@@ -101,7 +130,7 @@ func getTaskFromId(id int, path string) (*Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	return FileTasks[path][taskNdx], nil
+	return Lists[path].Tasks[taskNdx], nil
 }
 
 func AppendToTask(id int, text, path string) error {
@@ -115,6 +144,7 @@ func AppendToTask(id int, text, path string) error {
 		return err
 	}
 	task.ID = &id
+	cleanupRelations(path)
 	return nil
 }
 
@@ -136,6 +166,7 @@ func PrependToTask(id int, text, path string) error {
 		return err
 	}
 	task.ID = &id
+	cleanupRelations(path)
 	return nil
 }
 
@@ -150,6 +181,7 @@ func ReplaceTask(id int, text, path string) error {
 		return err
 	}
 	task.ID = &id
+	cleanupRelations(path)
 	return nil
 }
 
@@ -161,7 +193,7 @@ func DeduplicateList(path string) error {
 
 	var indexes []int
 	var lines map[string][]int = make(map[string][]int)
-	for ndx, task := range FileTasks[path] {
+	for ndx, task := range Lists[path].Tasks {
 		taskNorm := task.Norm()
 		_, ok := lines[taskNorm]
 		if !ok {
@@ -239,7 +271,7 @@ func getIndexesFromIds(ids []int, path string) ([]int, error) {
 		idsMap[val] = true
 	}
 	var indexes []int
-	for ndx, task := range FileTasks[path] {
+	for ndx, task := range Lists[path].Tasks {
 		if task.ID == nil {
 			continue
 		}
@@ -270,12 +302,13 @@ func DeleteTasks(ids []int, path string) error {
 		return err
 	}
 	for _, ndx := range indexes {
-		FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
+		Lists.DeleteTasks(path, ndx, ndx+1)
 	}
 	err = cleanupIDs(path)
 	if err != nil {
 		return err
 	}
+	cleanupRelations(path)
 	return nil
 }
 
@@ -290,13 +323,11 @@ func DoneTask(ids []int, path string) error {
 	}
 	var tasks []*Task
 	for _, ndx := range indexes {
-		tasks = append(tasks, FileTasks[path][ndx])
-		FileTasks[path] = slices.Delete(FileTasks[path], ndx, ndx+1)
+		tasks = append(tasks, Lists[path].Tasks[ndx])
+		Lists.DeleteTasks(path, ndx, ndx+1)
 	}
-	err = cleanupIDs(path)
-	if err != nil {
-		return err
-	}
+	cleanupIDs(path)
+	cleanupRelations(path)
 
 	var out []string
 	for _, task := range tasks {
@@ -322,11 +353,13 @@ func MoveTask(from string, id int, to string) error {
 	if err != nil {
 		return err
 	}
-	// TODO: remove orphans
-	FileTasks[to] = append(FileTasks[to], FileTasks[from][taskNdx])
+
+	Lists.Append(to, Lists[from].Tasks[taskNdx])
 	cleanupIDs(to)
-	FileTasks[from] = slices.Delete(FileTasks[from], taskNdx, taskNdx+1)
+	cleanupRelations(to)
+	Lists.DeleteTasks(from, taskNdx, taskNdx+1)
 	cleanupIDs(from)
+	cleanupRelations(from)
 	return nil
 }
 
@@ -341,13 +374,14 @@ func RevertTask(ids []int, path string) error {
 	}
 
 	for _, text := range texts {
-		newId := len(FileTasks[path])
+		newId := Lists.Len(path)
 		task, err := ParseTask(&newId, text)
 		if err != nil {
 			return err
 		}
-		FileTasks[path] = append(FileTasks[path], task)
+		Lists.Append(path, task)
 	}
+	cleanupRelations(path)
 	return nil
 }
 
@@ -403,7 +437,7 @@ func CheckAndRecurTasks(path string) error {
 	if err != nil {
 		return err
 	}
-	for _, task := range FileTasks[path] {
+	for _, task := range Lists[path].Tasks {
 		if task.Time.Every != nil &&
 			task.Time.DueDate != nil &&
 			task.Time.DueDate.Before(rightNow) {

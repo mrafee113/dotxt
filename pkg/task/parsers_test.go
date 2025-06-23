@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 }
 
 func clearTasks(path string) {
-	FileTasks[path] = make([]*Task, 0)
+	Lists.Empty(path)
 }
 
 func mockLoad(path string) error {
@@ -48,7 +48,7 @@ func TestAdd(t *testing.T) {
 	if !assert.NoError(err) {
 		assert.FailNow(err.Error())
 	}
-	task := FileTasks[path][0]
+	task := Lists[path].Tasks[0]
 	assert.Equal(*task.ID, 0)
 	assert.Equal(task.Norm(), "testing")
 }

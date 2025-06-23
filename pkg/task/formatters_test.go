@@ -367,9 +367,9 @@ func TestRenderList(t *testing.T) {
 	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/cat/223/3500")
 
 	sm := rPrint{lists: make(map[string]*rList)}
-	FileTasks[path] = append(FileTasks[path], task1)
-	FileTasks[path] = append(FileTasks[path], task2)
-	FileTasks[path] = append(FileTasks[path], task3)
+	Lists.Append(path, task1)
+	Lists.Append(path, task2)
+	Lists.Append(path, task3)
 	err := RenderList(&sm, path)
 	assert.NoError(err)
 
@@ -461,12 +461,12 @@ func TestPrintLists(t *testing.T) {
 	}
 
 	t.Run("header len", func(t *testing.T) {
-		FileTasks[path] = []*Task{task2}
+		Lists[path].Tasks = []*Task{task2}
 		out := capture(80, 70)
 		assert.Equal(192, len(out[0]))
 		out = capture(90, 70)
 		assert.Equal(192, len(out[0]))
-		FileTasks[path] = []*Task{task1}
+		Lists[path].Tasks = []*Task{task1}
 		out = capture(90, 70)
 		assert.Equal(252, len(out[0]))
 		out = capture(160, 70)
@@ -475,7 +475,7 @@ func TestPrintLists(t *testing.T) {
 		assert.Equal(297, len(out[0]))
 	})
 	t.Run("line len", func(t *testing.T) {
-		FileTasks[path] = []*Task{task1, task2, task3}
+		Lists[path].Tasks = []*Task{task1, task2, task3}
 		out := capture(50, 10)
 		assert.Equal(132, len(out[0])) // header
 		assert.Equal(90, len(out[1]))  // category header
@@ -492,7 +492,7 @@ func TestPrintLists(t *testing.T) {
 		assert.Equal(15, len(out[10]))
 	})
 	t.Run("category headers", func(t *testing.T) {
-		FileTasks[path] = []*Task{task1, task2, task3}
+		Lists[path].Tasks = []*Task{task1, task2, task3}
 		out := capture(50, 10)
 		assert.Equal(90, len(out[1]))
 		assert.Equal(90, len(out[5]))
@@ -510,7 +510,7 @@ func TestPrintTask(t *testing.T) {
 	id3 := 210
 	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500")
 	path := "/tmp/file"
-	FileTasks[path] = []*Task{task1, task2, task3}
+	Lists[path].Tasks = []*Task{task1, task2, task3}
 	rn := rightNow.Format("2006-01-02T15-04-05")
 
 	capture := func(id int) string {

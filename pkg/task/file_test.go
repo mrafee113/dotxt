@@ -89,7 +89,7 @@ func TestPrepFileTaskFromPath(t *testing.T) {
 	assert.ErrorIs(err, terrors.ErrListNotInMemory)
 	assert.ErrorContains(err, path)
 	path, _ = parseFilepath(path)
-	FileTasks[path] = make([]*Task, 0)
+	Lists.Empty(path)
 	_, err = prepFileTaskFromPath(path)
 	assert.NoError(err)
 }
@@ -107,11 +107,10 @@ func TestLocateFiles(t *testing.T) {
 	// TODO: add support for nested files and symbolic links
 	// os.MkdirAll(filepath.Join(tmpDir, "todos", "dir1"), 0755)
 	// CreateFile(filepath.Join(tmpDir, "todos", "dir1", "file2"))
-	FileTasks = make(map[string][]*Task)
+	Lists = make(lists)
 	err = locateFiles()
 	assert.NoError(err)
-	_, ok := FileTasks[filepath.Join(tmpDir, "todos", "file1")]
-	assert.True(ok)
+	assert.True(Lists.Exists(filepath.Join(tmpDir, "todos", "file1")))
 	// _, ok = FileTasks[filepath.Join(tmpDir, "todos", "dir1", "file2")]
 	// assert.True(ok)
 }
@@ -276,8 +275,7 @@ func TestCreateFile(t *testing.T) {
 	raw, err := os.ReadFile(path)
 	require.Nil(t, err)
 	assert.Equal("", string(raw))
-	_, ok := FileTasks[path]
-	assert.True(ok)
+	assert.True(Lists.Exists(path))
 }
 
 func TestLoadFile(t *testing.T) {
@@ -300,7 +298,7 @@ func TestLoadFile(t *testing.T) {
 		os.WriteFile(path, []byte(""), 0o655)
 		err := LoadFile(name)
 		require.Nil(t, err)
-		tasks, ok := FileTasks[path]
+		tasks, ok := Lists.Tasks(path)
 		assert.True(ok)
 		assert.Empty(tasks)
 	})
@@ -308,7 +306,7 @@ func TestLoadFile(t *testing.T) {
 		os.WriteFile(path, []byte("1\n2\n3"), 0o655)
 		err := LoadFile(name)
 		require.Nil(t, err)
-		tasks, ok := FileTasks[path]
+		tasks, ok := Lists.Tasks(path)
 		assert.True(ok)
 		assert.Len(tasks, 3)
 	})
@@ -328,9 +326,9 @@ func TestStoreFile(t *testing.T) {
 	t.Run("empty tasks", func(t *testing.T) {
 		os.WriteFile(path, []byte("1\n2\n"), 0o655)
 		LoadFile(name)
-		tasks := FileTasks[path]
+		tasks := Lists[path].Tasks
 		assert.Len(tasks, 2)
-		FileTasks[path] = make([]*Task, 0)
+		Lists.Empty(path)
 		err = StoreFile(path)
 		require.Nil(t, err)
 		raw, err := os.ReadFile(path)
@@ -342,7 +340,8 @@ func TestStoreFile(t *testing.T) {
 		os.WriteFile(path, []byte(""), 0o655)
 		LoadFile(name + "1")
 		LoadFile(name)
-		FileTasks[path] = FileTasks[path+"1"]
+		assert.True(Lists.Exists(path))
+		Lists[path].Tasks = Lists[path+"1"].Tasks
 		err := StoreFile(path)
 		require.Nil(t, err)
 		raw, err := os.ReadFile(path)

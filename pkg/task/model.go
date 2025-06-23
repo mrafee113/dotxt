@@ -13,7 +13,95 @@ import (
 	"github.com/spf13/viper"
 )
 
-var FileTasks map[string][]*Task = make(map[string][]*Task)
+// var FileTasks map[string][]*Task = make(map[string][]*Task)
+
+type List struct {
+	Tasks []*Task
+	EIDs  map[string]*Task
+	PIDs  map[*Task]string
+}
+
+type lists map[string]*List
+
+var Lists lists = make(lists)
+
+func (l *lists) Exists(path string) bool {
+	_, ok := (*l)[path]
+	return ok
+}
+
+// check existence and get
+func (l *lists) Tasks(path string) ([]*Task, bool) {
+	if !l.Exists(path) {
+		return nil, false
+	}
+	return (*l)[path].Tasks, true
+}
+
+// create a list if it doesn't exist
+func (l *lists) Init(path string, values ...*Task) {
+	if !l.Exists(path) {
+		(*l)[path] = new(List)
+		(*l)[path].EIDs = make(map[string]*Task)
+		(*l)[path].PIDs = make(map[*Task]string)
+		if len(values) > 0 {
+			(*l)[path].Tasks = append((*l)[path].Tasks, values...)
+		}
+	} else if len(values) > 0 {
+		l.Set(path, values)
+		cleanupRelations(path)
+	}
+}
+
+// empties the tasks of this path if it exists
+func (l *lists) Empty(path string) {
+	l.Init(path)
+	(*l)[path].Tasks = make([]*Task, 0)
+}
+
+func (l *lists) Set(path string, tasks []*Task) {
+	l.Init(path)
+	(*l)[path].Tasks = tasks
+	cleanupRelations(path)
+}
+
+// append task to list if it exists
+func (l *lists) Append(path string, task *Task) {
+	l.Init(path)
+	(*l)[path].Tasks = append((*l)[path].Tasks, task)
+}
+
+func (l *lists) Sort(path string) {
+	if l.Exists(path) {
+		(*l)[path].Tasks = sortTasks((*l)[path].Tasks)
+	}
+}
+
+func (l *lists) SortFunc(path string, cmp func(*Task, *Task) int) {
+	if l.Exists(path) {
+		slices.SortFunc((*l)[path].Tasks, cmp)
+	}
+}
+
+func (l *lists) Delete(path string) {
+	if l.Exists(path) {
+		delete(*l, path)
+	}
+}
+
+// uses slices.Delete upon l.Tasks
+func (l *lists) DeleteTasks(path string, start, end int) {
+	if l.Exists(path) {
+		(*l)[path].Tasks = slices.Delete((*l)[path].Tasks, start, end)
+	}
+}
+
+func (l *lists) Len(path string) int {
+	if l.Exists(path) {
+		return len((*l)[path].Tasks)
+	}
+	return 0
+}
 
 type TokenType int
 
@@ -125,10 +213,12 @@ type temporalNode struct {
 type Task struct {
 	Tokens   []*Token
 	ID       *int
-	EID      *string // explicit id ($id=)
 	Hints    []*string
 	Priority *string
+	EID      *string // explicit id ($id=)
+	Children []*Task
 	PID      *string // parent id ($P=)
+	Parent   *Task
 
 	Time *Temporal
 	Prog *Progress
@@ -136,6 +226,14 @@ type Task struct {
 
 func (t *Task) String() string {
 	return fmt.Sprintf("%-2d %s", *t.ID, t.Raw())
+}
+
+func (t *Task) Root() *Task {
+	task := t
+	for task.Parent != nil {
+		task = task.Parent
+	}
+	return task.Parent
 }
 
 func (t *Task) update(new *Task) error {

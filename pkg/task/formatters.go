@@ -484,10 +484,10 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 		return err
 	}
 
-	FileTasks[path] = sortTasks(FileTasks[path])
+	Lists.Sort(path)
 	listMetadata := rList{path: path, idList: make(map[string]bool)}
 	sessionMetadata.lists[path] = &listMetadata
-	for _, task := range FileTasks[path] {
+	for _, task := range Lists[path].Tasks {
 		rtask := task.Render(&listMetadata)
 		listMetadata.tasks = append(listMetadata.tasks, rtask)
 	}

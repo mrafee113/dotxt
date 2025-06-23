@@ -3,6 +3,7 @@ package task
 import (
 	"dotxt/pkg/terrors"
 	"dotxt/pkg/utils"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -238,4 +239,57 @@ func TestTokenValueTypes(t *testing.T) {
 	assert.True(ok, "every")
 	_, ok = task.Tokens[11].Value.(*Progress)
 	assert.True(ok, "progress")
+}
+
+func TestLists(t *testing.T) {
+	assert := assert.New(t)
+	path, _ := parseFilepath("hello")
+	var tasks []*Task
+	for ndx := range 10 {
+		task, _ := ParseTask(utils.MkPtr(ndx), fmt.Sprintf("%d", ndx))
+		tasks = append(tasks, task)
+	}
+	t.Run("exists", func(t *testing.T) {
+		Lists.Init(path)
+		assert.True(Lists.Exists(path))
+		Lists.Delete(path)
+		assert.False(Lists.Exists(path))
+	})
+	t.Run("init", func(t *testing.T) {
+		Lists.Delete(path)
+		Lists.Init(path)
+		assert.True(Lists.Exists(path))
+		assert.NotNil(Lists[path].EIDs)
+		assert.NotNil(Lists[path].PIDs)
+		assert.Empty(Lists[path].Tasks)
+		Lists.Init(path, tasks...)
+		assert.NotEmpty(Lists[path].Tasks)
+		Lists.Delete(path)
+		Lists.Init(path, tasks...)
+		assert.NotEmpty(path)
+	})
+	t.Run("empty", func(t *testing.T) {
+		Lists.Delete(path)
+		Lists.Init(path)
+		Lists.Empty(path)
+		assert.Empty(Lists[path].Tasks)
+		Lists.Set(path, tasks)
+		assert.NotEmpty(Lists[path].Tasks)
+		Lists.Empty(path)
+		assert.Empty(Lists[path].Tasks)
+	})
+	t.Run("set", func(t *testing.T) {
+		Lists.Delete(path)
+		Lists.Init(path)
+		Lists.Set(path, tasks)
+		assert.Equal(tasks, Lists[path].Tasks)
+		Lists.Set(path, tasks[2:6])
+		assert.Equal(tasks[2:6], Lists[path].Tasks)
+	})
+	t.Run("append", func(t *testing.T) {
+		Lists.Append(path, tasks[0])
+		assert.NotEqual(tasks[1], Lists[path].Tasks[len(Lists[path].Tasks)-1])
+		Lists.Append(path, tasks[1])
+		assert.Equal(tasks[1], Lists[path].Tasks[len(Lists[path].Tasks)-1])
+	})
 }
