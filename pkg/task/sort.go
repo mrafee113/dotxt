@@ -129,44 +129,28 @@ func sortHelper(l, r *Task) int {
 }
 
 func sortTasks(tasks []*Task) []*Task {
-	parentsToChildren := func() map[*Task][]*Task {
-		parents := make(map[*Task][]*Task)
-		PIDs := make(map[string]*Task)
-		for _, task := range tasks {
-			if task == nil {
-				continue
-			}
-			if task.EID != nil {
-				PIDs[*task.EID] = task
-				parents[task] = make([]*Task, 0)
-			}
+	for ndx := len(tasks) - 1; ndx >= 0; ndx-- {
+		if tasks[ndx].Parent != nil {
+			tasks = slices.Delete(tasks, ndx, ndx+1)
 		}
-		for ndx := len(tasks) - 1; ndx >= 0; ndx-- {
-			if tasks[ndx].PID != nil {
-				parent, ok := PIDs[*tasks[ndx].PID]
-				if !ok {
-					continue
-				}
-				parents[parent] = append(parents[parent], tasks[ndx])
-				tasks = slices.Delete(tasks, ndx, ndx+1)
-			}
-		}
-		return parents
-	}()
-	slices.SortFunc(tasks, sortHelper)
-
-	var out []*Task
-	for _, task := range tasks {
-		if task == nil {
-			continue
-		}
-		out = append(out, task)
-		children, ok := parentsToChildren[task]
-		if !ok {
-			continue
-		}
-		slices.SortFunc(children, sortHelper)
-		out = append(out, children...)
 	}
-	return out
+	slices.SortFunc(tasks, sortHelper)
+	var dfs func(int)
+	dfs = func(ndx int) {
+		// TODO: ask Ai on how to use `copy` so as to not sort the children within the actual ds
+		children := tasks[ndx].Children
+		slices.SortFunc(children, sortHelper)
+		for sndx := len(children) - 1; sndx >= 0; sndx-- {
+			tasks = slices.Insert(tasks, ndx+1, children[sndx])
+			if len(children[sndx].Children) > 0 {
+				dfs(ndx + 1)
+			}
+		}
+	}
+	for ndx := len(tasks) - 1; ndx >= 0; ndx-- {
+		if len(tasks[ndx].Children) > 0 {
+			dfs(ndx)
+		}
+	}
+	return tasks
 }

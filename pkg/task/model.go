@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// var FileTasks map[string][]*Task = make(map[string][]*Task)
-
 type List struct {
 	Tasks []*Task
 	EIDs  map[string]*Task
@@ -228,12 +226,14 @@ func (t *Task) String() string {
 	return fmt.Sprintf("%-2d %s", *t.ID, t.Raw())
 }
 
-func (t *Task) Root() *Task {
+func (t *Task) Depth() int {
+	count := -1
 	task := t
-	for task.Parent != nil {
+	for task != nil {
 		task = task.Parent
+		count++
 	}
-	return task.Parent
+	return count
 }
 
 func (t *Task) update(new *Task) error {

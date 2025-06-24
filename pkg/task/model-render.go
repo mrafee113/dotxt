@@ -3,6 +3,7 @@ package task
 import (
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 // Used to carry intermediary info for a token,
@@ -28,6 +29,13 @@ type rTask struct {
 
 func (r *rTask) stringify(color bool, maxWidth int) string {
 	var out strings.Builder
+	idPrefix := ""
+	newLinePrefix := strings.Repeat(" ", r.idLen+1)
+	if depth := r.tsk.Depth(); depth > 0 {
+		depthSpace := strings.Repeat(" ", depth*(r.idLen+1))
+		idPrefix += depthSpace
+		newLinePrefix += depthSpace
+	}
 	var length int
 	var fold func(string) string
 	fold = func(str string) string {
@@ -35,26 +43,29 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 			return str
 		}
 		n := len(str)
-		if n+length <= maxWidth {
+		if n+length <= maxWidth { // fits
 			length += n
 			return str
 		}
-		if n > maxWidth {
+		if length >= maxWidth-1 { // current line has no space whatsoever
+			length = r.idLen + 1
+			if str == " " {
+				return "\n" + newLinePrefix
+			}
+			return "\n" + newLinePrefix + fold(str)
+		}
+		if n > maxWidth || r.idLen+1+n > maxWidth { // string is so long it has to be split
 			oldLen := length
 			length = r.idLen + 1
 			return str[:maxWidth-oldLen-1] + "\\\n" +
-				strings.Repeat(" ", r.idLen+1) +
-				fold(str[maxWidth-oldLen-1:])
+				newLinePrefix + fold(str[maxWidth-oldLen-1:])
 		}
-		if r.idLen+1+len(str) > maxWidth {
-			length = 0
-			return "\n" + fold(strings.Repeat(" ", r.idLen+1)+str)
-		}
-		length = r.idLen + 1 + len(str)
-		return "\n" + strings.Repeat(" ", r.idLen+1) + str
+		// str is long enough to not fit current line and not long enough to be splitted
+		length = r.idLen + 1 + n
+		return "\n" + newLinePrefix + str
 	}
 
-	idTxt := fmt.Sprintf("%0*d", r.idLen, r.id)
+	idTxt := fmt.Sprintf("%s%0*d", idPrefix, r.idLen, r.id)
 	if color {
 		out.WriteString(colorize(r.idColor, fold(idTxt)))
 	} else {
@@ -85,7 +96,7 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 		}
 		out.WriteString(fold(" "))
 	}
-	return strings.TrimSpace(out.String())
+	return strings.TrimRightFunc(out.String(), unicode.IsSpace)
 }
 
 // Used to carry intermediary info for a task List

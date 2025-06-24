@@ -568,17 +568,17 @@ func TestCleanupRelations(t *testing.T) {
 	path, _ := parseFilepath("test")
 	Lists.Empty(path)
 	for ndx, line := range []string{
-		"repetetive $id=first",
-		"nested repetetive $id=fourth $P=first",
-		"no id",
-		"id $id=first",
-		"id $id=second",
-		"parent $P=first",
-		"parent $P=second",
-		"id+parent $id=third $P=second",
-		"nested first $P=third",
-		"nested second $id=fourth $P=third",
-		"nested nested $P=fourth",
+		"0 repetetive $id=first",
+		"1 nested repetetive $id=fourth $P=first",
+		"2 no id",
+		"3 id $id=first",
+		"4 id $id=second",
+		"5 parent $P=first",
+		"6 parent $P=second",
+		"7 id+parent $id=third $P=second",
+		"8 nested first $P=third",
+		"9 nested second $id=fourth $P=third",
+		"10 nested nested $P=fourth",
 	} {
 		task, _ := ParseTask(utils.MkPtr(ndx), line)
 		Lists.Append(path, task)
@@ -621,12 +621,15 @@ func TestCleanupRelations(t *testing.T) {
 	}
 	assert.Equal(4, *get(6).Parent.ID, "pid=second")
 	assert.Equal(7, *get(8).Parent.ID, "pid=third")
+	assert.Equal(2, get(8).Depth())
 	assert.Equal(9, *get(10).Parent.ID, "pid=fourth")
 	assert.Equal(3, *get(1).Parent.ID, "pid=first")
 	assert.Equal(3, *get(5).Parent.ID, "pid=first")
+	assert.Equal(1, get(5).Depth())
 
 	assert.Empty(get(0).Children)
 	assert.Empty(get(1).Children)
 	assert.Nil(get(2).Parent)
 	assert.Empty(get(2).Children)
+	assert.Equal(0, get(2).Depth())
 }

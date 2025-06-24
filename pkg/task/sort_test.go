@@ -110,12 +110,24 @@ func TestSortTask(t *testing.T) {
 			"a",
 			"a.2 $P=1",
 		}} {
+			path, _ := parseFilepath("test")
+			prep := func(lines []string) {
+				Lists.Empty(path)
+				for ndx, line := range lines {
+					task, err := ParseTask(&ndx, line)
+					assert.NoError(err)
+					assert.NotNil(task)
+					Lists.Append(path, task)
+				}
+				cleanupRelations(path)
+				Lists.Sort(path)
+			}
 			prep(lineSet)
-			assert.Equal("a", arr[0].Norm())
-			assert.Equal("b $id=1", arr[1].Norm())
-			assert.Equal("a.2 $P=1", arr[2].Norm())
-			assert.Equal("z.1 $P=1", arr[3].Norm())
-			assert.Equal("c", arr[4].Norm())
+			assert.Equal("a", Lists[path].Tasks[0].Norm())
+			assert.Equal("b $id=1", Lists[path].Tasks[1].Norm())
+			assert.Equal("a.2 $P=1", Lists[path].Tasks[2].Norm())
+			assert.Equal("z.1 $P=1", Lists[path].Tasks[3].Norm())
+			assert.Equal("c", Lists[path].Tasks[4].Norm())
 		}
 	})
 }

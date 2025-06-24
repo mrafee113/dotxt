@@ -393,16 +393,17 @@ func TestRenderList(t *testing.T) {
 
 func TestStringify(t *testing.T) {
 	assert := assert.New(t)
-
+	// test the fold such that it is long enough that str with prefix will exceed maxwidth, but not long enough that str will exceed maxwidth...
 	id1 := 12
 	helper := func(line string) string {
 		task, _ := ParseTask(&id1, line)
 		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		rtask := task.Render(&l)
+		rtask.idLen = 2
 		return rtask.stringify(false, 50)
 	}
 	out := helper("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/12/15 text $r=-3d $every=1m")
-	assert.Equal("12 12/15( 80%) =======>   (unit) (A) +prj #tag @at\n  $due=1d $dead=1w $r=22' $id=3 $P=2 text $r=-3d \n $every=1m", out)
+	assert.Equal("12 12/15( 80%) =======>   (unit) (A) +prj #tag @at\n   $due=1d $dead=1w $r=22' $id=3 $P=2 text $r=-3d \n   $every=1m", out)
 	assert.Equal("12 ", out[:3], "id")
 	assert.Equal("12/15( 80%) =======>   (unit) ", out[3:33], "progress")
 	testLength := func(out string) bool {
@@ -415,21 +416,72 @@ func TestStringify(t *testing.T) {
 		return exceeds
 	}
 	t.Run("fold", func(t *testing.T) {
+		// fits
 		out = helper("===========")
+		assert.Equal("12 ===========", out)
 		assert.NotContains(out, "\n")
 		assert.False(testLength(out))
+		// string so long it has to be split
 		out = helper("=============================================================================================================================")
+		assert.Equal("12 ==============================================\\\n   ==============================================\\\n   =================================", out)
 		assert.Contains(out, "\\")
 		assert.Equal(2, strings.Count(out, "\\"))
 		assert.Contains(out, "\n")
 		assert.Equal(2, strings.Count(out, "\n"))
 		assert.False(testLength(out))
+		// line has no space whatsoever
+		// string so long it has to be split
+		// str is long enough
 		out = helper("one two three four five six seven eight nine ten eleven ============================================================= twelve thirteen fourteen sixteen seventeen eighteen nineteen twenty twenty-one")
-		assert.Contains(out, "nine \n ten")
-		assert.Contains(out, "fourteen\n  sixteen")
-		assert.Contains(out, "twenty \n twenty-one")
-		assert.Contains(out, "=====================================\\\n ========================")
+		assert.Equal("12 one two three four five six seven eight nine \n   ten eleven ===================================\\\n   ========================== twelve thirteen \n   fourteen sixteen seventeen eighteen nineteen \n   twenty twenty-one", out)
+		assert.Contains(out, "nine \n   ten")
+		assert.Contains(out, "thirteen \n   fourteen")
+		assert.Contains(out, "nineteen \n   twenty")
+		assert.Contains(out, "===================================\\\n   ==========================")
 		assert.False(testLength(out))
+	})
+	t.Run("task depth", func(t *testing.T) {
+		path, _ := parseFilepath("test")
+		Lists.Init(path)
+		AddTaskFromStr("0 no id", path)
+		AddTaskFromStr("1 $id=1", path)
+		AddTaskFromStr("2 $id=2 $P=1", path)
+		AddTaskFromStr("3 $id=3 $P=1", path)
+		AddTaskFromStr("4 $id=4 $P=3", path)
+		AddTaskFromStr("5 $id=5", path)
+		AddTaskFromStr("6 $id=6 $P=5", path)
+		AddTaskFromStr("7 $id=7 $P=6", path)
+		AddTaskFromStr("8 no id", path)
+		AddTaskFromStr("9 $P=7 =============================================================================================================================", path)
+		AddTaskFromStr("10 $P=7 one two three four five six seven eight nine ten eleven ============================================================= twelve thirteen fourteen sixteen seventeen eighteen nineteen twenty twenty-one", path)
+		AddTaskFromStr("11 $P=7 =====================================\\\n ========================", path)
+		AddTaskFromStr("12 =============================================================================================================================", path)
+		AddTaskFromStr("13 one two three four five six seven eight nine ten eleven ============================================================= twelve thirteen fourteen sixteen seventeen eighteen nineteen twenty twenty-one", path)
+		AddTaskFromStr("14 =====================================\\\n ========================", path)
+		cleanupRelations(path)
+		Lists.Sort(path)
+		helper := func(ndx int) string {
+			task := Lists[path].Tasks[ndx]
+			l := rList{path: "/tmp/file", idList: make(map[string]bool)}
+			rtask := task.Render(&l)
+			rtask.idLen = 2
+			return rtask.stringify(false, 50)
+		}
+		assert.Equal("00 0 no id", helper(0))
+		assert.Equal("01 1 $id=1", helper(1))
+		assert.Equal("   02 2 $id=2 $P=1", helper(2))
+		assert.Equal("   03 3 $id=3 $P=1", helper(3))
+		assert.Equal("      04 4 $id=4 $P=3", helper(4))
+		assert.Equal("12 12 ===========================================\\\n   ==============================================\\\n   ====================================", helper(5))
+		assert.Equal("13 13 one two three four five six seven eight nine\n   ten eleven ===================================\\\n   ========================== twelve thirteen \n   fourteen sixteen seventeen eighteen nineteen \n   twenty twenty-one", helper(6))
+		assert.Equal("14 14 =====================================\\ \n   ========================", helper(7))
+		assert.Equal("05 5 $id=5", helper(8))
+		assert.Equal("   06 6 $id=6 $P=5", helper(9))
+		assert.Equal("      07 7 $id=7 $P=6", helper(10))
+		assert.Equal("         10 10 $P=7 one two three four five six \n            seven eight nine ten eleven ==================\\\n            =========================================== \n            twelve thirteen fourteen sixteen seventeen \n            eighteen nineteen twenty twenty-one", helper(11))
+		assert.Equal("         11 11 $P=7 \n            =====================================\\ \n            ========================", helper(12))
+		assert.Equal("         09 9 $P=7 ==============================\\\n            ==============================================\\\n            ==============================================\\\n            ===", helper(13))
+		assert.Equal("08 8 no id", helper(14))
 	})
 }
 
@@ -481,7 +533,7 @@ func TestPrintLists(t *testing.T) {
 		assert.Equal(90, len(out[1]))  // category header
 
 		assert.Equal(50, len(out[2]))
-		assert.Equal(49, len(out[3]))
+		assert.Equal(48, len(out[3]))
 		assert.Equal(20, len(out[4]))
 
 		assert.Equal(37, len(out[6]))
