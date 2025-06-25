@@ -11,6 +11,7 @@ colors:
   cyan: &cyan "#05FCC6"
   light-jade: &light-jade "#6aa88f"
   light-grey: &light-grey "#919191"
+  medium-grey: &medium-grey "#696969"
   dark-grey: &dark-grey "#4C4C4C"
   dark-purple: &dark-purple "#6b5f73"
   light-red: &light-red "#FC7876"
@@ -45,6 +46,7 @@ print:
   color-date-dead: *light-red   # deadline
   color-date-r: *light-jade     # reminders
   color-every: *light-yellow
+  color-dead-relations: *medium-grey
 
   color-at: *blue
   color-plus: *light-jade

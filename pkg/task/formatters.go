@@ -558,6 +558,11 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 		for _, tk := range task.tokens {
 			if tk.token.Type == TokenID {
 				tk.color = idColors[*tk.token.Value.(*string)]
+				if tk.dominantColor == "" &&
+					((tk.token.Key == "id" && len(task.tsk.Children) == 0) ||
+						(tk.token.Key == "P" && task.tsk.Parent == nil)) {
+					tk.dominantColor = "print.color-dead-relations"
+				}
 			}
 		}
 	}
