@@ -47,6 +47,7 @@ print:
   color-date-r: *light-jade     # reminders
   color-every: *light-yellow
   color-dead-relations: *medium-grey
+  color-collapsed: *light-orange
 
   color-at: *blue
   color-plus: *light-jade

@@ -412,6 +412,35 @@ func TestRenderList(t *testing.T) {
 		assert.Equal(3, sm.countLen)
 		assert.Equal(4, sm.doneCountLen)
 	})
+	t.Run("id collapse filter", func(t *testing.T) {
+		path, _ := parseFilepath("idC")
+		Lists.Empty(path)
+		AddTaskFromStr("$-id=1", path)
+		AddTaskFromStr("$id=2 $P=1", path)
+		AddTaskFromStr("$id=3 $P=2", path)
+		AddTaskFromStr("$P=3", path)
+		AddTaskFromStr("$id=4 $P=2", path)
+		AddTaskFromStr("$P=4", path)
+		AddTaskFromStr("$id=5", path)
+		AddTaskFromStr("$id=6 $P=5", path)
+		AddTaskFromStr("$P=6", path)
+		AddTaskFromStr("$id=7", path)
+		cleanupRelations(path)
+		sm := rPrint{lists: make(map[string]*rList)}
+		err := RenderList(&sm, path)
+		assert.NoError(err)
+		root := func(node *Task) *Task {
+			for node.Parent != nil {
+				node = node.Parent
+			}
+			return node
+		}
+		for _, task := range sm.lists[path].tasks {
+			if task.tsk.Norm() != "$-id=1" {
+				assert.NotEqual("$-id=1", root(task.tsk).Norm())
+			}
+		}
+	})
 }
 
 func TestStringify(t *testing.T) {
@@ -505,6 +534,18 @@ func TestStringify(t *testing.T) {
 		assert.Equal("         11 11 $P=7 \n            =====================================\\ \n            ========================", helper(12))
 		assert.Equal("         09 9 $P=7 ==============================\\\n            ==============================================\\\n            ==============================================\\\n            ===", helper(13))
 		assert.Equal("08 8 no id", helper(14))
+	})
+	t.Run("id collapse", func(t *testing.T) {
+		path, _ := parseFilepath("test")
+		Lists.Empty(path)
+		AddTaskFromStr("(testing) heyto $due=1w $-id=first $P=dead", path)
+		cleanupRelations(path)
+		task := Lists[path].Tasks[0]
+		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
+		rtask := task.Render(&l)
+		rtask.idLen = 2
+		str := rtask.stringify(false, 50)
+		assert.Equal("00 + (testing) heyto $due=1w $-id=first $P=dead", str)
 	})
 }
 

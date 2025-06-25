@@ -209,14 +209,15 @@ type temporalNode struct {
 }
 
 type Task struct {
-	Tokens   []*Token
-	ID       *int
-	Hints    []*string
-	Priority *string
-	EID      *string // explicit id ($id=)
-	Children []*Task
-	PID      *string // parent id ($P=)
-	Parent   *Task
+	Tokens      []*Token
+	ID          *int
+	Hints       []*string
+	Priority    *string
+	EID         *string // explicit id ($id=)
+	EIDCollapse bool
+	Children    []*Task
+	PID         *string // parent id ($P=)
+	Parent      *Task
 
 	Time *Temporal
 	Prog *Progress

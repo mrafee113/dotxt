@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+
+	"github.com/spf13/viper"
 )
 
 // Used to carry intermediary info for a token,
@@ -72,6 +74,15 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 		out.WriteString(fold(idTxt))
 	}
 	out.WriteString(fold(" "))
+
+	if r.tsk.EIDCollapse && r.tsk.Parent == nil {
+		if color {
+			out.WriteString(colorize(viper.GetString("print.color-collapsed"), fold("+")))
+		} else {
+			out.WriteString(fold("+"))
+		}
+		out.WriteString(fold(" "))
+	}
 
 	for _, tk := range r.tokens {
 		if tk.color == "" {

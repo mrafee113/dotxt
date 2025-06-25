@@ -400,10 +400,11 @@ func tokenizeLine(line string) ([]*Token, []error) {
 				specialFields[key] = true
 			}
 			switch key {
-			case "id", "P":
+			case "-id", "id", "P":
+				k := strings.Replace(key, "-", "", 1)
 				tokens = append(tokens, &Token{
 					Type: TokenID, Raw: tokenStr,
-					Key: key, Value: utils.MkPtr(value),
+					Key: k, Value: utils.MkPtr(value),
 				})
 			case "c", "lud", "due", "end", "dead", "r":
 				var dt any
@@ -470,6 +471,9 @@ func ParseTask(id *int, line string) (*Task, error) {
 			switch token.Key {
 			case "id":
 				task.EID = val
+				if strings.HasPrefix(token.Raw, "$-id") {
+					task.EIDCollapse = true
+				}
 			case "P":
 				task.PID = val
 			}

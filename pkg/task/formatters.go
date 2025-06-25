@@ -351,7 +351,11 @@ func colorizeIds(ids map[string]bool) map[string]string {
 }
 
 func formatID(tk Token) string {
-	return fmt.Sprintf("$%s=%s", tk.Key, *tk.Value.(*string))
+	var idCollapse string
+	if strings.HasPrefix(tk.Raw, "$-id=") {
+		idCollapse = "-"
+	}
+	return fmt.Sprintf("$%s%s=%s", idCollapse, tk.Key, *tk.Value.(*string))
 }
 
 func formatCategoryHeader(category string, list *rList) string {
@@ -550,6 +554,9 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 	listMetadata := rList{path: path, idList: make(map[string]bool)}
 	sessionMetadata.lists[path] = &listMetadata
 	for _, task := range Lists[path].Tasks {
+		if task.Parent != nil && task.EIDCollapse {
+			continue
+		}
 		rtask := task.Render(&listMetadata)
 		listMetadata.tasks = append(listMetadata.tasks, rtask)
 	}
