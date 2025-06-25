@@ -167,51 +167,74 @@ func TestFormatAbsoluteDatetime(t *testing.T) {
 
 func TestFormatPriorities(t *testing.T) {
 	assert := assert.New(t)
-	data := strings.Split(strings.TrimSpace(`
-	A                                        // 78 // single character
-	AA                                       // 85 // single chain, no branching
-	AAB                                      // 92 // chain of length 3
-	AAC                                      // 95 // sibling of AAB (branching at depth 2)
-	AB                                       // 98 // branch at depth 1
-	ABA                                      // 101 // deeper branch under AB
-	ABB                                      // 104 // sibling of ABA
-	ABC                                      // 106 // third sibling under AB
-	ABCD                                     // 107 // further depth under ABC
-	ABCDE                                    // 108 // deeper still
-	ABCDEA                                   // 108 // sibling under ABCDE
-	XYZ                                      // 189 // entirely separate branch
-	XYZA                                     // 207 // deeper under XYZ
-	ZYX                                      // 234 // reverse order distinct
-	LongPriorityStringThatExceedsDepthLimit  // 126 // very long single chain
-	Short                                    // 162 // moderate length, no sibling
-	1                                        // 42 // numeric single char
-	12                                       // 51 // numeric two-char chain
-	123                                      // 57 // numeric three-char chain
-	1A                                       // 66 // mixed numeric/alpha
-	-                                        // 9 // punctuation single char
-	--                                       // 22 // punctuation two-char chain
-	---                                      // 32 // punctuation three-char chain
-	🔥                                       // 333 // single unicode char
-	🔥A                                      // 351 // unicode + alpha
-	特殊                                     // 270 // multi-byte unicode
-	長い                                     // 306 // another unicode test
-	AAAAAAAAAAAAAAAAAAAAAAAAAAAAA            // 88 // very long repeated char (25× “A”)`), "\n")
+	input := `
+	(A) $id=a                                  // 99
+	(AA) $P=a                                  // 72
+	(AAB) $P=a                                 // 88
+	(AAC) $P=a                                 // 103
+	(AB) $id=ab                                // 203
+	(ABA) $P=ab                                // 154
+	(ABB) $P=ab                                // 166
+	(ABC) $P=ab                                // 179
+	(ABCD) $P=ab                               // 191
+	(ABCDE) $P=ab                              // 203
+	(ABCDEA) $P=ab                             // 215
+	(A)                                        // 76
+	(AA)                                       // 115
+	(AAB)                                      // 134
+	(AAC)                                      // 143
+	(AB)                                       // 166
+	(ABA)                                      // 226
+	(ABB)                                      // 235
+	(ABC)                                      // 245
+	(ABCD)                                     // 254
+	(ABCDE)                                    // 263
+	(ABCDEA)                                   // 272
+	(XYZ)                                      // 300
+	(XYZA)                                     // 309
+	(ZYX)                                      // 319
+	(LongPriorityStringThatExceedsDepthLimit)  // 281
+	(Short)                                    // 291
+	(1)                                        // 32
+	(12)                                       // 41
+	(123)                                      // 51
+	(1A)                                       // 60
+	(-)                                        // 5
+	(--)                                       // 14
+	(---)                                      // 23
+	(🔥)                                       // 346
+	(🔥A)                                      // 355
+	(特殊)                                     // 328
+	(長い)                                     // 337
+	(AAAAAAAAAAAAAAAAAAAAAAAAAAAAA)            // 125`
+	lines := strings.Split(strings.TrimSpace(input), "\n")
 	var tasks []*rTask
 	var hues []int
-	for ndx := range data {
-		h, _ := strconv.Atoi(strings.TrimSpace(strings.Split(data[ndx], "//")[1]))
-		hues = append(hues, h)
-		data[ndx] = data[ndx][:strings.Index(data[ndx], "//")]
-		data[ndx] = strings.TrimSpace(data[ndx])
-		data[ndx] = fmt.Sprintf("(%s)", data[ndx])
-		task, _ := ParseTask(&ndx, data[ndx])
+	for ndx, line := range lines {
+		if strings.TrimSpace(line)[0] == '/' {
+			continue
+		}
+		parts := strings.SplitN(strings.TrimSpace(line), "//", 2)
+		taskLine := strings.TrimSpace(parts[0])
+		hueVal, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+		hues = append(hues, hueVal)
+		task, _ := ParseTask(utils.MkPtr(ndx), taskLine)
 		tasks = append(tasks, task.Render(nil))
 	}
+	path, _ := parseFilepath("testPrio")
+	Lists.Set(path, func() []*Task {
+		var out []*Task
+		for _, t := range tasks {
+			out = append(out, t.tsk)
+		}
+		return out
+	}())
+	cleanupRelations(path)
 	formatPriorities(tasks)
-	for ndx, hue := range hues {
+	for ndx := range len(tasks) {
 		h, _, _ := utils.HexToHSL(tasks[ndx].tokens[0].color)
 		h = math.Round(h)
-		assert.Equal(float64(hue), h)
+		assert.Equalf(float64(hues[ndx]), h, "=%s :color=%s", lines[ndx], tasks[ndx].tokens[0].color)
 	}
 }
 

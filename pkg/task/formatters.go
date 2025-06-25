@@ -129,9 +129,18 @@ func formatPriorities(tasks []*rTask) {
 
 	colorSaturation := viper.GetFloat64("print.priority.saturation")
 	colorLightness := viper.GetFloat64("print.priority.lightness")
-	maxDepth := viper.GetInt("print.priority.group-depth")
 	colorStartHue := viper.GetFloat64("print.priority.start-hue")
 	colorEndHue := viper.GetFloat64("print.priority.end-hue")
+
+	taskToRTask := func() map[*Task]*rTask {
+		out := make(map[*Task]*rTask)
+		for _, t := range tasks {
+			if t.tsk != nil {
+				out[t.tsk] = t
+			}
+		}
+		return out
+	}()
 
 	assignColor := func(task *rTask, color string) {
 		for _, tk := range task.tokens {
@@ -142,60 +151,113 @@ func formatPriorities(tasks []*rTask) {
 		}
 	}
 
-	var assignHue func([]*rTask, float64, float64, int)
-	assignHue = func(tasks []*rTask, startHue, endHue float64, depth int) {
-		n := len(tasks)
-		if n == 1 || depth >= maxDepth {
-			for i, tsk := range tasks {
-				h := startHue + (float64(i)+0.5)/float64(n)*(endHue-startHue)
-				assignColor(tsk, utils.HslToHex(h, colorSaturation, colorLightness))
-			}
-			return
-		}
-
-		groups := make([][]*rTask, 0, n)
-		prefixes := make([]string, 0, n)
-		for _, t := range tasks {
-			p := ""
-			if len(*t.tsk.Priority) > depth {
-				p = (*t.tsk.Priority)[:depth+1]
-			}
-			if len(groups) == 0 || prefixes[len(prefixes)-1] != p {
-				groups = append(groups, []*rTask{t})
-				prefixes = append(prefixes, p)
-			} else {
-				groups[len(groups)-1] = append(groups[len(groups)-1], t)
-			}
-		}
-
-		if len(groups) == 1 {
-			assignHue(tasks, startHue, endHue, depth+1)
-			return
-		}
-
-		span := (endHue - startHue) / float64(len(groups))
-		for i, grp := range groups {
-			h0 := startHue + float64(i)*span
-			h1 := h0 + span
-			assignHue(grp, h0, h1, depth+1)
-		}
-	}
-
-	assignHue(func() []*rTask {
-		var out []*rTask
-		for _, t := range tasks {
-			if t.tsk != nil && t.tsk.Priority != nil && *t.tsk.Priority != "" {
-				out = append(out, t)
-			}
-		}
-		slices.SortFunc(out, func(l, r *rTask) int {
+	sortByPriority := func(tasks []*rTask) []*rTask {
+		slices.SortFunc(tasks, func(l, r *rTask) int {
 			if r := sortPriority(l.tsk, r.tsk); r != 2 {
 				return r
 			}
 			return 0
 		})
+		return tasks
+	}
+
+	filterPriority := func(rts []*rTask) []*rTask {
+		var out []*rTask
+		for _, rt := range rts {
+			if rt.tsk.Priority != nil && *rt.tsk.Priority != "" {
+				out = append(out, rt)
+			}
+		}
 		return out
-	}(), colorStartHue, colorEndHue, 0)
+	}
+
+	var assignHue func(tasks []*rTask, startHue, endHue float64, depth int)
+	assignHue = func(tasks []*rTask, startHue, endHue float64, depth int) {
+		tasks = filterPriority(tasks)
+		n := len(tasks)
+		maxDepth := 0
+		for _, t := range tasks {
+			maxDepth = max(maxDepth, len(*t.tsk.Priority))
+		}
+		if n == 0 || depth > maxDepth || int(endHue-startHue) < n {
+			return
+		}
+
+		groups := make(map[string][]*rTask)
+		prefixes := []string{}
+		for _, rt := range tasks {
+			prio := *rt.tsk.Priority
+			prefix := prio
+			if len(prio) > depth {
+				prefix = prio[:depth+1]
+			}
+			if _, exists := groups[prefix]; !exists {
+				prefixes = append(prefixes, prefix)
+			}
+			groups[prefix] = append(groups[prefix], rt)
+		}
+
+		weights := make([]int, len(prefixes))
+		for i, prefix := range prefixes {
+			var countTasks func([]*Task) int
+			countTasks = func(ts []*Task) int {
+				count := 0
+				for _, t := range ts {
+					if t.Priority != nil && *t.Priority != "" {
+						count++
+					}
+					count += countTasks(t.Children)
+				}
+				return count
+			}
+			for _, rt := range groups[prefix] {
+				weights[i] += 1 + countTasks(rt.tsk.Children)
+			}
+		}
+
+		totalWeight := 0
+		for _, w := range weights {
+			totalWeight += w
+		}
+
+		currentHue := startHue
+		for i, prefix := range prefixes {
+			group := groups[prefix]
+			slices.SortFunc(group, func(a, b *rTask) int {
+				return strings.Compare(*a.tsk.Priority, *b.tsk.Priority)
+			})
+
+			ratio := float64(weights[i]) / float64(totalWeight)
+			nextHue := currentHue + (endHue-startHue)*ratio
+			ng := len(group)
+
+			for ndx, rt := range group {
+				if len(*rt.tsk.Priority) <= depth {
+					h := currentHue + (float64(ndx)+0.5)/float64(ng)*(nextHue-currentHue)
+					assignColor(rt, utils.HslToHex(h, colorSaturation, colorLightness))
+				}
+				children := []*rTask{}
+				for _, child := range rt.tsk.Children {
+					if crt, ok := taskToRTask[child]; ok {
+						children = append(children, crt)
+					}
+				}
+				assignHue(children, currentHue, nextHue, 0)
+			}
+
+			assignHue(group, currentHue, nextHue, depth+1)
+			currentHue = nextHue
+		}
+	}
+
+	roots := []*rTask{}
+	for _, rt := range tasks {
+		if rt.tsk != nil && rt.tsk.Parent == nil {
+			roots = append(roots, rt)
+		}
+	}
+
+	assignHue(sortByPriority(roots), colorStartHue, colorEndHue, 0)
 }
 
 func formatProgress(p *Progress, countLen, doneCountLen int) []rToken {
