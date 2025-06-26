@@ -279,7 +279,7 @@ func resolveDates(tokens []*Token) []error {
 			continue
 		}
 		if token.Key == "r" {
-			token.Key = fmt.Sprintf("r%d", ndx) // TODO: check whether I should return this to normal
+			token.Key = fmt.Sprintf("r%d", ndx)
 		}
 		totalDateCount++
 		tokenKeyToNdx[token.Key] = ndx

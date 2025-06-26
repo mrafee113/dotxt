@@ -137,8 +137,7 @@ func sortTasks(tasks []*Task) []*Task {
 	slices.SortFunc(tasks, sortHelper)
 	var dfs func(int)
 	dfs = func(ndx int) {
-		// TODO: ask Ai on how to use `copy` so as to not sort the children within the actual ds
-		children := tasks[ndx].Children
+		children := slices.Clone(tasks[ndx].Children)
 		slices.SortFunc(children, sortHelper)
 		for sndx := len(children) - 1; sndx >= 0; sndx-- {
 			tasks = slices.Insert(tasks, ndx+1, children[sndx])
