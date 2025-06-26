@@ -619,7 +619,7 @@ func ParseTasks(filepath string) ([]*Task, error) {
 		return []*Task{}, err
 	}
 	lines := strings.Split(string(data), "\n")
-	var tasks []*Task = make([]*Task, 0)
+	var tasks []*Task
 	var errs error = fmt.Errorf("")
 	for id, line := range lines {
 		if strings.TrimSpace(line) == "" {
@@ -630,9 +630,6 @@ func ParseTasks(filepath string) ([]*Task, error) {
 			errs = fmt.Errorf("%w\nline %d: %w", errs, id, err)
 		}
 		tasks = append(tasks, task)
-	}
-	if viper.GetBool("debug") && errs != fmt.Errorf("") {
-		return tasks, errs
 	}
 	return tasks, nil
 }

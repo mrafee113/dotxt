@@ -912,9 +912,72 @@ func TestParseAbsoluteDatetime(t *testing.T) {
 }
 
 func TestResolveDates(t *testing.T) {
-	// TODO
+	assert := assert.New(t)
+	helper := func(line string) ([]*Token, []error) {
+		var tokens []*Token
+		for token := range strings.SplitSeq(line, " ") {
+			token := strings.TrimSpace(token)
+			if token == "" {
+				continue
+			}
+			switch token[0] {
+			case '$':
+				keyValue := strings.SplitN(token[1:], "=", 2)
+				if len(keyValue) != 2 {
+					continue
+				}
+				key, value := keyValue[0], keyValue[1]
+				if validateEmptyText(value) != nil {
+					continue
+				}
+				switch key {
+				case "c", "lud", "due", "end", "dead", "r":
+					var dt any
+					dt, err := parseAbsoluteDatetime(value)
+					if err != nil {
+						dt, err = parseTmpRelativeDatetime(key, value)
+						if err != nil {
+							continue
+						}
+					}
+					tokens = append(tokens, &Token{
+						Type: TokenDate, Raw: token,
+						Key: key, Value: dt,
+					})
+				}
+			}
+		}
+		return tokens, resolveDates(tokens)
+	}
+	t.Run("normal", func(t *testing.T) {
+		tokens, errs := helper("$c=2025-05-05T05-05 $due=1w $dead=2w $lud=12s $r=-5h $r=+5M")
+		require.Empty(t, errs)
+		for _, tk := range tokens {
+			assert.Equal(TokenDate, tk.Type)
+			_, ok := tk.Value.(*time.Time)
+			assert.True(ok)
+		}
+	})
+	// TODO: figure out where it could go wrong through logging
 }
 
 func TestParseTasks(t *testing.T) {
-	// TODO
+	assert := assert.New(t)
+	prevConfig := config.ConfigPath()
+	defer config.SelectConfigFile(prevConfig)
+	tmpDir, err := os.MkdirTemp(prevConfig, "")
+	require.Nil(t, err)
+	config.SelectConfigFile(tmpDir)
+	mkDirs("")
+	path, _ := parseFilepath("test")
+	os.WriteFile(path, []byte("1\n2\n3"), 0o644)
+
+	data, err := ParseTasks(path)
+	require.NoError(t, err)
+	assert.Equal("1", data[0].Norm())
+	assert.Equal(0, *data[0].ID)
+	assert.Equal("2", data[1].Norm())
+	assert.Equal(1, *data[1].ID)
+	assert.Equal("3", data[2].Norm())
+	assert.Equal(2, *data[2].ID)
 }
