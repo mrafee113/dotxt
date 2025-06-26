@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -578,45 +579,43 @@ func TestPrintLists(t *testing.T) {
 		return strings.Split(out, "\n")
 	}
 
-	// TODO: these lengths are out of it, but they show correct number of chars when the whole string is printed to stdout
-	//  ask ai what's going on... probably some golang string thing
 	t.Run("header len", func(t *testing.T) {
 		Lists.Empty(path, task2)
 		out := capture(80, 70)
-		assert.Equal(180, len(out[0]))
+		assert.Equal(70, utf8.RuneCountInString(out[0]))
 		out = capture(90, 70)
-		assert.Equal(180, len(out[0]))
+		assert.Equal(70, utf8.RuneCountInString(out[0]))
 		Lists.Empty(path, task1)
 		out = capture(90, 70)
-		assert.Equal(240, len(out[0]))
+		assert.Equal(90, utf8.RuneCountInString(out[0]))
 		out = capture(160, 70)
-		assert.Equal(285, len(out[0]))
+		assert.Equal(105, utf8.RuneCountInString(out[0]))
 		out = capture(130, 70)
-		assert.Equal(285, len(out[0]))
+		assert.Equal(105, utf8.RuneCountInString(out[0]))
 	})
 	t.Run("line len", func(t *testing.T) {
 		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
-		assert.Equal(120, len(out[0])) // header
-		assert.Equal(90, len(out[1]))  // category header
+		assert.Equal(50, utf8.RuneCountInString(out[0])) // header
+		assert.Equal(50, utf8.RuneCountInString(out[1])) // category header
 
-		assert.Equal(50, len(out[2]))
-		assert.Equal(48, len(out[3]))
-		assert.Equal(20, len(out[4]))
+		assert.Equal(50, utf8.RuneCountInString(out[2]))
+		assert.Equal(48, utf8.RuneCountInString(out[3]))
+		assert.Equal(20, utf8.RuneCountInString(out[4]))
 
-		assert.Equal(37, len(out[6]))
-		assert.Equal(43, len(out[7]))
-		assert.Equal(26, len(out[8]))
+		assert.Equal(37, utf8.RuneCountInString(out[6]))
+		assert.Equal(43, utf8.RuneCountInString(out[7]))
+		assert.Equal(26, utf8.RuneCountInString(out[8]))
 
-		assert.Equal(90, len(out[9])) // category header
+		assert.Equal(50, utf8.RuneCountInString(out[9])) // category header
 		assert.Equal(15, len(out[10]))
 	})
 	t.Run("category headers", func(t *testing.T) {
 		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
-		assert.Equal(90, len(out[1]))
-		assert.Equal(90, len(out[5]))
-		assert.Equal(90, len(out[9]))
+		assert.Equal(50, utf8.RuneCountInString(out[1]))
+		assert.Equal(50, utf8.RuneCountInString(out[5]))
+		assert.Equal(50, utf8.RuneCountInString(out[9]))
 	})
 }
 

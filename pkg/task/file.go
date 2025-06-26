@@ -52,7 +52,7 @@ func parseFilepath(path string) (string, error) {
 		return filepath.Join(todosDir(), "todo"), nil
 	}
 	if path[len(path)-1] == '/' {
-		return "", fmt.Errorf("%w: path cannot end in a /", terrors.ErrParse) // TODO: test
+		return "", fmt.Errorf("%w: path cannot end in a /", terrors.ErrParse)
 	}
 	if filepath.IsAbs(path) {
 		if strings.HasPrefix(path, filepath.Join(todosDir())+"/") {
