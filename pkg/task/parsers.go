@@ -186,25 +186,18 @@ func parseTmpRelativeDatetime(field, dt string) (*temporalNode, error) {
 }
 
 func parseProgress(token string) (*Progress, error) {
-	if strings.Count(token, "/") != 3 {
-		return nil, fmt.Errorf("%w: $progress: number of '/' does not equal 3: %s", terrors.ErrParse, token)
+	parts := strings.Split(token, "/")
+	if len(parts) < 3 {
+		return nil, fmt.Errorf("%w: $progress: number of '/' is less than 2: required fields not provided: %s", terrors.ErrParse, token)
 	}
-	var unit, category string
-	var count, doneCount string = "0", "0"
-	firstNdx := strings.IndexByte(token, '/')
-	secondNdx := firstNdx + 1 + strings.IndexByte(token[firstNdx+1:], '/')
-	thirdNdx := secondNdx + 1 + strings.IndexByte(token[secondNdx+1:], '/')
-	if firstNdx > 0 {
-		unit = token[0:firstNdx]
+	unit, count, doneCount := parts[0], parts[1], parts[2]
+	var category string
+	switch len(parts) {
+	case 4:
+		category = parts[3]
 	}
-	if secondNdx > firstNdx+1 {
-		category = token[firstNdx+1 : secondNdx]
-	}
-	if thirdNdx > secondNdx+1 {
-		count = token[secondNdx+1 : thirdNdx]
-	}
-	if thirdNdx < len(token)-1 {
-		doneCount = token[thirdNdx+1:]
+	if unit == "" {
+		return nil, fmt.Errorf("%w: %w: $progress: unit is empty", terrors.ErrParse, terrors.ErrValue)
 	}
 	doneCountInt, err := strconv.Atoi(doneCount)
 	if err != nil {
@@ -240,11 +233,11 @@ func unparseProgress(progress Progress) (string, error) {
 	if progress.Count > progress.DoneCount {
 		return "", fmt.Errorf("%w: progress count cannot be greater than doneCount: %d > %d", terrors.ErrValue, progress.Count, progress.DoneCount)
 	}
-	return fmt.Sprintf(
-		"%s/%s/%d/%d",
-		progress.Unit, progress.Category,
-		progress.Count, progress.DoneCount,
-	), nil
+	base := fmt.Sprintf("%s/%d/%d", progress.Unit, progress.Count, progress.DoneCount)
+	if progress.Category != "" {
+		base += "/" + progress.Category
+	}
+	return base, nil
 }
 
 func parsePriority(line string) (int, int, error) {

@@ -221,8 +221,8 @@ func TestDeduplicateList(t *testing.T) {
 	path, _ := parseFilepath("file")
 	Lists.Empty(path)
 	AddTaskFromStr("0", path)
-	AddTaskFromStr("(1) +prj @at #tag $due=1w $c=2024-05-05T05-05 $lud=2025-03-05T05-05 $p=page/books/0/1287 $every=1m", path)
-	AddTaskFromStr("(1) +prj @at #tag $due=1w $c=1960-05-05T05-05 $lud=1970-03-05T05-05 $p=page/books/0/1287 $every=1m", path)
+	AddTaskFromStr("(1) +prj @at #tag $due=1w $c=2024-05-05T05-05 $lud=2025-03-05T05-05 $p=page/0/1287/books $every=1m", path)
+	AddTaskFromStr("(1) +prj @at #tag $due=1w $c=1960-05-05T05-05 $lud=1970-03-05T05-05 $p=page/0/1287/books $every=1m", path)
 	AddTaskFromStr("3", path)
 	err := DeduplicateList(path)
 	require.NoError(t, err)
@@ -435,11 +435,11 @@ func TestIncrementProgressCount(t *testing.T) {
 
 	path, _ := parseFilepath("file")
 	Lists.Empty(path)
-	AddTaskFromStr("0 $p=unit/cat/10/100", path)
+	AddTaskFromStr("0 $p=unit/10/100/cat", path)
 	AddTaskFromStr("1", path)
-	AddTaskFromStr("2 $p=unit/cat/10/100", path)
-	AddTaskFromStr("3 $p=unit/cat/10/100", path)
-	AddTaskFromStr("4 $p=unit/cat/10/100", path)
+	AddTaskFromStr("2 $p=unit/10/100/cat", path)
+	AddTaskFromStr("3 $p=unit/10/100/cat", path)
+	AddTaskFromStr("4 $p=unit/10/100/cat", path)
 	t.Run("no progress", func(t *testing.T) {
 		err := IncrementProgressCount(1, path, 2)
 		require.Error(t, err)
@@ -501,7 +501,7 @@ func TestIncrementProgressCount(t *testing.T) {
 			if tk.Type == TokenProgress {
 				found = true
 				assert.Equal(0, tk.Value.(*Progress).Count)
-				assert.Contains(tk.Raw, "unit/cat/0/100")
+				assert.Contains(tk.Raw, "unit/0/100/cat")
 			}
 		}
 		assert.True(found)

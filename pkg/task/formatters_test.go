@@ -307,14 +307,14 @@ func TestRender(t *testing.T) {
 
 	t.Run("normal", func(t *testing.T) {
 		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
-		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1w $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
+		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1w $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 		rtask := task.Render(&l)
 		assert.Equal(1, l.idLen)
 		assert.Equal(103, l.maxLen)
 		assert.Equal(task, rtask.tsk, "task")
 		assert.Equal(id, rtask.id, "id")
 		assert.Equal("print.color-index", rtask.idColor, "idColor")
-		assert.Equal("$p=unit/cat/2/15", rtask.tokens[0].token.Raw)
+		assert.Equal("$p=unit/2/15/cat", rtask.tokens[0].token.Raw)
 		assert.Equal("print.color-default", rtask.tokens[0].color)
 		assert.Equal("(A)", rtask.tokens[1].raw)
 		assert.Equal("print.color-default", rtask.tokens[1].color)
@@ -343,7 +343,7 @@ func TestRender(t *testing.T) {
 	})
 	t.Run("after due", func(t *testing.T) {
 		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
-		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
+		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
 		rtask := task.Render(&l)
@@ -355,7 +355,7 @@ func TestRender(t *testing.T) {
 	})
 	t.Run("after due before end", func(t *testing.T) {
 		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
-		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $end=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
+		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $end=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
 		rtask := task.Render(&l)
@@ -368,7 +368,7 @@ func TestRender(t *testing.T) {
 	})
 	t.Run("after due before dead", func(t *testing.T) {
 		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
-		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
+		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
 		rtask := task.Render(&l)
@@ -385,11 +385,11 @@ func TestRenderList(t *testing.T) {
 	Lists.Empty(path)
 
 	id1 := 0
-	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
+	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 	id2 := 1
 	task2, _ := ParseTask(&id2, "normal task")
 	id3 := 210
-	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/cat/223/3500")
+	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500/cat")
 
 	sm := rPrint{lists: make(map[string]*rList)}
 	Lists.Append(path, task1)
@@ -456,7 +456,7 @@ func TestStringify(t *testing.T) {
 		rtask.idLen = 2
 		return rtask.stringify(false, 50)
 	}
-	out := helper("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/12/15 text $r=-3d $every=1m")
+	out := helper("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/12/15/cat text $r=-3d $every=1m")
 	assert.Equal("12 12/15( 80%) =======>   (unit) (A) +prj #tag @at\n   $due=1d $dead=1w $r=22' $id=3 $P=2 text $r=-3d \n   $every=1m", out)
 	assert.Equal("12 ", out[:3], "id")
 	assert.Equal("12/15( 80%) =======>   (unit) ", out[3:33], "progress")
@@ -557,11 +557,11 @@ func TestPrintLists(t *testing.T) {
 	Lists.Empty(path)
 
 	id1 := 0
-	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
+	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 	id2 := 1
 	task2, _ := ParseTask(&id2, "normal task")
 	id3 := 210
-	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit//223/3500")
+	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500")
 
 	capture := func(maxlen, minlen int) []string {
 		realStdout := os.Stdout
@@ -623,7 +623,7 @@ func TestPrintTask(t *testing.T) {
 	assert := assert.New(t)
 
 	id1 := 0
-	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
+	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 	id2 := 1
 	task2, _ := ParseTask(&id2, "normal task")
 	id3 := 210
@@ -650,5 +650,5 @@ func TestPrintTask(t *testing.T) {
 	out := capture(210)
 	assert.Equal(fmt.Sprintf("tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500 $c=%s $lud=0s\n", rn), out)
 	out = capture(0)
-	assert.Equal(fmt.Sprintf("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m $c=%s $lud=0s\n", rn), out)
+	assert.Equal(fmt.Sprintf("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m $c=%s $lud=0s\n", rn), out)
 }

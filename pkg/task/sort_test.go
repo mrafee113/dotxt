@@ -21,28 +21,28 @@ func TestSortTask(t *testing.T) {
 	}
 	t.Run("doneCount", func(t *testing.T) {
 		for _, lineSet := range [][]string{{
-			"$p=unit/100", "random",
+			"$p=unit/0/100", "random",
 		}, {
-			"random", "$p=unit/100",
+			"random", "$p=unit/0/100",
 		}} {
 			prep(lineSet)
-			assert.Equal("$p=unit/100", arr[0].Norm())
+			assert.Equal("$p=unit/0/100", arr[0].Norm())
 			assert.Equal("random", arr[1].Norm())
 		}
 	})
 	t.Run("category", func(t *testing.T) {
 		for _, lineSet := range [][]string{{
-			"$p=unit/cat/0/100", "$p=unit/100",
-			"$p=unit/catA/0/100", "$p=unit/catB/0/100",
+			"$p=unit/0/100/cat", "$p=unit/0/100",
+			"$p=unit/0/100/catA", "$p=unit/0/100/catB",
 		}, {
-			"$p=unit/100", "$p=unit/cat/0/100",
-			"$p=unit/catB/0/100", "$p=unit/catA/0/100",
+			"$p=unit/0/100", "$p=unit/0/100/cat",
+			"$p=unit/0/100/catB", "$p=unit/0/100/catA",
 		}} {
 			prep(lineSet)
-			assert.Equal("$p=unit/cat/0/100", arr[0].Norm())
-			assert.Equal("$p=unit/100", arr[3].Norm())
-			assert.Equal("$p=unit/catA/0/100", arr[1].Norm())
-			assert.Equal("$p=unit/catB/0/100", arr[2].Norm())
+			assert.Equal("$p=unit/0/100/cat", arr[0].Norm())
+			assert.Equal("$p=unit/0/100", arr[3].Norm())
+			assert.Equal("$p=unit/0/100/catA", arr[1].Norm())
+			assert.Equal("$p=unit/0/100/catB", arr[2].Norm())
 		}
 	})
 	t.Run("priority", func(t *testing.T) {

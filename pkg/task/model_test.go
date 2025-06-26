@@ -24,8 +24,8 @@ func TestUpdate(t *testing.T) {
 		}
 	}
 	t.Run("non-temporal vars", func(t *testing.T) {
-		task, _ := ParseTask(nil, "(A) +p #t @a $p=unit/cat/10/100 $due=1w $dead=1w $c=2024-05-05T05-05")
-		newTask, _ := ParseTask(nil, "(B) +p #t @a $p=unit/cat/90/100 $due=1w $dead=1w")
+		task, _ := ParseTask(nil, "(A) +p #t @a $p=unit/10/100/cat $due=1w $dead=1w $c=2024-05-05T05-05")
+		newTask, _ := ParseTask(nil, "(B) +p #t @a $p=unit/90/100/cat $due=1w $dead=1w")
 		task.update(newTask)
 		assert.Equal("B", *task.Priority)
 		assert.Equal(90, task.Prog.Count)
@@ -214,7 +214,7 @@ func TestUpdateDate(t *testing.T) {
 
 func TestTokenValueTypes(t *testing.T) {
 	assert := assert.New(t)
-	task, _ := ParseTask(utils.MkPtr(2), "(prio) $c=2025-05-05T05-05 $lud=1s $due=1w $dead=1w +prj #tag @at $id=1 $P=2 $every=1m $p=unit/cat/10/100")
+	task, _ := ParseTask(utils.MkPtr(2), "(prio) $c=2025-05-05T05-05 $lud=1s $due=1w $dead=1w +prj #tag @at $id=1 $P=2 $every=1m $p=unit/10/100/cat")
 	_, ok := task.Tokens[0].Value.(*string)
 	assert.True(ok, "priority")
 	_, ok = task.Tokens[1].Value.(*time.Time)
