@@ -55,13 +55,14 @@ func TestMkDirs(t *testing.T) {
 	assert.NoDirExists(filepath.Join(tmpDir, "todos"))
 	assert.NoDirExists(filepath.Join(tmpDir, "todos", "_etc"))
 	assert.NoDirExists(filepath.Join(tmpDir, "todos", "_archive"))
-	err = mkDirs()
+	err = mkDirs("")
 	require.NoError(t, err)
 	assert.DirExists(filepath.Join(tmpDir, "todos"))
 	assert.DirExists(filepath.Join(tmpDir, "todos", "_etc"))
 	assert.DirExists(filepath.Join(tmpDir, "todos", "_archive"))
-	err = mkDirs()
+	err = mkDirs("nestedDir/nested-er-Dir/")
 	require.NoError(t, err)
+	assert.DirExists(filepath.Join(tmpDir, "todos", "nestedDir", "nested-er-Dir"))
 }
 
 func TestParseFilepath(t *testing.T) {
@@ -72,13 +73,52 @@ func TestParseFilepath(t *testing.T) {
 		return out
 	}
 	t.Run("empty", func(t *testing.T) {
-		assert.Equal(filepath.Join(config.ConfigPath(), "todos", "todo"), helper(""))
+		assert.Equal(filepath.Join(todosDir(), "todo"), helper(""))
 	})
 	t.Run("absolute", func(t *testing.T) {
-		assert.Equal("/tmp/file", helper("/tmp/file"))
+		assert.Equal(filepath.Join(todosDir(), "file"), helper(filepath.Join(todosDir(), "file")))
+	})
+	t.Run("error not under confpath/todos", func(t *testing.T) {
+		_, err := parseFilepath("/tmp/file")
+		assert.Error(err)
+		assert.ErrorIs(err, terrors.ErrParse)
+		assert.ErrorContains(err, "filepath not under /todos")
 	})
 	t.Run("basename", func(t *testing.T) {
-		assert.Equal(filepath.Join(config.ConfigPath(), "todos", "file"), helper("file"))
+		assert.Equal(filepath.Join(todosDir(), "file"), helper("file"))
+	})
+	t.Run("not ending in /", func(t *testing.T) {
+		_, err := parseFilepath("/tom/file/")
+		assert.Error(err)
+		assert.ErrorIs(err, terrors.ErrParse)
+		assert.ErrorContains(err, "path cannot end in a /")
+	})
+}
+
+func TestParseDirpath(t *testing.T) {
+	assert := assert.New(t)
+	helper := func(path string) string {
+		out, err := parseDirpath(path)
+		assert.NoError(err)
+		return out
+	}
+	t.Run("empty", func(t *testing.T) {
+		assert.Equal(filepath.Join(todosDir(), "todo"), helper(""))
+	})
+	t.Run("absolute", func(t *testing.T) {
+		assert.Equal(filepath.Join(todosDir(), "file"), helper(filepath.Join(todosDir(), "file")))
+	})
+	t.Run("can end in /", func(t *testing.T) {
+		assert.Equal(filepath.Join(todosDir(), "file")+"/", helper(filepath.Join(todosDir(), "file")+"/"))
+	})
+	t.Run("error not under confpath/todos", func(t *testing.T) {
+		_, err := parseDirpath("/tmp/file")
+		assert.Error(err)
+		assert.ErrorIs(err, terrors.ErrParse)
+		assert.ErrorContains(err, "dirpath not under /todos")
+	})
+	t.Run("basename", func(t *testing.T) {
+		assert.Equal(filepath.Join(todosDir(), "file"), helper("file"))
 	})
 }
 
@@ -102,17 +142,30 @@ func TestLocateFiles(t *testing.T) {
 	require.Nil(t, err)
 	config.SelectConfigFile(tmpDir)
 
-	mkDirs()
+	os.MkdirAll(filepath.Join(tmpDir, "todos", "storage"), 0755)
+	os.MkdirAll(filepath.Join(tmpDir, "to-be-pointed-to"), 0755)
+
 	CreateFile(filepath.Join(tmpDir, "todos", "file1"))
-	// TODO: add support for nested files and symbolic links
-	// os.MkdirAll(filepath.Join(tmpDir, "todos", "dir1"), 0755)
-	// CreateFile(filepath.Join(tmpDir, "todos", "dir1", "file2"))
+	CreateFile(filepath.Join(tmpDir, "todos", "nestedDir", "nestedFile"))
+
+	os.Symlink(filepath.Join(tmpDir, "to-be-pointed-to"), filepath.Join(tmpDir, "todos", "nestedSymDir"))
+	CreateFile(filepath.Join(tmpDir, "todos", "nestedSymDir", "regular"))
+
+	CreateFile(filepath.Join(tmpDir, "todos", "storage", "regular"))
+	os.Symlink(filepath.Join(tmpDir, "todos", "storage", "regular"), filepath.Join(tmpDir, "todos", "nestedSymDir", "sym"))
+
+	CreateFile(filepath.Join(tmpDir, "todos", "storage", "regular2"))
+	os.Symlink(filepath.Join(tmpDir, "todos", "storage", "regular2"), filepath.Join(tmpDir, "todos", "sym"))
+
 	Lists = make(lists)
 	err = locateFiles()
 	assert.NoError(err)
+
 	assert.True(Lists.Exists(filepath.Join(tmpDir, "todos", "file1")))
-	// _, ok = FileTasks[filepath.Join(tmpDir, "todos", "dir1", "file2")]
-	// assert.True(ok)
+	assert.True(Lists.Exists(filepath.Join(tmpDir, "todos", "nestedDir", "nestedFile")))
+	assert.True(Lists.Exists(filepath.Join(tmpDir, "todos", "nestedSymDir", "regular")))
+	assert.True(Lists.Exists(filepath.Join(tmpDir, "todos", "nestedSymDir", "sym")))
+	assert.True(Lists.Exists(filepath.Join(tmpDir, "todos", "sym")))
 }
 
 func TestReolveSymlinkPath(t *testing.T) {
@@ -122,7 +175,7 @@ func TestReolveSymlinkPath(t *testing.T) {
 	tmpDir, err := os.MkdirTemp(prevConfig, "")
 	require.Nil(t, err)
 	config.SelectConfigFile(tmpDir)
-	mkDirs()
+	mkDirs("")
 
 	t.Run("sym -> regular target", func(t *testing.T) {
 		target := filepath.Join(tmpDir, "target")
@@ -178,11 +231,11 @@ func TestAppendToDoneFile(t *testing.T) {
 	tmpDir, err := os.MkdirTemp(prevConfig, "")
 	require.Nil(t, err)
 	config.SelectConfigFile(tmpDir)
-	mkDirs()
+	mkDirs("")
 
 	t.Run("append to non-existing", func(t *testing.T) {
 		randName := filepath.Base(tmpDir)
-		path := filepath.Join(config.ConfigPath(), "todos", "_etc", randName+".done")
+		path := filepath.Join(todosDir(), "_etc", randName+".done")
 		assert.NoFileExists(path)
 		err := appendToDoneFile("text", randName)
 		require.NoError(t, err)
@@ -192,7 +245,7 @@ func TestAppendToDoneFile(t *testing.T) {
 	})
 	t.Run("append to empty", func(t *testing.T) {
 		name := "file"
-		path := filepath.Join(config.ConfigPath(), "todos", "_etc", name+".done")
+		path := filepath.Join(todosDir(), "_etc", name+".done")
 		os.WriteFile(path, []byte(""), 0o655)
 		assert.FileExists(path)
 		appendToDoneFile("text", name)
@@ -202,7 +255,7 @@ func TestAppendToDoneFile(t *testing.T) {
 	})
 	t.Run("append to file ending with \\n", func(t *testing.T) {
 		name := "file2"
-		path := filepath.Join(config.ConfigPath(), "todos", "_etc", name+".done")
+		path := filepath.Join(todosDir(), "_etc", name+".done")
 		os.WriteFile(path, []byte("1\n2\n"), 0o655)
 		assert.FileExists(path)
 		appendToDoneFile("text", name)
@@ -212,13 +265,24 @@ func TestAppendToDoneFile(t *testing.T) {
 	})
 	t.Run("append to file not ending with \\n", func(t *testing.T) {
 		name := "file3"
-		path := filepath.Join(config.ConfigPath(), "todos", "_etc", name+".done")
+		path := filepath.Join(todosDir(), "_etc", name+".done")
 		os.WriteFile(path, []byte("1\n2"), 0o655)
 		assert.FileExists(path)
 		appendToDoneFile("text", name)
 		rawData, err := os.ReadFile(path)
 		require.Nil(t, err)
 		assert.Equal("1\n2\ntext", string(rawData))
+	})
+	t.Run("append to file which is nested", func(t *testing.T) {
+		name := "nested/file4"
+		path := filepath.Join(todosDir(), "_etc", name+".done")
+		os.MkdirAll(filepath.Dir(path), 0755)
+		os.WriteFile(path, []byte("1"), 0o655)
+		assert.FileExists(path)
+		appendToDoneFile("text", name)
+		rawData, err := os.ReadFile(path)
+		require.Nil(t, err)
+		assert.Equal("1\ntext", string(rawData))
 	})
 }
 
@@ -229,9 +293,9 @@ func TestRemoveFromDoneFile(t *testing.T) {
 	tmpDir, err := os.MkdirTemp(prevConfig, "")
 	require.Nil(t, err)
 	config.SelectConfigFile(tmpDir)
-	mkDirs()
+	mkDirs("")
 	name := "file"
-	path := filepath.Join(config.ConfigPath(), "todos", "_etc", name+".done")
+	path := filepath.Join(todosDir(), "_etc", name+".done")
 	os.WriteFile(path, []byte(""), 0o655)
 
 	t.Run("validate ids", func(t *testing.T) {
@@ -256,6 +320,20 @@ func TestRemoveFromDoneFile(t *testing.T) {
 		require.Nil(t, err)
 		assert.Equal("b\n \n \n \nf", string(rawData))
 	})
+	t.Run("nested", func(t *testing.T) {
+		name := "nested/file"
+		mkDirs(filepath.Dir(name))
+		path := filepath.Join(todosDir(), "_etc", name+".done")
+		os.WriteFile(path, []byte("a\nb\nc\n \nd\n \ne\n \nf"), 0o655)
+		tasks, err := removeFromDoneFile([]int{0}, name)
+		require.NoError(t, err)
+		assert.Equal("a", tasks[0])
+		tasks, _ = removeFromDoneFile([]int{1, 3, 5}, name)
+		assert.Equal([]string{"e", "d", "c"}, tasks)
+		rawData, err := os.ReadFile(path)
+		require.Nil(t, err)
+		assert.Equal("b\n \n \n \nf", string(rawData))
+	})
 }
 
 func TestCreateFile(t *testing.T) {
@@ -265,9 +343,9 @@ func TestCreateFile(t *testing.T) {
 	tmpDir, err := os.MkdirTemp(prevConfig, "")
 	require.Nil(t, err)
 	config.SelectConfigFile(tmpDir)
-	mkDirs()
+	mkDirs("")
 	name := "file"
-	path := filepath.Join(config.ConfigPath(), "todos", name)
+	path := filepath.Join(todosDir(), name)
 	assert.NoFileExists(path)
 	err = CreateFile(name)
 	require.Nil(t, err)
@@ -276,6 +354,19 @@ func TestCreateFile(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal("", string(raw))
 	assert.True(Lists.Exists(path))
+
+	t.Run("nested", func(t *testing.T) {
+		name := "nested/file"
+		path := filepath.Join(todosDir(), name)
+		assert.NoFileExists(path)
+		err = CreateFile(name)
+		require.Nil(t, err)
+		assert.FileExists(path)
+		raw, err := os.ReadFile(path)
+		require.Nil(t, err)
+		assert.Equal("", string(raw))
+		assert.True(Lists.Exists(path))
+	})
 }
 
 func TestLoadFile(t *testing.T) {
@@ -285,9 +376,9 @@ func TestLoadFile(t *testing.T) {
 	tmpDir, err := os.MkdirTemp(prevConfig, "")
 	require.Nil(t, err)
 	config.SelectConfigFile(tmpDir)
-	mkDirs()
+	mkDirs("")
 	name := "file"
-	path := filepath.Join(config.ConfigPath(), "todos", name)
+	path := filepath.Join(todosDir(), name)
 
 	t.Run("non-existing", func(t *testing.T) {
 		err := LoadFile("random")
@@ -298,6 +389,7 @@ func TestLoadFile(t *testing.T) {
 		os.WriteFile(path, []byte(""), 0o655)
 		err := LoadFile(name)
 		require.Nil(t, err)
+		assert.True(Lists.Exists(path))
 		tasks, ok := Lists.Tasks(path)
 		assert.True(ok)
 		assert.Empty(tasks)
@@ -306,6 +398,19 @@ func TestLoadFile(t *testing.T) {
 		os.WriteFile(path, []byte("1\n2\n3"), 0o655)
 		err := LoadFile(name)
 		require.Nil(t, err)
+		assert.True(Lists.Exists(path))
+		tasks, ok := Lists.Tasks(path)
+		assert.True(ok)
+		assert.Len(tasks, 3)
+	})
+	t.Run("nested", func(t *testing.T) {
+		mkDirs("nested/")
+		name := "nested/file"
+		path = filepath.Join(todosDir(), name)
+		os.WriteFile(path, []byte("1\n2\n3"), 0o655)
+		err := LoadFile(name)
+		require.Nil(t, err)
+		assert.True(Lists.Exists(path))
 		tasks, ok := Lists.Tasks(path)
 		assert.True(ok)
 		assert.Len(tasks, 3)
@@ -319,9 +424,9 @@ func TestStoreFile(t *testing.T) {
 	tmpDir, err := os.MkdirTemp(prevConfig, "")
 	require.Nil(t, err)
 	config.SelectConfigFile(tmpDir)
-	mkDirs()
+	mkDirs("")
 	name := "file"
-	path := filepath.Join(config.ConfigPath(), "todos", name)
+	path := filepath.Join(todosDir(), name)
 
 	t.Run("empty tasks", func(t *testing.T) {
 		os.WriteFile(path, []byte("1\n2\n"), 0o655)
@@ -336,6 +441,22 @@ func TestStoreFile(t *testing.T) {
 		assert.Equal("", string(raw))
 	})
 	t.Run("full file", func(t *testing.T) {
+		os.WriteFile(path+"1", []byte("1\n2\n3\n"), 0o655)
+		os.WriteFile(path, []byte(""), 0o655)
+		LoadFile(name + "1")
+		LoadFile(name)
+		assert.True(Lists.Exists(path))
+		Lists[path].Tasks = Lists[path+"1"].Tasks
+		err := StoreFile(path)
+		require.Nil(t, err)
+		raw, err := os.ReadFile(path)
+		require.Nil(t, err)
+		assert.Equal(3, len(strings.Split(string(raw), "\n")))
+	})
+	t.Run("nested", func(t *testing.T) {
+		mkDirs("nested/")
+		name := "nested/file"
+		path := filepath.Join(todosDir(), name)
 		os.WriteFile(path+"1", []byte("1\n2\n3\n"), 0o655)
 		os.WriteFile(path, []byte(""), 0o655)
 		LoadFile(name + "1")

@@ -77,7 +77,7 @@ func TestAddTask(t *testing.T) {
 	}
 	path, _ := parseFilepath("file")
 	task, _ := ParseTask(mkId(1), "1")
-	Lists.Init(path, task)
+	Lists.Empty(path, task)
 	task, _ = ParseTask(nil, "nil")
 	err := AddTask(task, path)
 	require.Nil(t, err)
@@ -97,7 +97,7 @@ func TestAddTaskFromStr(t *testing.T) {
 	}
 	path, _ := parseFilepath("file")
 	task, _ := ParseTask(mkId(1), "1")
-	Lists.Init(path, task)
+	Lists.Empty(path, task)
 	err := AddTaskFromStr("nil", path)
 	require.Nil(t, err)
 	assert.Equal("nil", Lists[path].Tasks[0].NormRegular())
@@ -372,7 +372,7 @@ func TestDoneTask(t *testing.T) {
 	assert.Equal("4 $P=2", Lists[path].Tasks[2].Norm())
 	assert.Equal(3, *Lists[path].Tasks[3].ID)
 	assert.Equal("3", Lists[path].Tasks[3].Norm())
-	raw, err := os.ReadFile(filepath.Join(config.ConfigPath(), "todos", "_etc", "file.done"))
+	raw, err := os.ReadFile(filepath.Join(todosDir(), "_etc", "file.done"))
 	require.NoError(t, err)
 	tasks := strings.Split(string(raw), "\n")
 	assert.True(strings.HasPrefix(tasks[0], "5"))
@@ -408,7 +408,7 @@ func TestRevertTask(t *testing.T) {
 	tmpDir, err := os.MkdirTemp(prevConfig, "")
 	require.Nil(t, err)
 	config.SelectConfigFile(tmpDir)
-	mkDirs()
+	mkDirs("")
 
 	path, _ := parseFilepath("file")
 	Lists.Empty(path)
@@ -419,7 +419,7 @@ func TestRevertTask(t *testing.T) {
 	AddTaskFromStr("4 $P=2", path)
 	AddTaskFromStr("5", path)
 
-	donePath := filepath.Join(config.ConfigPath(), "todos", "_etc", "file.done")
+	donePath := filepath.Join(todosDir(), "_etc", "file.done")
 	err = os.WriteFile(donePath, []byte("1\n2\n3"), 0o655)
 	require.NoError(t, err)
 

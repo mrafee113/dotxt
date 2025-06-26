@@ -238,7 +238,7 @@ func TestParseTask(t *testing.T) {
 
 	t.Run("validate $-id collapse", func(t *testing.T) {
 		path, _ := parseFilepath("idC")
-		Lists.Init(path)
+		Lists.Empty(path)
 		AddTaskFromStr("A $-id=1", path)
 		task := Lists[path].Tasks[0]
 		assert.True(task.EIDCollapse)

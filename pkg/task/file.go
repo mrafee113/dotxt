@@ -43,30 +43,96 @@ func GetTodoPathArgFromCmd(cmd *cobra.Command, arg string) (string, error) {
 	return path, nil
 }
 
-func mkDirs() error {
-	cfgPath := config.ConfigPath()
-	err := os.MkdirAll(filepath.Join(cfgPath, "todos", "_etc"), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	err = os.Mkdir(filepath.Join(cfgPath, "todos", "_archive"), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	return nil
+func todosDir() string {
+	return filepath.Join(config.ConfigPath(), "todos")
 }
 
 func parseFilepath(path string) (string, error) {
-	if path == "" {
-		return filepath.Join(config.ConfigPath(), "todos", "todo"), nil
+	if strings.TrimSpace(path) == "" {
+		return filepath.Join(todosDir(), "todo"), nil
+	}
+	if path[len(path)-1] == '/' {
+		return "", fmt.Errorf("%w: path cannot end in a /", terrors.ErrParse) // TODO: test
 	}
 	if filepath.IsAbs(path) {
-		return path, nil
+		if strings.HasPrefix(path, filepath.Join(todosDir())+"/") {
+			return path, nil
+		} else {
+			return "", fmt.Errorf("%w: filepath not under /todos %s", terrors.ErrParse, path)
+		}
 	}
-	if tmpPath := filepath.Join(config.ConfigPath(), "todos", path); filepath.IsAbs(tmpPath) {
+	if tmpPath := filepath.Join(todosDir(), path); filepath.IsAbs(tmpPath) {
 		return tmpPath, nil
 	}
-	return path, fmt.Errorf("%w: failed to parse filepath %s", terrors.ErrParse, path)
+	return "", fmt.Errorf("%w: failed to parse filepath %s", terrors.ErrParse, path)
+}
+
+func parseDirpath(path string) (string, error) {
+	if strings.TrimSpace(path) == "" {
+		return filepath.Join(todosDir(), "todo"), nil
+	}
+	if filepath.IsAbs(path) {
+		if strings.HasPrefix(path, filepath.Join(todosDir())) {
+			return path, nil
+		} else {
+			return "", fmt.Errorf("%w: dirpath not under /todos %s", terrors.ErrParse, path)
+		}
+	}
+	if tmpPath := filepath.Join(todosDir(), path); filepath.IsAbs(tmpPath) {
+		return tmpPath, nil
+	}
+	return "", fmt.Errorf("%w: failed to parse filepath %s", terrors.ErrParse, path)
+}
+
+func mkDirs(path string) error {
+	mkdir := func(path string, all bool) error {
+		var err error
+		if all {
+			err = os.MkdirAll(path, 0755)
+		} else {
+			err = os.Mkdir(path, 0755)
+		}
+		if err != nil && !os.IsExist(err) {
+			return err
+		}
+		return nil
+	}
+
+	err := mkdir(todosDir(), true)
+	if err != nil {
+		return err
+	}
+	err = mkdir(filepath.Join(todosDir(), "_etc"), false)
+	if err != nil {
+		return err
+	}
+	err = mkdir(filepath.Join(todosDir(), "_archive"), false)
+	if err != nil {
+		return err
+	}
+
+	if strings.TrimSpace(path) != "" {
+		path, err := parseDirpath(path)
+		if err != nil {
+			return err
+		}
+		postPath := strings.TrimPrefix(path, todosDir())
+		if len(postPath) > 0 {
+			err = mkdir(path, true)
+			if err != nil {
+				return err
+			}
+			err = mkdir(filepath.Join(todosDir(), "_etc", postPath), true)
+			if err != nil {
+				return err
+			}
+			err = mkdir(filepath.Join(todosDir(), "_archive", postPath), true)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func prepFileTaskFromPath(path string) (string, error) {
@@ -92,31 +158,47 @@ func CheckFileExistence(path string) error {
 }
 
 func locateFiles() error {
-	todoPath := filepath.Join(config.ConfigPath(), "todos")
-	err := mkDirs()
+	todoPath := todosDir()
+	err := mkDirs("")
 	if err != nil {
 		return err
 	}
-	files, err := os.ReadDir(todoPath)
-	if err != nil {
-		return fmt.Errorf("failed listing files from %s: %w", todoPath, err)
-	}
-	for _, entry := range files {
-		fpath := filepath.Join(todoPath, entry.Name())
-		isRegular := entry.Type().IsRegular()
-		isSymlink := false
-		if entry.Type()&os.ModeSymlink != 0 {
-			targetInfo, err := os.Stat(fpath)
+
+	var walk func(string)
+	walk = func(path string) {
+		info, err := os.Lstat(path)
+		if err != nil {
+			return
+		}
+		var isDir bool
+		var isValidFile bool
+		if info.Mode()&os.ModeSymlink != 0 {
+			targetInfo, err := os.Stat(path)
 			if err != nil {
-				continue
+				return
 			}
-			isSymlink = targetInfo.Mode().IsRegular()
+			if targetInfo.IsDir() {
+				isDir = true
+			} else if targetInfo.Mode().IsRegular() {
+				isValidFile = true
+			}
 		}
-		if isRegular || isSymlink {
-			key := filepath.Join(todoPath, entry.Name())
-			Lists.Init(key)
+		isDir = isDir || info.IsDir()
+		isValidFile = isValidFile || info.Mode().IsRegular()
+		if isDir {
+			entries, err := os.ReadDir(path)
+			if err != nil {
+				return
+			}
+			for _, e := range entries {
+				walk(filepath.Join(path, e.Name()))
+			}
+			return
+		} else if isValidFile {
+			Lists.Init(path)
 		}
 	}
+	walk(todoPath)
 	return nil
 }
 
@@ -152,11 +234,11 @@ func appendToDoneFile(text, path string) error {
 	if err != nil {
 		return err
 	}
-	if err = mkDirs(); err != nil {
+	if err = mkDirs(filepath.Dir(path)); err != nil {
 		return err
 	}
 	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
-	path = filepath.Join(config.ConfigPath(), "todos", "_etc", path+".done")
+	path = filepath.Join(todosDir(), "_etc", path+".done")
 	tpath, err := resolveSymlinkPath(path)
 	if err != nil {
 		return err
@@ -194,11 +276,11 @@ func removeFromDoneFile(ids []int, path string) ([]string, error) {
 	if err != nil {
 		return tasks, err
 	}
-	if err = mkDirs(); err != nil {
+	if err = mkDirs(filepath.Dir(path)); err != nil {
 		return tasks, err
 	}
 	path = strings.TrimPrefix(path, filepath.Join(config.ConfigPath(), "todos/"))
-	path = filepath.Join(config.ConfigPath(), "todos", "_etc", path+".done")
+	path = filepath.Join(todosDir(), "_etc", path+".done")
 	tpath, err := resolveSymlinkPath(path)
 	if err != nil {
 		return tasks, err
@@ -234,7 +316,7 @@ func CreateFile(path string) error {
 	if utils.FileExists(path) {
 		return nil
 	}
-	if err = mkDirs(); err != nil {
+	if err = mkDirs(filepath.Dir(path)); err != nil {
 		return err
 	}
 	if err := os.WriteFile(path, []byte(""), 0644); err != nil {
@@ -304,7 +386,7 @@ func StoreFile(path string) error {
 		}
 		lines = append(lines, strings.Join(textArr, " "))
 	}
-	if err = mkDirs(); err != nil {
+	if err = mkDirs(filepath.Dir(path)); err != nil {
 		return err
 	}
 	tpath, err := resolveSymlinkPath(path)
@@ -348,10 +430,10 @@ func taskifyRandomFile(path string) ([]Task, error) {
 
 func LsFiles() ([]string, error) {
 	var out []string
-	if err := mkDirs(); err != nil {
+	if err := mkDirs(""); err != nil {
 		return out, err
 	}
-	rootDir := filepath.Join(config.ConfigPath(), "todos")
+	rootDir := filepath.Join(todosDir())
 	rootDir, err := filepath.Abs(rootDir)
 	if err != nil {
 		return out, err

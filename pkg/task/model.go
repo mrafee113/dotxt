@@ -52,9 +52,13 @@ func (l *lists) Init(path string, values ...*Task) {
 }
 
 // empties the tasks of this path if it exists
-func (l *lists) Empty(path string) {
+func (l *lists) Empty(path string, values ...*Task) {
 	l.Init(path)
-	(*l)[path].Tasks = make([]*Task, 0)
+	if len(values) > 0 {
+		l.Set(path, values)
+	} else {
+		(*l)[path].Tasks = make([]*Task, 0)
+	}
 }
 
 func (l *lists) Set(path string, tasks []*Task) {

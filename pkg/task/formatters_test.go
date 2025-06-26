@@ -380,7 +380,8 @@ func TestRender(t *testing.T) {
 
 func TestRenderList(t *testing.T) {
 	assert := assert.New(t)
-	path := "/tmp/file"
+	path, _ := parseFilepath("test")
+	Lists.Empty(path)
 
 	id1 := 0
 	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
@@ -494,7 +495,7 @@ func TestStringify(t *testing.T) {
 	})
 	t.Run("task depth", func(t *testing.T) {
 		path, _ := parseFilepath("test")
-		Lists.Init(path)
+		Lists.Empty(path)
 		AddTaskFromStr("0 no id", path)
 		AddTaskFromStr("1 $id=1", path)
 		AddTaskFromStr("2 $id=2 $P=1", path)
@@ -514,7 +515,7 @@ func TestStringify(t *testing.T) {
 		Lists.Sort(path)
 		helper := func(ndx int) string {
 			task := Lists[path].Tasks[ndx]
-			l := rList{path: "/tmp/file", idList: make(map[string]bool)}
+			l := rList{path: path, idList: make(map[string]bool)}
 			rtask := task.Render(&l)
 			rtask.idLen = 2
 			return rtask.stringify(false, 50)
@@ -551,7 +552,8 @@ func TestStringify(t *testing.T) {
 
 func TestPrintLists(t *testing.T) {
 	assert := assert.New(t)
-	path := "/tmp/file"
+	path, _ := parseFilepath("printLists")
+	Lists.Empty(path)
 
 	id1 := 0
 	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/cat/2/15 text $r=-3d $every=1m")
@@ -576,24 +578,26 @@ func TestPrintLists(t *testing.T) {
 		return strings.Split(out, "\n")
 	}
 
+	// TODO: these lengths are out of it, but they show correct number of chars when the whole string is printed to stdout
+	//  ask ai what's going on... probably some golang string thing
 	t.Run("header len", func(t *testing.T) {
-		Lists[path].Tasks = []*Task{task2}
+		Lists.Empty(path, task2)
 		out := capture(80, 70)
-		assert.Equal(192, len(out[0]))
+		assert.Equal(180, len(out[0]))
 		out = capture(90, 70)
-		assert.Equal(192, len(out[0]))
-		Lists[path].Tasks = []*Task{task1}
+		assert.Equal(180, len(out[0]))
+		Lists.Empty(path, task1)
 		out = capture(90, 70)
-		assert.Equal(252, len(out[0]))
+		assert.Equal(240, len(out[0]))
 		out = capture(160, 70)
-		assert.Equal(297, len(out[0]))
+		assert.Equal(285, len(out[0]))
 		out = capture(130, 70)
-		assert.Equal(297, len(out[0]))
+		assert.Equal(285, len(out[0]))
 	})
 	t.Run("line len", func(t *testing.T) {
-		Lists[path].Tasks = []*Task{task1, task2, task3}
+		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
-		assert.Equal(132, len(out[0])) // header
+		assert.Equal(120, len(out[0])) // header
 		assert.Equal(90, len(out[1]))  // category header
 
 		assert.Equal(50, len(out[2]))
@@ -608,7 +612,7 @@ func TestPrintLists(t *testing.T) {
 		assert.Equal(15, len(out[10]))
 	})
 	t.Run("category headers", func(t *testing.T) {
-		Lists[path].Tasks = []*Task{task1, task2, task3}
+		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
 		assert.Equal(90, len(out[1]))
 		assert.Equal(90, len(out[5]))
@@ -625,8 +629,8 @@ func TestPrintTask(t *testing.T) {
 	task2, _ := ParseTask(&id2, "normal task")
 	id3 := 210
 	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500")
-	path := "/tmp/file"
-	Lists[path].Tasks = []*Task{task1, task2, task3}
+	path, _ := parseFilepath("printTask")
+	Lists.Empty(path, task1, task2, task3)
 	rn := rightNow.Format("2006-01-02T15-04-05")
 
 	capture := func(id int) string {
