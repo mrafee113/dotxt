@@ -316,7 +316,7 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 		newDtTxt = unparseRelativeDatetime(*newDt, *rel)
 		tmp := temporalFallback[field]
 		if tmp != fallback {
-			newDtTxt = fmt.Sprintf("variable=%s;%s", fallback, newDtTxt)
+			newDtTxt = fmt.Sprintf("%s:%s", fallback, newDtTxt)
 		}
 	}
 	token.Raw = fmt.Sprintf("$%s=%s", field, newDtTxt)

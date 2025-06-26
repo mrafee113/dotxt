@@ -159,12 +159,11 @@ func getTemporalFallback(field, dt string) (string, string, error) {
 	if !ok {
 		return "", "", fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, field)
 	}
-	if strings.HasPrefix(dt, "variable=") {
-		ndx := strings.Index(dt, ";")
-		if ndx == -1 {
-			return "", "", fmt.Errorf("%w: did not find ';'", terrors.ErrParse)
+	if ndx := strings.IndexRune(dt, ':'); ndx != -1 {
+		if ndx == 0 || ndx == len(dt)-1 {
+			return "", "", fmt.Errorf("%w: invalid use of var:dt", terrors.ErrParse)
 		}
-		fallback = dt[len("variable="):ndx]
+		fallback = dt[:ndx]
 		_, ok := temporalFallback[fallback]
 		if !ok {
 			return "", "", fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, fallback)

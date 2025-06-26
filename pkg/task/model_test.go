@@ -177,17 +177,17 @@ func TestUpdateDate(t *testing.T) {
 		assert.True(found)
 	})
 	t.Run("relative with var", func(t *testing.T) {
-		task, _ := ParseTask(nil, "$due=1m $dead=variable=c;2m")
+		task, _ := ParseTask(nil, "$due=1m $dead=c:2m")
 		dt := rightNow.Add(3 * 30 * 24 * 60 * 60 * time.Second)
 		err := task.updateDate("dead", &dt)
 		require.NoError(t, err)
-		assert.Equal("$due=1m $dead=variable=c;3m", task.Norm())
+		assert.Equal("$due=1m $dead=c:3m", task.Norm())
 		assert.Equal(dt, *task.Time.Deadline)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "dead" {
 				found = true
-				assert.Equal("$dead=variable=c;3m", tk.Raw)
+				assert.Equal("$dead=c:3m", tk.Raw)
 				assert.Equal(dt, *tk.Value.(*time.Time))
 			}
 		}
