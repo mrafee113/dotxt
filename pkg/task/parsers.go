@@ -513,7 +513,109 @@ func dateToTextToken(dt *Token) {
 	dt.Value = dt.Raw
 }
 
-func tokenizeLine(line string) ([]*Token, []error) {
+/*
+tokenizeLine splits a line into tokens with the following rules:
+  - A single unescaped space is just a separator.  Extra spaces beyond the first
+    become explicit " " tokens (e.g. "a  b" → ["a","b"," "]).
+  - "\ " produces a literal space in the token.
+  - Double, single, or back-tick quotes group everything (including spaces) until
+    the matching closing quote; inside them only \" (or \' or \`) is special.
+    The opening and closing characters of \" and \' are also kept intact in the token;
+    but the \` are stripped away.
+  - If a quote never closes, we abandon the quote and treat the rest as plain text.
+  - If a \; is provided the token is forced to be split
+  - The function replaces any \n with '\ '
+*/
+func tokenizeLine(line string) []string {
+	line = strings.NewReplacer("\t", "    ", "\r", " ", "\n", " ", "\v", " ", "\f", " ").Replace(line)
+	var tokens []string
+	var cur strings.Builder
+	rs := []rune(line)
+	n := len(rs)
+
+	flush := func() {
+		if cur.Len() > 0 {
+			tokens = append(tokens, cur.String())
+			cur.Reset()
+		}
+	}
+
+	for i := 0; i < n; {
+		r := rs[i]
+
+		if r == '\\' && i+1 < n && rs[i+1] == ' ' {
+			cur.WriteRune(' ')
+			i += 2
+			continue
+		}
+
+		if r == '"' || r == '\'' || r == '`' {
+			snapTokens := slices.Clone(tokens)
+			snapStr := cur.String()
+			snapI := i
+
+			open := r
+			if open != '`' {
+				cur.WriteRune(open)
+			}
+			i++ // consume the opening quote
+			for i < n {
+				if rs[i] == '\\' && i+1 < n && rs[i+1] == open {
+					cur.WriteRune(open)
+					i += 2
+					continue
+				}
+				if rs[i] == open {
+					if open != '`' {
+						cur.WriteRune(open)
+					}
+					i++ // consume closing
+					break
+				}
+				cur.WriteRune(rs[i])
+				i++
+			}
+			// check unterminated
+			if i > n || (i <= n && rs[i-1] != open) {
+				tokens = snapTokens
+				cur.Reset()
+				cur.WriteString(snapStr)
+				i = snapI
+			} else {
+				flush()
+				continue
+			}
+		}
+
+		if r == ' ' {
+			j := i
+			for j < n && rs[j] == ' ' {
+				j++
+			}
+			count := j - i - 1 // excluding the first one as separator
+			flush()
+			if count > 0 {
+				tokens = append(tokens, strings.Repeat(" ", count))
+			}
+			i = j
+			continue
+		}
+
+		if r == '\\' && i+1 < n && rs[i+1] == ';' {
+			flush()
+			i += 2
+			continue
+		}
+
+		cur.WriteRune(r)
+		i++
+	}
+
+	flush()
+	return tokens
+}
+
+func parseTokens(line string) ([]*Token, []error) {
 	specialFields := make(map[string]bool)
 	var tokens []*Token
 	var errs []error
@@ -532,11 +634,12 @@ func tokenizeLine(line string) ([]*Token, []error) {
 		})
 		line = line[j+1:]
 	}
-	for tokenStr := range strings.SplitSeq(line, " ") {
-		tokenStr = strings.TrimSpace(tokenStr)
-		if tokenStr == "" {
-			continue
-		}
+	// for tokenStr := range strings.SplitSeq(line, " ") {
+	// 	tokenStr = strings.TrimSpace(tokenStr)
+	// 	if tokenStr == "" {
+	// 		continue
+	// 	}
+	for _, tokenStr := range tokenizeLine(line) {
 		switch tokenStr[0] {
 		case '+', '@', '#':
 			if err := validateHint(tokenStr); err != nil {
@@ -628,7 +731,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 
 	task := &Task{ID: id, Time: utils.MkPtr(Temporal{})}
-	tokens, errs := tokenizeLine(line)
+	tokens, errs := parseTokens(line)
 	for ndx := range tokens {
 		token := tokens[ndx]
 		switch token.Type {

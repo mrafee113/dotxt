@@ -447,11 +447,11 @@ func TestRenderList(t *testing.T) {
 
 func TestStringify(t *testing.T) {
 	assert := assert.New(t)
-	// test the fold such that it is long enough that str with prefix will exceed maxwidth, but not long enough that str will exceed maxwidth...
 	id1 := 12
+	path, _ := parseFilepath("file")
 	helper := func(line string) string {
 		task, _ := ParseTask(&id1, line)
-		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
+		l := rList{path: path, idList: make(map[string]bool)}
 		rtask := task.Render(&l)
 		rtask.idLen = 2
 		return rtask.stringify(false, 50)
@@ -508,10 +508,10 @@ func TestStringify(t *testing.T) {
 		AddTaskFromStr("8 no id", path)
 		AddTaskFromStr("9 $P=7 =============================================================================================================================", path)
 		AddTaskFromStr("10 $P=7 one two three four five six seven eight nine ten eleven ============================================================= twelve thirteen fourteen sixteen seventeen eighteen nineteen twenty twenty-one", path)
-		AddTaskFromStr("11 $P=7 =====================================\\\n ========================", path)
+		AddTaskFromStr("11 $P=7 =============================================================", path)
 		AddTaskFromStr("12 =============================================================================================================================", path)
 		AddTaskFromStr("13 one two three four five six seven eight nine ten eleven ============================================================= twelve thirteen fourteen sixteen seventeen eighteen nineteen twenty twenty-one", path)
-		AddTaskFromStr("14 =====================================\\\n ========================", path)
+		AddTaskFromStr("14 =============================================================", path)
 		cleanupRelations(path)
 		Lists.Sort(path)
 		helper := func(ndx int) string {
@@ -528,12 +528,12 @@ func TestStringify(t *testing.T) {
 		assert.Equal("      04 4 $id=4 $P=3", helper(4))
 		assert.Equal("12 12 ===========================================\\\n   ==============================================\\\n   ====================================", helper(5))
 		assert.Equal("13 13 one two three four five six seven eight nine\n   ten eleven ===================================\\\n   ========================== twelve thirteen \n   fourteen sixteen seventeen eighteen nineteen \n   twenty twenty-one", helper(6))
-		assert.Equal("14 14 =====================================\\ \n   ========================", helper(7))
+		assert.Equal("14 14 ===========================================\\\n   ==================", helper(7))
 		assert.Equal("05 5 $id=5", helper(8))
 		assert.Equal("   06 6 $id=6 $P=5", helper(9))
 		assert.Equal("      07 7 $id=7 $P=6", helper(10))
 		assert.Equal("         10 10 $P=7 one two three four five six \n            seven eight nine ten eleven ==================\\\n            =========================================== \n            twelve thirteen fourteen sixteen seventeen \n            eighteen nineteen twenty twenty-one", helper(11))
-		assert.Equal("         11 11 $P=7 \n            =====================================\\ \n            ========================", helper(12))
+		assert.Equal("         11 11 $P=7 =============================\\\n            ================================", helper(12))
 		assert.Equal("         09 9 $P=7 ==============================\\\n            ==============================================\\\n            ==============================================\\\n            ===", helper(13))
 		assert.Equal("08 8 no id", helper(14))
 	})

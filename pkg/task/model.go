@@ -4,6 +4,7 @@ import (
 	"dotxt/pkg/terrors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -241,12 +242,56 @@ func (t *Task) Depth() int {
 	return count
 }
 
+func removeToken(input, token string) string {
+	// AI generated
+	// Match:
+	// - The token preceded by optional whitespace
+	// - The token followed by optional whitespace
+	// - Don't touch other whitespace
+
+	// Use `\s?` before and after the token to handle optional single whitespace
+	// Use `\b` to ensure we match only full words, not substrings
+	re := regexp.MustCompile(`(?i)(\s*)\b` + regexp.QuoteMeta(token) + `\b(\s*)`)
+
+	return re.ReplaceAllStringFunc(input, func(match string) string {
+		before := re.FindStringSubmatch(match)[1]
+		after := re.FindStringSubmatch(match)[2]
+
+		// Only remove one of the spaces if both exist
+		if before != "" && after != "" {
+			return " "
+		}
+		// If only one side has space, just remove the token and keep spacing natural
+		return ""
+	})
+}
+
 func (t *Task) update(new *Task) error {
-	creationDateText := fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*new.Time.CreationDate))
-	text := strings.ReplaceAll(new.Raw(), creationDateText, "")
-	text = strings.ReplaceAll(text, creationDateText[:len(creationDateText)-3], "")
-	creationDateText = fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(*t.Time.CreationDate))
-	new, err := ParseTask(new.ID, text+" "+creationDateText)
+	var curCreationDtToken *Token
+	for _, tk := range t.Tokens {
+		if tk.Type == TokenDate && tk.Key == "c" {
+			curCreationDtToken = tk
+		}
+	}
+	if curCreationDtToken != nil {
+		var newCreationDtToken *Token
+		for _, tk := range new.Tokens {
+			if tk.Type == TokenDate && tk.Key == "c" {
+				newCreationDtToken = tk
+			}
+		}
+		if newCreationDtToken != nil {
+			newCreationDtToken.Raw = curCreationDtToken.Raw
+			newCreationDtToken.Value = curCreationDtToken.Value.(*time.Time)
+		} else {
+			new.Tokens = append(new.Tokens, &Token{
+				Type: TokenDate, Key: "c",
+				Raw:   curCreationDtToken.Raw,
+				Value: curCreationDtToken.Value.(*time.Time),
+			})
+		}
+	}
+	new, err := ParseTask(t.ID, new.Raw())
 	if err != nil {
 		return err
 	}
@@ -258,7 +303,7 @@ func (t *Task) update(new *Task) error {
 }
 
 func (t *Task) updateFromText(new string) error {
-	dummy, err := ParseTask(nil, new)
+	dummy, err := ParseTask(t.ID, new)
 	if err != nil {
 		return err
 	}

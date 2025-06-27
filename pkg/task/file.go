@@ -382,7 +382,7 @@ func StoreFile(path string) error {
 	for _, file := range fileTasks {
 		var textArr []string
 		for _, token := range file.Tokens {
-			textArr = append(textArr, token.Raw)
+			textArr = append(textArr, token.Raw) // TODO
 		}
 		lines = append(lines, strings.Join(textArr, " "))
 	}

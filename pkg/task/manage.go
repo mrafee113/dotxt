@@ -166,8 +166,14 @@ func PrependToTask(id int, text, path string) error {
 
 	var newText string
 	if task.Priority != nil && *task.Priority != "" {
-		newText = task.Raw()[strings.IndexRune(task.Raw(), ')')+1:]
-		newText = fmt.Sprintf("(%s) %s %s", *task.Priority, text, newText)
+		var out []string
+		for _, tk := range task.Tokens {
+			if tk.Type != TokenPriority {
+				out = append(out, tk.Raw)
+			}
+		}
+		curText := strings.Join(out, " ")
+		newText = fmt.Sprintf("(%s) %s %s", *task.Priority, text, curText)
 	} else {
 		newText = text + " " + task.Raw()
 	}
