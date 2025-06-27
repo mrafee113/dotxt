@@ -871,33 +871,202 @@ func TestUnparseProgress(t *testing.T) {
 
 func TestParseAbsoluteDatetime(t *testing.T) {
 	assert := assert.New(t)
-	t.Run("valid: %H-%M", func(t *testing.T) {
-		val, err := parseAbsoluteDatetime("2025-05-05T05-05")
-		assert.NoError(err, "err")
-		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05")
-		assert.Exactly(*dt, *val)
+	helper := func(dt string) *time.Time {
+		val, err := parseAbsoluteDatetime(dt)
+		require.NoError(t, err)
+		return val
+	}
+	timeCheck := func(val *time.Time, hour, minute, second int) {
+		assert.Equal(hour, val.Hour())
+		assert.Equal(minute, val.Minute())
+		assert.Equal(second, val.Second())
+	}
+	t.Run("valid time: 3-parter", func(t *testing.T) {
+		v := helper("T01-02-03")
+		timeCheck(v, 1, 2, 3)
 	})
-	t.Run("valid: %H-%M-%S", func(t *testing.T) {
-		val, err := parseAbsoluteDatetime("2025-05-05T05-05-05")
-		assert.NoError(err, "err")
-		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05-05")
-		assert.Exactly(*dt, *val)
+	t.Run("valid time: 2-parter: %H-%M", func(t *testing.T) {
+		v := helper("T1-2")
+		timeCheck(v, 1, 2, 0)
 	})
-	t.Run("invalid: no T", func(t *testing.T) {
+	t.Run("valid time: 2-parter: %M-%S", func(t *testing.T) {
+		v := helper("T24-2")
+		timeCheck(v, 0, 24, 2)
+	})
+	t.Run("valid time: 1-parter: %H", func(t *testing.T) {
+		v := helper("T2")
+		timeCheck(v, 2, 0, 0)
+	})
+	t.Run("valid time: 1-parter: %M", func(t *testing.T) {
+		v := helper("T24")
+		timeCheck(v, 0, 24, 0)
+	})
+	dateCheck := func(val *time.Time, year, month, day int) {
+		assert.Equal(year, val.Year())
+		assert.EqualValues(month, val.Month())
+		assert.Equal(day, val.Day())
+	}
+	t.Run("valid date: 3-parter", func(t *testing.T) {
+		t.Run("%Y-%m-%d", func(t *testing.T) {
+			v := helper("2025-01-02")
+			dateCheck(v, 2025, 1, 2)
+		})
+		t.Run("%y-%m-%d", func(t *testing.T) {
+			v := helper("25-01-02")
+			dateCheck(v, 2025, 1, 2)
+		})
+		t.Run("%Y-%b-%d", func(t *testing.T) {
+			v := helper("2025-jan-02")
+			dateCheck(v, 2025, 1, 2)
+		})
+		t.Run("%y-%b-%d", func(t *testing.T) {
+			v := helper("25-jan-02")
+			dateCheck(v, 2025, 1, 2)
+		})
+	})
+	t.Run("valid date: 2-parter", func(t *testing.T) {
+		t.Run("%Y-%m", func(t *testing.T) {
+			v := helper("2025-2")
+			dateCheck(v, 2025, 2, 1)
+		})
+		t.Run("%Y-%b", func(t *testing.T) {
+			v := helper("2025-feb")
+			dateCheck(v, 2025, 2, 1)
+		})
+		t.Run("%y-%m", func(t *testing.T) {
+			v := helper("25-2")
+			dateCheck(v, 2025, 2, 1)
+		})
+		t.Run("%y-%b", func(t *testing.T) {
+			v := helper("25-feb")
+			dateCheck(v, 2025, 2, 1)
+		})
+		t.Run("%m-%d", func(t *testing.T) {
+			v := helper("12-2")
+			dateCheck(v, 2025, 12, 2)
+		})
+		t.Run("%b-%d", func(t *testing.T) {
+			v := helper("dec-2")
+			dateCheck(v, 2025, 12, 2)
+		})
+	})
+	t.Run("valid date: 1-parter", func(t *testing.T) {
+		t.Run("%Y", func(t *testing.T) {
+			v := helper("2025")
+			dateCheck(v, 2025, 1, 1)
+		})
+		t.Run("%y", func(t *testing.T) {
+			v := helper("94")
+			dateCheck(v, 1994, 1, 1)
+		})
+		t.Run("%m", func(t *testing.T) {
+			v := helper("5")
+			dateCheck(v, 2025, 5, 1)
+		})
+		t.Run("%b", func(t *testing.T) {
+			v := helper("dec")
+			dateCheck(v, 2025, 12, 1)
+		})
+	})
+	t.Run("valid: zero fills", func(t *testing.T) {
+		v := helper("25-2-3T5-6-7")
+		dateCheck(v, 2025, 2, 3)
+		timeCheck(v, 5, 6, 7)
+	})
+	t.Run("invalid time: empty T", func(t *testing.T) {
+		_, err := parseAbsoluteDatetime("2025-05-05T")
+		require.Error(t, err)
+		assert.ErrorIs(err, terrors.ErrParse)
+		assert.ErrorContains(err, "invalid use of T")
+	})
+	t.Run("invalid time: too many dashes after T", func(t *testing.T) {
+		_, err := parseAbsoluteDatetime("2025-05-05T05-05-05-40")
+		require.Error(t, err)
+		assert.ErrorIs(err, terrors.ErrParse)
+		assert.ErrorContains(err, "invalid use T: either no string afterwards or too many dashes")
+	})
+	t.Run("invalid time: non-integer value for time", func(t *testing.T) {
+		for _, dt := range []string{"Ta-1-2", "T1-a-2", "T1-2-a"} {
+			_, err := parseAbsoluteDatetime(dt)
+			require.Error(t, err)
+			assert.ErrorIs(err, terrors.ErrParse)
+			assert.ErrorIs(err, terrors.ErrValue)
+			assert.ErrorContains(err, "invalid hour, minute or second")
+		}
+	})
+	t.Run("invalid time: over 60 time value", func(t *testing.T) {
+		for _, dt := range []string{"T60-1-2", "T1-60-2", "T1-2-60"} {
+			_, err := parseAbsoluteDatetime(dt)
+			require.Error(t, err)
+			assert.ErrorIs(err, terrors.ErrParse)
+			assert.ErrorIs(err, terrors.ErrValue)
+			assert.ErrorContains(err, "invalid hour, minute or second value")
+		}
+	})
+	t.Run("invalid time 3-parter: over 24 hours", func(t *testing.T) {
+		_, err := parseAbsoluteDatetime("T24-1-2")
+		require.Error(t, err)
+		assert.ErrorIs(err, terrors.ErrParse)
+		assert.ErrorIs(err, terrors.ErrValue)
+		assert.ErrorContains(err, "invalid hour value")
+	})
+	t.Run("invalid date: too many dashes", func(t *testing.T) {
 		_, err := parseAbsoluteDatetime("2025-05-05-05-05")
 		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrParse)
-			assert.ErrorContains(err, "datetime doesn't have 'T'")
+			assert.ErrorContains(err, "invalid use of date: too many dashes")
 		}
 	})
-	t.Run("invalid: not enough or too many dashes", func(t *testing.T) {
-		for _, val := range []string{"2025-05-05T05", "2025-05T05-05", "2025T05-05-05", "-3000-05-05T05-05-05"} {
-			_, err := parseAbsoluteDatetime(val)
-			if assert.Error(err, "err") {
-				assert.ErrorIs(err, terrors.ErrParse)
-				assert.ErrorContains(err, "datetime doesn't satisfy 3 <= dashCount <= 4")
-			}
+	t.Run("invalid date: over 3000 value", func(t *testing.T) {
+		for _, dt := range []string{"3000-2-3", "25-3000-3", "25-3-3000"} {
+			_, err := parseAbsoluteDatetime(dt)
+			require.Error(t, err)
+			assert.ErrorIs(err, terrors.ErrParse)
+			assert.ErrorIs(err, terrors.ErrValue)
+			assert.ErrorContains(err, "invalid year, month or day value")
 		}
+	})
+	t.Run("invalid date: weird value", func(t *testing.T) {
+		for _, dt := range []string{"a-2-3", "25-a-3", "25-3-a"} {
+			_, err := parseAbsoluteDatetime(dt)
+			require.Error(t, err)
+			assert.ErrorIs(err, terrors.ErrParse)
+			assert.ErrorIs(err, terrors.ErrValue)
+			assert.ErrorContains(err, "invalid date value which is neither 'Jan' nor a number")
+		}
+	})
+}
+
+func TestUnparseAbsoluteDatetime(t *testing.T) {
+	assert := assert.New(t)
+	helper := func(dt string) string {
+		val, err := parseAbsoluteDatetime(dt)
+		require.NoError(t, err)
+		return unparseAbsoluteDatetime(*val)
+	}
+	t.Run("%Y", func(t *testing.T) {
+		v := helper("2025")
+		assert.Equal("2025", v)
+	})
+	t.Run("%Y-%m", func(t *testing.T) {
+		v := helper("2025-dec")
+		assert.Equal("2025-12", v)
+	})
+	t.Run("%Y-%m-%d", func(t *testing.T) {
+		v := helper("2025-dec-2")
+		assert.Equal("2025-12-02", v)
+	})
+	t.Run("%Y-%m-%dT%H", func(t *testing.T) {
+		v := helper("2025-05-05T2")
+		assert.Equal("2025-05-05T02", v)
+	})
+	t.Run("%Y-%m-%dT%H-%M", func(t *testing.T) {
+		v := helper("2025-05-05T2-3")
+		assert.Equal("2025-05-05T02-03", v)
+	})
+	t.Run("%Y-%m-%dT%H-%M-%S", func(t *testing.T) {
+		v := helper("2025-05-05T2-3-4")
+		assert.Equal("2025-05-05T02-03-04", v)
 	})
 }
 

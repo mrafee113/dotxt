@@ -4,6 +4,7 @@ import (
 	"dotxt/pkg/terrors"
 	"dotxt/pkg/utils"
 	"fmt"
+	"math"
 	"os"
 	"slices"
 	"strconv"
@@ -14,31 +15,204 @@ import (
 	"github.com/spf13/viper"
 )
 
+/*
+ommitted fields will be replaced from RightNow
+%Y:2006, %y:06, %m:01, %d:02, %H:15, %M:04, %S:05, %b:Jan
+
+datetime: [date][[time]]
+time:
+
+	3-parter: T%H-%M-%S
+	2-parter:
+		T<a>-<b>:
+			if a <= 23: T%H-%M
+			else:		T%M-%S
+	1-parter:
+		T<a>:
+			if a <= 23: T%H
+			else: 		T%M
+
+date:
+
+	3-parter:
+		%Y-%m-%d
+		%y-%m-%d
+		%Y-%b-%d
+		%y-%b-%d
+	2-parter:
+		<a>-<b>:
+			if a >= 13 || <b> == %b:
+				- %Y-%m
+				- %Y-%b
+				- %y-%m
+				- %y-%b
+			else:
+				- %m-%d
+				- %b-%d
+	1-parter:
+		<a>:
+			if a >= 13:
+				- %Y
+				- %y
+			else:
+				- %m
+				- %b
+*/
 func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
-	if strings.Count(absDt, "T") != 1 {
-		return nil, fmt.Errorf("%w: datetime doesn't have 'T'", terrors.ErrParse)
+	if absDt == "" {
+		return nil, fmt.Errorf("%w: empty", terrors.ErrParse)
 	}
-	var t time.Time
-	var err error
-	if dashCount := strings.Count(absDt, "-"); dashCount == 4 {
-		t, err = time.ParseInLocation("2006-01-02T15-04-05", absDt, time.Local)
-	} else if dashCount == 3 {
-		t, err = time.ParseInLocation("2006-01-02T15-04", absDt, time.Local)
+	var timeStr string
+	if ndx := strings.IndexRune(absDt, 'T'); ndx != -1 {
+		timeStr = absDt[ndx+1:]
+		absDt = absDt[:ndx]
+		if len(timeStr) == 0 {
+			return nil, fmt.Errorf("%w: invalid use of T", terrors.ErrParse)
+		}
+		parts := strings.Split(timeStr, "-")
+		n := len(parts)
+		if n == 0 || n > 3 {
+			return nil, fmt.Errorf("%w: invalid use T: either no string afterwards or too many dashes", terrors.ErrParse)
+		}
+		vals := make([]int, n)
+		for ndx := range parts {
+			val, err := strconv.Atoi(parts[ndx])
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w: invalid hour, minute or second: %w", terrors.ErrParse, terrors.ErrValue, err)
+			}
+			if val >= 60 {
+				return nil, fmt.Errorf("%w: %w: invalid hour, minute or second value: %d", terrors.ErrParse, terrors.ErrValue, val)
+			}
+			vals[ndx] = val
+			parts[ndx] = fmt.Sprintf("%02s", parts[ndx])
+		}
+		switch n {
+		case 3:
+			if vals[0] >= 24 {
+				return nil, fmt.Errorf("%w: %w: invalid hour value: %d", terrors.ErrParse, terrors.ErrValue, vals[0])
+			}
+			timeStr = fmt.Sprintf("%s-%s-%s", parts[0], parts[1], parts[2])
+		case 2:
+			if vals[0] <= 23 {
+				timeStr = fmt.Sprintf("%s-%s-00", parts[0], parts[1])
+			} else {
+				timeStr = fmt.Sprintf("00-%s-%s", parts[0], parts[1])
+			}
+		case 1:
+			if vals[0] <= 23 {
+				timeStr = fmt.Sprintf("%s-00-00", parts[0])
+			} else {
+				timeStr = fmt.Sprintf("00-%s-00", parts[0])
+			}
+		}
 	} else {
-		return nil, fmt.Errorf("%w: datetime doesn't satisfy 3 <= dashCount <= 4", terrors.ErrParse)
+		timeStr = "00-00-00"
 	}
+
+	var dateStr string
+	if len(absDt) > 0 {
+		parts := strings.Split(absDt, "-")
+		n := len(parts)
+		if n == 0 || n > 3 {
+			return nil, fmt.Errorf("%w: invalid use of date: too many dashes", terrors.ErrParse)
+		}
+		vals := make([]int, n)
+		for ndx := range parts {
+			val, err := strconv.Atoi(parts[ndx])
+			if err == nil {
+				if val >= 3000 {
+					return nil, fmt.Errorf("%w: %w: invalid year, month or day value: %d",
+						terrors.ErrParse, terrors.ErrValue, val)
+				}
+				vals[ndx] = val
+			} else {
+				t, err := time.Parse("Jan", parts[ndx])
+				if err != nil {
+					return nil, fmt.Errorf("%w: %w: invalid date value which is neither 'Jan' nor a number: %s",
+						terrors.ErrParse, terrors.ErrValue, parts[ndx])
+				}
+				vals[ndx] = math.MaxInt
+				parts[ndx] = t.Format("01")
+			}
+			parts[ndx] = fmt.Sprintf("%02s", parts[ndx])
+		}
+		handleSmallYear := func(year string) string {
+			t, _ := time.Parse("06", year)
+			return t.Format("2006")
+		}
+		switch n {
+		case 3:
+			if vals[0] < 100 {
+				parts[0] = handleSmallYear(parts[0])
+			}
+			dateStr = fmt.Sprintf("%s-%s-%s", parts[0], parts[1], parts[2])
+		case 2:
+			if (vals[0] >= 13 && vals[0] < 3000) || vals[1] == math.MaxInt {
+				if vals[0] < 100 {
+					parts[0] = handleSmallYear(parts[0])
+				}
+				dateStr = fmt.Sprintf("%s-%s-01", parts[0], parts[1])
+			} else {
+				dateStr = fmt.Sprintf("%s-%s-%s", rightNow.Format("2006"), parts[0], parts[1])
+			}
+		case 1:
+			if vals[0] >= 13 && vals[0] < 3000 {
+				if vals[0] < 100 {
+					parts[0] = handleSmallYear(parts[0])
+				}
+				dateStr = fmt.Sprintf("%s-01-01", parts[0])
+			} else {
+				dateStr = fmt.Sprintf("%s-%s-01", rightNow.Format("2006"), parts[0])
+			}
+		}
+	} else {
+		dateStr = fmt.Sprintf("%s-01-01", rightNow.Format("2006"))
+	}
+
+	t, err := time.ParseInLocation("2006-01-02T15-04-05", fmt.Sprintf("%sT%s", dateStr, timeStr), time.Local)
 	if err != nil {
 		return nil, err
 	}
 	return &t, nil
 }
 
+/*
+datetime: [date]T[[time]]
+date:
+
+	if month == 1 and day == 1: %Y
+	else if day == 1:			%Y-%m
+	else: 						%Y-%m-%d
+
+time:
+
+	if hour == 0 and minute == 0 and second == 0:
+	else if minute == 0 and second == 0:       	  T%H
+	else if second == 0:						  T%H-%M
+	else:										  T%H-%M-%S
+*/
 func unparseAbsoluteDatetime(absDt time.Time) string {
-	seconds, _ := strconv.Atoi(absDt.Format("05"))
-	if seconds == 0 {
-		return absDt.Format("2006-01-02T15-04")
+	var dateStr string
+	if absDt.Month() == 1 && absDt.Day() == 1 {
+		dateStr = absDt.Format("2006")
+	} else if absDt.Day() == 1 {
+		dateStr = absDt.Format("2006-01")
+	} else {
+		dateStr = absDt.Format("2006-01-02")
 	}
-	return absDt.Format("2006-01-02T15-04-05")
+	var timeStr string
+	if absDt.Hour() == 0 && absDt.Minute() == 0 && absDt.Second() == 0 {
+	} else if absDt.Minute() == 0 && absDt.Second() == 0 {
+		timeStr = absDt.Format("15")
+	} else if absDt.Second() == 0 {
+		timeStr = absDt.Format("15-04")
+	} else {
+		timeStr = absDt.Format("15-04-05")
+	}
+	if len(timeStr) > 0 {
+		timeStr = "T" + timeStr
+	}
+	return fmt.Sprintf("%s%s", dateStr, timeStr)
 }
 
 func parseDuration(dur string) (*time.Duration, error) {
