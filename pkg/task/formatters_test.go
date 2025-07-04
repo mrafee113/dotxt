@@ -314,7 +314,7 @@ func TestRender(t *testing.T) {
 		assert.Equal(task, rtask.tsk, "task")
 		assert.Equal(id, rtask.id, "id")
 		assert.Equal("print.color-index", rtask.idColor, "idColor")
-		assert.Equal("$p=unit/2/15/cat", rtask.tokens[0].token.Raw)
+		assert.Equal("$p=unit/2/15/cat", rtask.tokens[0].token.raw)
 		assert.Equal("print.color-default", rtask.tokens[0].color)
 		assert.Equal("(A)", rtask.tokens[1].raw)
 		assert.Equal("print.color-default", rtask.tokens[1].color)

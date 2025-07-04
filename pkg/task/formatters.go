@@ -352,7 +352,7 @@ func colorizeIds(ids map[string]bool) map[string]string {
 
 func formatID(tk Token) string {
 	var idCollapse string
-	if strings.HasPrefix(tk.Raw, "$-id=") {
+	if strings.HasPrefix(tk.raw, "$-id=") {
 		idCollapse = "-"
 	}
 	return fmt.Sprintf("$%s%s=%s", idCollapse, tk.Key, *tk.Value.(*string))
@@ -377,7 +377,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 	}
 	out := rTask{tsk: t, id: *t.ID, idColor: "print.color-index"}
 	addAsRegular := func(token *Token) {
-		out.tokens = append(out.tokens, &rToken{token: token, raw: token.Raw})
+		out.tokens = append(out.tokens, &rToken{token: token, raw: token.String(t)})
 	}
 	specialTokenMap := func() map[string]*Token {
 		out := make(map[string]*Token)
@@ -432,7 +432,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			continue
 		case TokenText:
 			out.tokens = append(out.tokens, &rToken{
-				token: t.Tokens[ndx], raw: t.Tokens[ndx].Raw,
+				token: t.Tokens[ndx], raw: t.Tokens[ndx].String(t),
 			})
 		case TokenID:
 			out.tokens = append(out.tokens, &rToken{
@@ -453,7 +453,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			}
 			out.tokens = append(out.tokens, &rToken{
 				token: t.Tokens[ndx],
-				raw:   t.Tokens[ndx].Raw, color: color,
+				raw:   t.Tokens[ndx].String(t), color: color,
 			})
 		case TokenDate:
 			if slices.Contains([]string{"due", "end", "dead"}, t.Tokens[ndx].Key) {

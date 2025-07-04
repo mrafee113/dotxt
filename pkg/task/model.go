@@ -119,40 +119,49 @@ const (
 
 type Token struct {
 	Type  TokenType
-	Raw   string
+	raw   string // an attempt to carry extra token metadata from the original text
 	Key   string
-	Value any
+	Value any // whatever the case this must be a pointer type
 }
 
 func (tk *Token) String(task *Task) string {
-	// TODO: extensively test
-	// switch tk.Type {
-	// case TokenText, TokenID, TokenHint:
-	// 	return *tk.Value.(*string)
-	// case TokenPriority:
-	// 	return "(" + *tk.Value.(*string) + ")"
-	// case TokenDuration:
-	// 	return unparseDuration(*tk.Value.(*time.Duration))
-	// case TokenDate:
-	// 	_, err := parseAbsoluteDatetime(tk.raw)
-	// 	if err == nil {
-	// 		return unparseAbsoluteDatetime(*tk.Value.(*time.Time))
-	// 	}
-	// 	_, err = parseTmpRelativeDatetime(tk.Key, tk.raw)
-	// 	if err == nil {
-	// 		out, err := tk.unparseRelativeDatetime(task.Time, nil)
-	// 		if err == nil {
-	// 			return out
-	// 		}
-	// 	}
-	// 	return tk.raw
-	// case TokenProgress:
-	// 	p, err := unparseProgress(*tk.Value.(*Progress))
-	// 	if err == nil {
-	// 		return p
-	// 	}
-	// 	return tk.raw
-	// }
+	switch tk.Type {
+	case TokenText:
+		return *tk.Value.(*string)
+	case TokenID:
+		val := *tk.Value.(*string)
+		for _, prefix := range []string{"$id=", "$-id=", "$P="} {
+			if strings.HasPrefix(tk.raw, prefix) {
+				return prefix + val
+			}
+		}
+		return val
+	case TokenHint:
+		return tk.Key + *tk.Value.(*string)
+	case TokenPriority:
+		return "(" + *tk.Value.(*string) + ")"
+	case TokenDuration:
+		return "$" + tk.Key + "=" + unparseDuration(*tk.Value.(*time.Duration))
+	case TokenDate:
+		_, err := parseAbsoluteDatetime(tk.raw)
+		if err == nil {
+			return unparseAbsoluteDatetime(*tk.Value.(*time.Time))
+		}
+		_, err = parseTmpRelativeDatetime(tk.Key, tk.raw)
+		if err == nil {
+			out, err := tk.unparseRelativeDatetime(task.Time, nil)
+			if err == nil {
+				return out
+			}
+		}
+		return tk.raw
+	case TokenProgress:
+		p, err := unparseProgress(*tk.Value.(*Progress))
+		if err == nil {
+			return "$p=" + p
+		}
+		return tk.raw
+	}
 	return ""
 }
 
@@ -288,12 +297,12 @@ func (t *Task) update(new *Task) error {
 			}
 		}
 		if newCreationDtToken != nil {
-			newCreationDtToken.Raw = curCreationDtToken.Raw
+			newCreationDtToken.raw = curCreationDtToken.raw
 			newCreationDtToken.Value = curCreationDtToken.Value.(*time.Time)
 		} else {
 			new.Tokens = append(new.Tokens, &Token{
 				Type: TokenDate, Key: "c",
-				Raw:   curCreationDtToken.Raw,
+				raw:   curCreationDtToken.raw,
 				Value: curCreationDtToken.Value.(*time.Time),
 			})
 		}
@@ -335,11 +344,11 @@ func (t *Task) renewLud() {
 	if token == nil {
 		t.Tokens = append(t.Tokens, &Token{
 			Type: TokenDate, Key: "lud",
-			Raw: ludText, Value: &rightNow,
+			raw: ludText, Value: &rightNow,
 		})
 	} else {
 		token.Value = &rightNow
-		token.Raw = ludText
+		token.raw = ludText
 	}
 }
 
@@ -355,8 +364,8 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 	if token == nil {
 		return fmt.Errorf("%w: token date for field '%s' not found", terrors.ErrNotFound, field)
 	}
-	curDtTxt = strings.TrimPrefix(token.Raw, fmt.Sprintf("$%s=", field))
 
+	curDtTxt = strings.TrimPrefix(token.raw, fmt.Sprintf("$%s=", field))
 	_, isAbsDt := parseAbsoluteDatetime(curDtTxt)
 	if isAbsDt == nil {
 		newDtTxt = unparseAbsoluteDatetime(*newDt)
@@ -368,13 +377,11 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 			return err
 		}
 	}
-	token.Raw = newDtTxt
+	token.raw = newDtTxt
 	token.Value = newDt
 	t.Time.setField(field, newDt)
 	return nil
 }
-
-// TODO: cleanup below functions
 
 // A reduced form of the raw string that represents tasks
 // more rigidly used for comparison
@@ -385,7 +392,7 @@ func (t *Task) Norm() string {
 		if token.Type == TokenDate && slices.Contains([]string{"c", "lud"}, token.Key) {
 			continue
 		}
-		out = append(out, token.Raw)
+		out = append(out, token.String(t))
 	}
 	return strings.Join(out, " ")
 }
@@ -397,17 +404,17 @@ func (t *Task) NormRegular() string { // Text
 	var out []string
 	for _, token := range t.Tokens {
 		if token.Type == TokenText {
-			out = append(out, token.Raw)
+			out = append(out, token.String(t))
 		}
 	}
 	return strings.Join(out, " ")
 }
 
 // the text of the task joined in from the tokens
-func (t *Task) Raw() string { // TODO: change to String
+func (t *Task) Raw() string {
 	var out []string
 	for _, token := range t.Tokens {
-		out = append(out, token.Raw)
+		out = append(out, token.String(t))
 	}
 	return strings.Join(out, " ")
 }

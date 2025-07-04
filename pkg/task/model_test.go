@@ -17,7 +17,7 @@ func TestUpdate(t *testing.T) {
 	checkToken := func(task *Task, key string, value *time.Time) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == key {
-				assert.True(strings.HasPrefix(tk.Raw, "$"+key+"="))
+				assert.True(strings.HasPrefix(tk.raw, "$"+key+"="))
 				assert.Equal(*value, *tk.Value.(*time.Time))
 				break
 			}
@@ -37,7 +37,7 @@ func TestUpdate(t *testing.T) {
 			} else if tk.Type == TokenProgress {
 				assert.Equal(90, tk.Value.(*Progress).Count)
 			} else if tk.Type == TokenDate && tk.Key == "c" {
-				assert.True(strings.HasPrefix(tk.Raw, "$c="))
+				assert.True(strings.HasPrefix(tk.raw, "$c="))
 				assert.Equal(*dt, *tk.Value.(*time.Time))
 			}
 		}
@@ -95,7 +95,7 @@ func TestUpdate(t *testing.T) {
 		assert.Equal(*dt, *task.Time.Reminders[0])
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key[0] == 'r' {
-				assert.True(strings.HasPrefix(tk.Raw, "$r="))
+				assert.True(strings.HasPrefix(tk.raw, "$r="))
 				assert.Equal(*dt, *tk.Value.(*time.Time))
 			}
 		}
@@ -128,7 +128,7 @@ func TestRenewLud(t *testing.T) {
 			if tk.Type == TokenDate && tk.Key == "lud" {
 				found = true
 				assert.Exactly(rightNow, *tk.Value.(*time.Time))
-				assert.Equal("$lud=7d", tk.Raw)
+				assert.Equal("$lud=7d", tk.raw)
 			}
 		}
 		assert.True(found, "not found")
@@ -142,7 +142,7 @@ func TestRenewLud(t *testing.T) {
 			if tk.Type == TokenDate && tk.Key == "lud" {
 				found = true
 				assert.Exactly(rightNow, *tk.Value.(*time.Time))
-				assert.Equal("$lud=0s", tk.Raw)
+				assert.Equal("$lud=0s", tk.raw)
 			}
 		}
 		assert.True(found, "not found")
@@ -170,7 +170,7 @@ func TestUpdateDate(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
 				found = true
-				assert.Equal("$due=7d", tk.Raw)
+				assert.Equal("$due=7d", tk.raw)
 				assert.Equal(dt, *tk.Value.(*time.Time))
 			}
 		}
@@ -187,7 +187,7 @@ func TestUpdateDate(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "dead" {
 				found = true
-				assert.Equal("$dead=c:3m", tk.Raw)
+				assert.Equal("$dead=c:3m", tk.raw)
 				assert.Equal(dt, *tk.Value.(*time.Time))
 			}
 		}
@@ -204,7 +204,7 @@ func TestUpdateDate(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
 				found = true
-				assert.Equal("$due=2025-07-05T05-05", tk.Raw)
+				assert.Equal("$due=2025-07-05T05-05", tk.raw)
 				assert.Equal(*dt, *tk.Value.(*time.Time))
 			}
 		}
@@ -292,4 +292,26 @@ func TestLists(t *testing.T) {
 		Lists.Append(path, tasks[1])
 		assert.Equal(tasks[1], Lists[path].Tasks[len(Lists[path].Tasks)-1])
 	})
+}
+
+func TestString(t *testing.T) {
+	assert := assert.New(t)
+	task, _ := ParseTask(nil, "(A) +prj #tag @at $due=1w $dead=1w $r=-2h $-id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m $lud=0s")
+	helper := func(ndx int) string {
+		return task.Tokens[ndx].String(task)
+	}
+	assert.Equal("(A)", helper(0))
+	assert.Equal("+prj", helper(1))
+	assert.Equal("#tag", helper(2))
+	assert.Equal("@at", helper(3))
+	assert.Equal("$due=1w", helper(4))
+	assert.Equal("$dead=1w", helper(5))
+	assert.Equal("$r=-2h", helper(6))
+	assert.Equal("$-id=3", helper(7))
+	assert.Equal("$P=2", helper(8))
+	assert.Equal("$p=unit/2/15/cat", helper(9))
+	assert.Equal("text", helper(10))
+	assert.Equal("$r=-3d", helper(11))
+	assert.Equal("$every=1m", helper(12))
+	assert.Equal("$lud=0s", helper(13))
 }

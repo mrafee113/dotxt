@@ -142,7 +142,7 @@ func TestParseTask(t *testing.T) {
 		found = false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
-				assert.Equal("$", tk.Value.(string))
+				assert.Equal("$", *tk.Value.(*string))
 				found = true
 			}
 		}
@@ -153,7 +153,7 @@ func TestParseTask(t *testing.T) {
 		found = false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
-				assert.Equal("$key", tk.Value.(string))
+				assert.Equal("$key", *tk.Value.(*string))
 				found = true
 			}
 		}
@@ -164,7 +164,7 @@ func TestParseTask(t *testing.T) {
 		found = false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
-				assert.Equal("$key=", tk.Value.(string))
+				assert.Equal("$key=", *tk.Value.(*string))
 				found = true
 			}
 		}
@@ -175,7 +175,7 @@ func TestParseTask(t *testing.T) {
 		found = false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
-				assert.Equal("$key=value", tk.Value.(string))
+				assert.Equal("$key=value", *tk.Value.(*string))
 				found = true
 			}
 		}
@@ -186,7 +186,7 @@ func TestParseTask(t *testing.T) {
 		found = false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
-				assert.Equal("$id=", tk.Value.(string))
+				assert.Equal("$id=", *tk.Value.(*string))
 				found = true
 			}
 		}
@@ -198,11 +198,11 @@ func TestParseTask(t *testing.T) {
 		count = 0
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenID {
-				if strings.HasPrefix(tk.Raw, "$id=") {
+				if strings.HasPrefix(tk.raw, "$id=") {
 					count++
 					assert.Equal("noway", *tk.Value.(*string), "$id")
 				}
-				if strings.HasPrefix(tk.Raw, "$P=") {
+				if strings.HasPrefix(tk.raw, "$P=") {
 					count++
 					assert.Equal("nada", *tk.Value.(*string), "$P")
 				}
@@ -221,11 +221,11 @@ func TestParseTask(t *testing.T) {
 		count = 0
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenID {
-				if strings.HasPrefix(tk.Raw, "$id=") {
+				if strings.HasPrefix(tk.raw, "$id=") {
 					count++
 					assert.Equal("20002", *tk.Value.(*string), "$id")
 				}
-				if strings.HasPrefix(tk.Raw, "$P=") {
+				if strings.HasPrefix(tk.raw, "$P=") {
 					count++
 					assert.Equal("534", *tk.Value.(*string), "$P")
 				}
@@ -251,7 +251,7 @@ func TestParseTask(t *testing.T) {
 			if tk.Type == TokenID {
 				found = true
 				assert.Equal("id", tk.Key)
-				assert.Contains(tk.Raw, "$-id=")
+				assert.Contains(tk.raw, "$-id=")
 			}
 		}
 		assert.True(found)
@@ -293,7 +293,7 @@ func TestParseTask(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
 				count++
-				assert.Equal("$due=", tk.Raw)
+				assert.Equal("$due=", tk.raw)
 			}
 		}
 		assert.Equal(1, count, "count")
@@ -305,7 +305,7 @@ func TestParseTask(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
 				count++
-				assert.Equal("$due=+2a", tk.Raw)
+				assert.Equal("$due=+2a", tk.raw)
 			}
 		}
 		assert.Equal(1, count, "count")
@@ -317,7 +317,7 @@ func TestParseTask(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
 				count++
-				assert.Equal("$due=abc:1y", tk.Raw)
+				assert.Equal("$due=abc:1y", tk.raw)
 			}
 		}
 		assert.Equal(1, count, "count")
@@ -329,7 +329,7 @@ func TestParseTask(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
 				count++
-				assert.Equal("$due=c;123", tk.Raw)
+				assert.Equal("$due=c;123", tk.raw)
 			}
 		}
 		assert.Equal(1, count, "count")
@@ -415,7 +415,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$c=1y", tk.Raw)
+				assert.Equal("$c=1y", tk.raw)
 			}
 		}
 		assert.True(foundDt, "found date")
@@ -432,7 +432,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$lud=1y", tk.Raw)
+				assert.Equal("$lud=1y", tk.raw)
 			}
 		}
 		assert.True(foundDt, "found date")
@@ -448,7 +448,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$dead=2026-06-06T00-00", tk.Raw)
+				assert.Equal("$dead=2026-06-06T00-00", tk.raw)
 			}
 		}
 		assert.False(foundDt, "found date")
@@ -464,7 +464,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$end=1w", tk.Raw)
+				assert.Equal("$end=1w", tk.raw)
 			}
 		}
 		assert.False(foundDt, "found date")
@@ -480,7 +480,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$dead=c:2d", tk.Raw)
+				assert.Equal("$dead=c:2d", tk.raw)
 			}
 		}
 		assert.False(foundDt, "found date")
@@ -496,7 +496,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$end=c:2d", tk.Raw)
+				assert.Equal("$end=c:2d", tk.raw)
 			}
 		}
 		assert.False(foundDt, "found date")
@@ -508,13 +508,13 @@ func TestParseTask(t *testing.T) {
 		var foundDead, foundEnd bool
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
-				if strings.Contains(tk.Raw, "dead") {
+				if strings.Contains(tk.raw, "dead") {
 					foundDead = true
-					assert.Equal("$dead=10d", tk.Raw)
+					assert.Equal("$dead=10d", tk.raw)
 				}
-				if strings.Contains(tk.Raw, "end") {
+				if strings.Contains(tk.raw, "end") {
 					foundEnd = true
-					assert.Equal("$end=1w", tk.Raw)
+					assert.Equal("$end=1w", tk.raw)
 				}
 			}
 		}
@@ -537,7 +537,7 @@ func TestParseTask(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$due=2023-05-05T05-05", tk.Raw)
+				assert.Equal("$due=2023-05-05T05-05", tk.raw)
 			}
 			if tk.Type == TokenDate && tk.Key == "due" {
 				foundDt = true
@@ -557,7 +557,7 @@ func TestParseTask(t *testing.T) {
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenText {
 				found = true
-				assert.Equal("$r=c:-1w", tk.Raw)
+				assert.Equal("$r=c:-1w", tk.raw)
 			}
 		}
 		assert.True(found, "found")
@@ -585,7 +585,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$every=23h59M59s", tk.Raw)
+				assert.Equal("$every=23h59M59s", tk.raw)
 			}
 		}
 		assert.False(foundDur, "found duration")
@@ -601,7 +601,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$every=10y", tk.Raw)
+				assert.Equal("$every=10y", tk.raw)
 			}
 		}
 		assert.False(foundDur, "found duration")
@@ -617,7 +617,7 @@ func TestParseTask(t *testing.T) {
 			}
 			if tk.Type == TokenText {
 				foundTxt = true
-				assert.Equal("$every=-1w", tk.Raw)
+				assert.Equal("$every=-1w", tk.raw)
 			}
 		}
 		assert.False(foundDur, "found duration")
@@ -1113,7 +1113,7 @@ func TestResolveDates(t *testing.T) {
 						}
 					}
 					tokens = append(tokens, &Token{
-						Type: TokenDate, Raw: token,
+						Type: TokenDate, raw: token,
 						Key: key, Value: dt,
 					})
 				}

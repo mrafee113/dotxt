@@ -328,7 +328,7 @@ func unparseRelativeDatetime(dt, rel time.Time) string {
 }
 
 func (tk *Token) unparseRelativeDatetime(t *Temporal, val *time.Time) (string, error) {
-	curDtTxt := strings.TrimPrefix(tk.Raw, fmt.Sprintf("$%s=", tk.Key))
+	curDtTxt := strings.TrimPrefix(tk.raw, fmt.Sprintf("$%s=", tk.Key))
 	fallback, _, err := getTemporalFallback(tk.Key, curDtTxt)
 	if err != nil {
 		return "", err
@@ -530,7 +530,7 @@ func resolveDates(tokens []*Token) []error {
 func dateToTextToken(dt *Token) {
 	dt.Key = ""
 	dt.Type = TokenText
-	dt.Value = dt.Raw
+	dt.Value = utils.MkPtr(dt.raw)
 }
 
 /*
@@ -643,14 +643,14 @@ func parseTokens(line string) ([]*Token, []error) {
 		if err != nil {
 			errs = append(errs, err)
 		}
-		tokens = append(tokens, &Token{Type: TokenText, Raw: tokenStr, Value: tokenStr})
+		tokens = append(tokens, &Token{Type: TokenText, raw: tokenStr, Value: utils.MkPtr(tokenStr)})
 	}
 	if i, j, err := parsePriority(line); err == nil {
 		p := line[i:j]
 		tokens = append(tokens, &Token{
 			Type: TokenPriority, Key: "priority",
 			Value: &p,
-			Raw:   fmt.Sprintf("(%s)", p),
+			raw:   fmt.Sprintf("(%s)", p),
 		})
 		line = line[j+1:]
 	}
@@ -662,7 +662,7 @@ func parseTokens(line string) ([]*Token, []error) {
 				continue
 			}
 			tokens = append(tokens, &Token{
-				Type: TokenHint, Raw: tokenStr,
+				Type: TokenHint, raw: tokenStr,
 				Key: tokenStr[0:1], Value: utils.MkPtr(tokenStr[1:]),
 			})
 		case '$':
@@ -687,7 +687,7 @@ func parseTokens(line string) ([]*Token, []error) {
 			case "-id", "id", "P":
 				k := strings.Replace(key, "-", "", 1)
 				tokens = append(tokens, &Token{
-					Type: TokenID, Raw: tokenStr,
+					Type: TokenID, raw: tokenStr,
 					Key: k, Value: utils.MkPtr(value),
 				})
 			case "c", "lud", "due", "end", "dead", "r":
@@ -701,7 +701,7 @@ func parseTokens(line string) ([]*Token, []error) {
 					}
 				}
 				tokens = append(tokens, &Token{
-					Type: TokenDate, Raw: tokenStr,
+					Type: TokenDate, raw: tokenStr,
 					Key: key, Value: dt,
 				})
 			case "every":
@@ -713,7 +713,7 @@ func parseTokens(line string) ([]*Token, []error) {
 					continue
 				}
 				tokens = append(tokens, &Token{
-					Type: TokenDuration, Raw: tokenStr,
+					Type: TokenDuration, raw: tokenStr,
 					Key: key, Value: duration,
 				})
 			case "p":
@@ -723,7 +723,7 @@ func parseTokens(line string) ([]*Token, []error) {
 					continue
 				}
 				tokens = append(tokens, &Token{
-					Type: TokenProgress, Raw: tokenStr,
+					Type: TokenProgress, raw: tokenStr,
 					Key: "p", Value: progress,
 				})
 			default:
@@ -755,7 +755,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 			switch token.Key {
 			case "id":
 				task.EID = val
-				if strings.HasPrefix(token.Raw, "$-id") {
+				if strings.HasPrefix(token.raw, "$-id") {
 					task.EIDCollapse = true
 				}
 			case "P":
@@ -800,7 +800,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	if task.Time.CreationDate == nil {
 		task.Time.CreationDate = &rightNow
 		task.Tokens = append(task.Tokens, &Token{
-			Type: TokenDate, Raw: fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow)),
+			Type: TokenDate, raw: fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow)),
 			Key: "c", Value: &rightNow,
 		})
 	}
@@ -808,7 +808,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		task.Time.LastUpdated = &rightNow
 		ludVal := rightNow.Add(time.Second)
 		task.Tokens = append(task.Tokens, &Token{
-			Type: TokenDate, Raw: "$lud=" + unparseDuration(time.Duration(0)),
+			Type: TokenDate, raw: "$lud=" + unparseDuration(time.Duration(0)),
 			Key: "lud", Value: &ludVal,
 		})
 	}
@@ -866,7 +866,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	if !task.Time.LastUpdated.After(*task.Time.CreationDate) {
 		tk, _ := findToken(TokenDate, "lud")
 		if tk != nil {
-			tk.Raw = "$lud=" + unparseDuration(time.Duration(0))
+			tk.raw = "$lud=" + unparseDuration(time.Duration(0))
 			ludVal := task.Time.CreationDate.Add(time.Second)
 			tk.Value = &ludVal
 			task.Time.LastUpdated = &ludVal

@@ -271,20 +271,20 @@ func TestPrioritizeTask(t *testing.T) {
 		err := PrioritizeTask(0, "prio", path)
 		assert.NoError(err)
 		assert.Equal("prio", *Lists[path].Tasks[0].Priority)
-		assert.Equal("(prio)", Lists[path].Tasks[0].Tokens[0].Raw)
+		assert.Equal("(prio)", Lists[path].Tasks[0].Tokens[0].raw)
 	})
 	t.Run("prior priority", func(t *testing.T) {
 		assert.Equal("with", *Lists[path].Tasks[1].Priority)
 		err := PrioritizeTask(1, "prio", path)
 		assert.NoError(err)
 		assert.Equal("prio", *Lists[path].Tasks[1].Priority)
-		assert.Equal("(prio)", Lists[path].Tasks[1].Tokens[0].Raw)
+		assert.Equal("(prio)", Lists[path].Tasks[1].Tokens[0].raw)
 	})
 	t.Run("ineffective parentheses", func(t *testing.T) {
 		err := PrioritizeTask(1, "(NewPrio)", path)
 		assert.NoError(err)
 		assert.Equal("NewPrio", *Lists[path].Tasks[1].Priority)
-		assert.Equal("(NewPrio)", Lists[path].Tasks[1].Tokens[0].Raw)
+		assert.Equal("(NewPrio)", Lists[path].Tasks[1].Tokens[0].raw)
 	})
 }
 
@@ -456,7 +456,7 @@ func TestIncrementProgressCount(t *testing.T) {
 			if tk.Type == TokenProgress {
 				found = true
 				assert.Equal(12, tk.Value.(*Progress).Count)
-				assert.Contains(tk.Raw, "12/100")
+				assert.Contains(tk.raw, "12/100")
 			}
 		}
 		assert.True(found)
@@ -471,7 +471,7 @@ func TestIncrementProgressCount(t *testing.T) {
 			if tk.Type == TokenProgress {
 				found = true
 				assert.Equal(8, tk.Value.(*Progress).Count)
-				assert.Contains(tk.Raw, "8/100")
+				assert.Contains(tk.raw, "8/100")
 			}
 		}
 		assert.True(found)
@@ -486,7 +486,7 @@ func TestIncrementProgressCount(t *testing.T) {
 			if tk.Type == TokenProgress {
 				found = true
 				assert.Equal(100, tk.Value.(*Progress).Count)
-				assert.Contains(tk.Raw, "100/100")
+				assert.Contains(tk.raw, "100/100")
 			}
 		}
 		assert.True(found)
@@ -501,7 +501,7 @@ func TestIncrementProgressCount(t *testing.T) {
 			if tk.Type == TokenProgress {
 				found = true
 				assert.Equal(0, tk.Value.(*Progress).Count)
-				assert.Contains(tk.Raw, "unit/0/100/cat")
+				assert.Contains(tk.raw, "unit/0/100/cat")
 			}
 		}
 		assert.True(found)
@@ -532,7 +532,7 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		for _, tk := range Lists[path].Tasks[0].Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
 				found = true
-				assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.Raw)
+				assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
 			}
 		}
 		assert.True(found)
@@ -555,7 +555,7 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		for _, tk := range Lists[path].Tasks[6].Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
 				found = true
-				assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.Raw)
+				assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
 			}
 		}
 		assert.True(found)

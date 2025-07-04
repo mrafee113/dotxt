@@ -169,7 +169,7 @@ func PrependToTask(id int, text, path string) error {
 		var out []string
 		for _, tk := range task.Tokens {
 			if tk.Type != TokenPriority {
-				out = append(out, tk.Raw)
+				out = append(out, tk.String(task))
 			}
 		}
 		curText := strings.Join(out, " ")
@@ -257,8 +257,8 @@ func PrioritizeTask(id int, priority, path string) error {
 	hadPriority := task.Priority != nil && *task.Priority != ""
 	task.Priority = &priority
 	pToken := Token{
-		Type: TokenPriority, Raw: fmt.Sprintf("(%s)", priority), Key: "priority",
-		Value: strings.TrimSuffix(strings.TrimPrefix(priority, "("), ")"),
+		Type: TokenPriority, raw: fmt.Sprintf("(%s)", priority), Key: "priority",
+		Value: utils.MkPtr(strings.TrimSuffix(strings.TrimPrefix(priority, "("), ")")),
 	}
 	if hadPriority {
 		for ndx := range task.Tokens {
@@ -349,7 +349,7 @@ func DoneTask(ids []int, path string) error {
 	for _, task := range tasks {
 		var textArr []string
 		for _, token := range task.Tokens {
-			textArr = append(textArr, token.Raw)
+			textArr = append(textArr, token.String(task))
 		}
 		out = append(out, strings.Join(textArr, " "))
 	}
@@ -443,7 +443,7 @@ func IncrementProgressCount(id int, path string, value int) error {
 		return err
 	}
 	progText = fmt.Sprintf("$p=%s", progText)
-	pToken.Raw = progText
+	pToken.raw = progText
 	pToken.Value = utils.MkPtr(*prog)
 	return nil
 }

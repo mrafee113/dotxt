@@ -379,10 +379,10 @@ func StoreFile(path string) error {
 		return fmt.Errorf("%w: %s", terrors.ErrListNotInMemory, path)
 	}
 	var lines []string
-	for _, file := range fileTasks {
+	for _, task := range fileTasks {
 		var textArr []string
-		for _, token := range file.Tokens {
-			textArr = append(textArr, token.Raw) // TODO
+		for _, token := range task.Tokens {
+			textArr = append(textArr, token.String(task)) // TODO
 		}
 		lines = append(lines, strings.Join(textArr, " "))
 	}
