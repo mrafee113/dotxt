@@ -360,22 +360,15 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 	_, isAbsDt := parseAbsoluteDatetime(curDtTxt)
 	if isAbsDt == nil {
 		newDtTxt = unparseAbsoluteDatetime(*newDt)
+		newDtTxt = fmt.Sprintf("$%s=%s", field, newDtTxt)
 	} else {
-		fallback, _, err := getTemporalFallback(field, curDtTxt)
+		var err error
+		newDtTxt, err = token.unparseRelativeDatetime(t.Time, newDt)
 		if err != nil {
 			return err
-		}
-		rel, err := t.Time.getField(fallback)
-		if err != nil {
-			return err
-		}
-		newDtTxt = unparseRelativeDatetime(*newDt, *rel)
-		tmp := temporalFallback[field]
-		if tmp != fallback {
-			newDtTxt = fmt.Sprintf("%s:%s", fallback, newDtTxt)
 		}
 	}
-	token.Raw = fmt.Sprintf("$%s=%s", field, newDtTxt)
+	token.Raw = newDtTxt
 	token.Value = newDt
 	t.Time.setField(field, newDt)
 	return nil
