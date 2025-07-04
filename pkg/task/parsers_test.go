@@ -727,6 +727,15 @@ func TestParseDuration(t *testing.T) {
 			assert.Equal((7+6*60+5*60*60+4*24*60*60+3*7*24*60*60+2*30*24*60*60+1*365*24*60*60)*time.Second, *val)
 		}
 	})
+	t.Run("valid: float values", func(t *testing.T) {
+		val, err := parseDuration("1.5y1.5m1.555w1.002d12.27h3.14M0.0s")
+		if assert.NoError(err) {
+			sec := float64(time.Second)
+			day := 24 * 60 * 60 * sec
+			var v float64 = 1.5*365*day + 1.5*30*day + 1.555*7*day + 1.002*day + 12.27*60*60*sec + 3.14*60*sec
+			assert.Equal(time.Duration(v), *val)
+		}
+	})
 }
 
 func TestUnparseDuration(t *testing.T) {
@@ -1205,5 +1214,192 @@ func TestTokenizeLine(t *testing.T) {
 		v := tokenizeLine("t1 `t2 t2`")
 		assert.Equal("t1", v[0])
 		assert.Equal("t2 t2", v[1])
+	})
+}
+
+func TestParseUnparseCoherency(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("duration", func(t *testing.T) {
+		helper := func(d string) string {
+			val, err := parseDuration(d)
+			if !assert.NoError(err, d) {
+				return ""
+			}
+			return unparseDuration(*val)
+		}
+		t.Run("zero value", func(t *testing.T) {
+			for _, d := range []string{
+				"0y", "-0y", "+0y",
+				"0m", "-0m", "+0m",
+				"0w", "-0w", "+0w",
+				"0d", "-0d", "+0d",
+				"0h", "-0h", "+0h",
+				"0M", "-0M", "+0M",
+				"0s", "-0s", "+0s",
+			} {
+				assert.Equal("0s", helper(d))
+			}
+		})
+		t.Run("positive sign isn't kept", func(t *testing.T) {
+			assert.Equal("2y", helper("+2y"))
+			assert.Equal("2y", helper("2y"))
+			assert.Equal("1y2m4d5h6M7s", helper("+1y2m4d5h6M7s"))
+		})
+		t.Run("negative sign is kept", func(t *testing.T) {
+			assert.Equal("-1d", helper("-1d"))
+		})
+		t.Run("weeks are turned to days", func(t *testing.T) {
+			assert.Equal("1y2m25d5h6M7s", helper("1y2m3w4d5h6M7s"))
+		})
+		t.Run("overflows are corrected", func(t *testing.T) {
+			assert.Equal("1d6h", helper("30h"))
+			assert.Equal("2y7m9d13h31M20s", helper("1y15m9w70d36h90M80s"))
+		})
+		t.Run("float values are poured to other units", func(t *testing.T) {
+			assert.Equal("1y6m2d12h", helper("1.5y"))
+		})
+		t.Run("units are ordered descending", func(t *testing.T) {
+			assert.Equal("1y2m25d5h6M7s", helper("2m4d3w7s6M1y5h"))
+		})
+	})
+	t.Run("progress", func(t *testing.T) {
+		helper := func(p string) string {
+			val, err := parseProgress(p)
+			if !assert.NoError(err, p) {
+				return ""
+			}
+			v, err := unparseProgress(*val)
+			if !assert.NoError(err, p) {
+				return ""
+			}
+			return v
+		}
+		t.Run("no difference", func(t *testing.T) {
+			for _, p := range []string{
+				"unit/10/100", "unit/0/100",
+				"unit/10/100", "unit/10/100/cat",
+			} {
+				assert.Equal(p, helper(p), p)
+			}
+		})
+		t.Run("overvalued counts are corrected", func(t *testing.T) {
+			assert.Equal("unit/100/100/cat", helper("unit/200/100/cat"))
+		})
+	})
+	t.Run("absolute date", func(t *testing.T) {
+		helper := func(dt string) string {
+			val, err := parseAbsoluteDatetime(dt)
+			if !assert.NoError(err, dt) {
+				return ""
+			}
+			return unparseAbsoluteDatetime(*val)
+		}
+		year := rightNow.Format("2006")
+		t.Run("dates are always provided", func(t *testing.T) {
+			for _, dt := range []string{
+				"T01-02", "T23-02", "T02", "T23",
+			} {
+				assert.Equal(year+dt, helper(dt))
+			}
+		})
+		t.Run("padding is always done", func(t *testing.T) {
+			assert.Equal(year+"-02-03T04-05-06", helper("25-2-3T4-5-6"))
+		})
+		t.Run("hour is always there", func(t *testing.T) {
+			assert.Equal(year+"T23", helper("T23"))
+			assert.Equal(year+"T00-24", helper("T24"))
+			assert.Equal(year+"T00-24-30", helper("T24-30"))
+		})
+		t.Run("month strings are turned integer", func(t *testing.T) {
+			assert.Equal("2025-01-02", helper("2025-jan-02"))
+			assert.Equal("2025-02", helper("25-feb"))
+		})
+		t.Run("year is always there", func(t *testing.T) {
+			assert.Equal(year+"-02", helper("feb"))
+			assert.Equal(year+"-02-02", helper("feb-02"))
+			assert.Equal(year+"-10", helper("10"))
+			assert.Equal("2024", helper("24"))
+		})
+	})
+	t.Run("relative date", func(t *testing.T) {
+		t.Run("normal", func(t *testing.T) {
+			for _, each := range []string{
+				"$due=1m $dead=1m",
+				"$due=1m $dead=c:1y",
+			} {
+				task, _ := ParseTask(nil, each)
+				for _, tk := range task.Tokens {
+					if tk.Type == TokenDate && tk.Key == "dead" {
+						out, err := tk.unparseRelativeDatetime(task.Time, nil)
+						assert.NoError(err)
+						assert.Equal(strings.Split(each, " ")[1], out)
+					}
+				}
+			}
+		})
+		t.Run("absolute tokens unparsed as relative will be relative", func(t *testing.T) {
+			task, _ := ParseTask(nil, "$due=jan-01")
+			for _, tk := range task.Tokens {
+				if tk.Type == TokenDate && tk.Key == "due" {
+					out, err := tk.unparseRelativeDatetime(task.Time, nil)
+					assert.NoError(err)
+					tVal, _ := time.Parse("Jan-02", "jan-01")
+					assert.Equal(unparseRelativeDatetime(tVal, rightNow), out)
+				}
+			}
+		})
+	})
+}
+
+func TestTokenUnparseRelativeDatetime(t *testing.T) {
+	assert := assert.New(t)
+	findToken := func(task *Task, key string) *Token {
+		for ndx := range task.Tokens {
+			if task.Tokens[ndx].Type == TokenDate && task.Tokens[ndx].Key == key {
+				return task.Tokens[ndx]
+			}
+		}
+		assert.NotNil(nil, key, task.Norm())
+		return nil
+	}
+	t.Run("normal relative", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$due=1m")
+		tk := findToken(task, "due")
+		out, err := tk.unparseRelativeDatetime(task.Time, nil)
+		assert.NoError(err)
+		assert.Equal("$due=1m", out)
+		t.Run("update", func(t *testing.T) {
+			tVal := rightNow.Add(6 * 30 * 24 * 60 * 60 * time.Second)
+			out, err = tk.unparseRelativeDatetime(task.Time, &tVal)
+			assert.NoError(err)
+			assert.Equal("$due=6m", out)
+		})
+	})
+	t.Run("custom field relative", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$due=1m $dead=c:1y")
+		tk := findToken(task, "dead")
+		out, err := tk.unparseRelativeDatetime(task.Time, nil)
+		assert.NoError(err)
+		assert.Equal("$dead=c:1y", out)
+		t.Run("update", func(t *testing.T) {
+			tVal := rightNow.Add(6 * 30 * 24 * 60 * 60 * time.Second)
+			out, err = tk.unparseRelativeDatetime(task.Time, &tVal)
+			assert.NoError(err)
+			assert.Equal("$dead=c:6m", out)
+		})
+	})
+	t.Run("absolute date", func(t *testing.T) {
+		year := rightNow.Format("2006")
+		task, _ := ParseTask(nil, fmt.Sprintf("$due=%s-12-26", year))
+		tk := findToken(task, "due")
+		out, err := tk.unparseRelativeDatetime(task.Time, nil)
+		assert.NoError(err)
+		assert.Equal("$due="+unparseRelativeDatetime(*tk.Value.(*time.Time), rightNow), out)
+		t.Run("update", func(t *testing.T) {
+			tVal := rightNow.Add(6 * 30 * 24 * 60 * 60 * time.Second)
+			out, err = tk.unparseRelativeDatetime(task.Time, &tVal)
+			assert.NoError(err)
+			assert.Equal("$due=6m", out)
+		})
 	})
 }

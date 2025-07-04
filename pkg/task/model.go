@@ -4,7 +4,6 @@ import (
 	"dotxt/pkg/terrors"
 	"fmt"
 	"reflect"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -125,6 +124,38 @@ type Token struct {
 	Value any
 }
 
+func (tk *Token) String(task *Task) string {
+	// TODO: extensively test
+	// switch tk.Type {
+	// case TokenText, TokenID, TokenHint:
+	// 	return *tk.Value.(*string)
+	// case TokenPriority:
+	// 	return "(" + *tk.Value.(*string) + ")"
+	// case TokenDuration:
+	// 	return unparseDuration(*tk.Value.(*time.Duration))
+	// case TokenDate:
+	// 	_, err := parseAbsoluteDatetime(tk.raw)
+	// 	if err == nil {
+	// 		return unparseAbsoluteDatetime(*tk.Value.(*time.Time))
+	// 	}
+	// 	_, err = parseTmpRelativeDatetime(tk.Key, tk.raw)
+	// 	if err == nil {
+	// 		out, err := tk.unparseRelativeDatetime(task.Time, nil)
+	// 		if err == nil {
+	// 			return out
+	// 		}
+	// 	}
+	// 	return tk.raw
+	// case TokenProgress:
+	// 	p, err := unparseProgress(*tk.Value.(*Progress))
+	// 	if err == nil {
+	// 		return p
+	// 	}
+	// 	return tk.raw
+	// }
+	return ""
+}
+
 type Progress struct {
 	Unit      string
 	Category  string
@@ -242,30 +273,6 @@ func (t *Task) Depth() int {
 	return count
 }
 
-func removeToken(input, token string) string {
-	// AI generated
-	// Match:
-	// - The token preceded by optional whitespace
-	// - The token followed by optional whitespace
-	// - Don't touch other whitespace
-
-	// Use `\s?` before and after the token to handle optional single whitespace
-	// Use `\b` to ensure we match only full words, not substrings
-	re := regexp.MustCompile(`(?i)(\s*)\b` + regexp.QuoteMeta(token) + `\b(\s*)`)
-
-	return re.ReplaceAllStringFunc(input, func(match string) string {
-		before := re.FindStringSubmatch(match)[1]
-		after := re.FindStringSubmatch(match)[2]
-
-		// Only remove one of the spaces if both exist
-		if before != "" && after != "" {
-			return " "
-		}
-		// If only one side has space, just remove the token and keep spacing natural
-		return ""
-	})
-}
-
 func (t *Task) update(new *Task) error {
 	var curCreationDtToken *Token
 	for _, tk := range t.Tokens {
@@ -374,6 +381,8 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 	return nil
 }
 
+// TODO: cleanup below functions
+
 // A reduced form of the raw string that represents tasks
 // more rigidly used for comparison
 // :: everything besides $c and $lud
@@ -391,7 +400,7 @@ func (t *Task) Norm() string {
 // A reduced form of the raw string that represents tasks
 // more rigidly via only regular texts used for comparison
 // :: only non-special text
-func (t *Task) NormRegular() string {
+func (t *Task) NormRegular() string { // Text
 	var out []string
 	for _, token := range t.Tokens {
 		if token.Type == TokenText {
@@ -402,7 +411,7 @@ func (t *Task) NormRegular() string {
 }
 
 // the text of the task joined in from the tokens
-func (t *Task) Raw() string {
+func (t *Task) Raw() string { // TODO: change to String
 	var out []string
 	for _, token := range t.Tokens {
 		out = append(out, token.Raw)

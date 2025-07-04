@@ -630,7 +630,7 @@ func TestPrintTask(t *testing.T) {
 	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500")
 	path, _ := parseFilepath("printTask")
 	Lists.Empty(path, task1, task2, task3)
-	rn := rightNow.Format("2006-01-02T15-04-05")
+	rn := unparseAbsoluteDatetime(rightNow)
 
 	capture := func(id int) string {
 		realStdout := os.Stdout

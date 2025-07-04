@@ -16,7 +16,7 @@ import (
 )
 
 /*
-ommitted fields will be replaced from RightNow
+ommitted fields will be replaced from RightNow, I think
 %Y:2006, %y:06, %m:01, %d:02, %H:15, %M:04, %S:05, %b:Jan
 
 datetime: [date][[time]]
@@ -231,16 +231,16 @@ func parseDuration(dur string) (*time.Duration, error) {
 	}
 
 	const day = 24 * time.Hour
-	var duration time.Duration
+	var duration float64
 	var numStr string
 	for _, char := range dur {
-		if unicode.IsDigit(char) {
+		if unicode.IsDigit(char) || char == '.' {
 			numStr += string(char)
 			continue
 		}
-		num, err := strconv.Atoi(numStr)
+		num, err := strconv.ParseFloat(numStr, 64)
 		if err != nil {
-			return nil, fmt.Errorf("%w: number conversion of '%s' failed", terrors.ErrParse, numStr)
+			return nil, fmt.Errorf("%w: number conversion of '%s' failed: %w", terrors.ErrParse, numStr, err)
 		}
 		var multiplier time.Duration
 		switch char {
@@ -261,14 +261,13 @@ func parseDuration(dur string) (*time.Duration, error) {
 		default:
 			return nil, fmt.Errorf("%w: unexpected time unit %q", terrors.ErrParse, char)
 		}
-		duration += multiplier * time.Duration(num)
+		duration += float64(multiplier) * num
 		numStr = ""
 	}
 	if numStr != "" {
 		return nil, fmt.Errorf("%w: trailing numbers without a time unit %q", terrors.ErrParse, numStr)
 	}
-	duration *= time.Duration(sign)
-	return &duration, nil
+	return utils.MkPtr(time.Duration(sign) * time.Duration(duration)), nil
 }
 
 func unparseDuration(dur time.Duration) string {
@@ -326,6 +325,27 @@ func unparseDuration(dur time.Duration) string {
 
 func unparseRelativeDatetime(dt, rel time.Time) string {
 	return unparseDuration(dt.Sub(rel))
+}
+
+func (tk *Token) unparseRelativeDatetime(t *Temporal, val *time.Time) (string, error) {
+	curDtTxt := strings.TrimPrefix(tk.Raw, fmt.Sprintf("$%s=", tk.Key))
+	fallback, _, err := getTemporalFallback(tk.Key, curDtTxt)
+	if err != nil {
+		return "", err
+	}
+	if val == nil {
+		val = tk.Value.(*time.Time)
+	}
+	rel, err := t.getField(fallback)
+	if err != nil {
+		return "", err
+	}
+	newDtTxt := unparseRelativeDatetime(*val, *rel)
+	if temporalFallback[tk.Key] != fallback {
+		newDtTxt = fmt.Sprintf("%s:%s", fallback, newDtTxt)
+	}
+	newDtTxt = fmt.Sprintf("$%s=%s", tk.Key, newDtTxt)
+	return newDtTxt, nil
 }
 
 func getTemporalFallback(field, dt string) (string, string, error) {
@@ -634,11 +654,6 @@ func parseTokens(line string) ([]*Token, []error) {
 		})
 		line = line[j+1:]
 	}
-	// for tokenStr := range strings.SplitSeq(line, " ") {
-	// 	tokenStr = strings.TrimSpace(tokenStr)
-	// 	if tokenStr == "" {
-	// 		continue
-	// 	}
 	for _, tokenStr := range tokenizeLine(line) {
 		switch tokenStr[0] {
 		case '+', '@', '#':
