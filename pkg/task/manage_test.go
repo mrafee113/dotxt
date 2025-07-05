@@ -250,13 +250,8 @@ func TestDeprioritizeTask(t *testing.T) {
 		err := DeprioritizeTask(1, path)
 		assert.NoError(err)
 		assert.Nil(Lists[path].Tasks[1].Priority)
-		found := false
-		for _, tk := range Lists[path].Tasks[1].Tokens {
-			if tk.Type == TokenPriority {
-				found = true
-			}
-		}
-		assert.False(found)
+		_, ndx := Lists[path].Tasks[1].Tokens.Find(TkByType(TokenPriority))
+		assert.Negative(ndx)
 	})
 }
 
@@ -451,60 +446,48 @@ func TestIncrementProgressCount(t *testing.T) {
 		err := IncrementProgressCount(0, path, 2)
 		require.NoError(t, err)
 		assert.Equal(12, task.Prog.Count)
-		found := false
-		for _, tk := range task.Tokens {
-			if tk.Type == TokenProgress {
-				found = true
-				assert.Equal(12, tk.Value.(*Progress).Count)
-				assert.Contains(tk.raw, "12/100")
-			}
+		tk, ndx := task.Tokens.Find(TkByType(TokenProgress))
+		assert.GreaterOrEqual(ndx, 0)
+		if assert.NotNil(tk) {
+			assert.Equal(12, tk.Value.(*Progress).Count)
+			assert.Contains(tk.raw, "12/100")
 		}
-		assert.True(found)
 	})
 	t.Run("negative", func(t *testing.T) {
 		task := Lists[path].Tasks[2]
 		err := IncrementProgressCount(2, path, -2)
 		require.NoError(t, err)
 		assert.Equal(8, task.Prog.Count)
-		found := false
-		for _, tk := range task.Tokens {
-			if tk.Type == TokenProgress {
-				found = true
-				assert.Equal(8, tk.Value.(*Progress).Count)
-				assert.Contains(tk.raw, "8/100")
-			}
+		tk, ndx := task.Tokens.Find(TkByType(TokenProgress))
+		assert.GreaterOrEqual(ndx, 0)
+		if assert.NotNil(tk) {
+			assert.Equal(8, tk.Value.(*Progress).Count)
+			assert.Contains(tk.raw, "8/100")
 		}
-		assert.True(found)
 	})
 	t.Run("exceed positive", func(t *testing.T) {
 		task := Lists[path].Tasks[3]
 		err := IncrementProgressCount(3, path, 200)
 		require.NoError(t, err)
 		assert.Equal(100, task.Prog.Count)
-		found := false
-		for _, tk := range task.Tokens {
-			if tk.Type == TokenProgress {
-				found = true
-				assert.Equal(100, tk.Value.(*Progress).Count)
-				assert.Contains(tk.raw, "100/100")
-			}
+		tk, ndx := task.Tokens.Find(TkByType(TokenProgress))
+		assert.GreaterOrEqual(ndx, 0)
+		if assert.NotNil(tk) {
+			assert.Equal(100, tk.Value.(*Progress).Count)
+			assert.Contains(tk.raw, "100/100")
 		}
-		assert.True(found)
 	})
 	t.Run("exceed negative", func(t *testing.T) {
 		task := Lists[path].Tasks[4]
 		err := IncrementProgressCount(4, path, -200)
 		require.NoError(t, err)
 		assert.Equal(0, task.Prog.Count)
-		found := false
-		for _, tk := range task.Tokens {
-			if tk.Type == TokenProgress {
-				found = true
-				assert.Equal(0, tk.Value.(*Progress).Count)
-				assert.Contains(tk.raw, "unit/0/100/cat")
-			}
+		tk, ndx := task.Tokens.Find(TkByType(TokenProgress))
+		assert.GreaterOrEqual(ndx, 0)
+		if assert.NotNil(tk) {
+			assert.Equal(0, tk.Value.(*Progress).Count)
+			assert.Contains(tk.raw, "unit/0/100/cat")
 		}
-		assert.True(found)
 	})
 }
 
@@ -528,14 +511,11 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		}
 		assert.Equal(*dt, *Lists[path].Tasks[0].Time.DueDate)
 		dueStr := unparseRelativeDatetime(*Lists[path].Tasks[0].Time.DueDate, *Lists[path].Tasks[0].Time.CreationDate)
-		found := false
-		for _, tk := range Lists[path].Tasks[0].Tokens {
-			if tk.Type == TokenDate && tk.Key == "due" {
-				found = true
-				assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
-			}
+		tk, ndx := Lists[path].Tasks[0].Tokens.Find(TkByTypeKey(TokenDate, "due"))
+		assert.GreaterOrEqual(ndx, 0)
+		if assert.NotNil(tk) {
+			assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
 		}
-		assert.True(found)
 	})
 	t.Run("invalid", func(t *testing.T) {
 		assert.Equal("1", Lists[path].Tasks[1].Norm())
@@ -551,14 +531,11 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		}
 		assert.Equal(*dt, *Lists[path].Tasks[6].Time.DueDate)
 		dueStr := unparseRelativeDatetime(*Lists[path].Tasks[6].Time.DueDate, *Lists[path].Tasks[6].Time.CreationDate)
-		found := false
-		for _, tk := range Lists[path].Tasks[6].Tokens {
-			if tk.Type == TokenDate && tk.Key == "due" {
-				found = true
-				assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
-			}
+		tk, ndx := Lists[path].Tasks[6].Tokens.Find(TkByTypeKey(TokenDate, "due"))
+		assert.GreaterOrEqual(ndx, 0)
+		if assert.NotNil(tk) {
+			assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
 		}
-		assert.True(found)
 		assert.Equal(dt.Add(30*24*60*60*time.Second), *Lists[path].Tasks[6].Time.Deadline)
 	})
 }

@@ -124,6 +124,49 @@ type Token struct {
 	Value any // whatever the case this must be a pointer type
 }
 
+type Tokens []*Token
+
+type TkCond func(*Token) bool
+type TkFunc func(*Token)
+
+func TkByType(tipe TokenType) TkCond {
+	return func(tk *Token) bool {
+		return tk.Type == tipe
+	}
+}
+
+func TkByTypeKey(tipe TokenType, key string) TkCond {
+	return func(tk *Token) bool {
+		return tk.Type == tipe && tk.Key == key
+	}
+}
+
+func (tks *Tokens) ForEach(fn TkFunc) {
+	for _, tk := range *tks {
+		fn(tk)
+	}
+}
+
+func (tks *Tokens) Find(cond TkCond) (*Token, int) {
+	for ndx, tk := range *tks {
+		if cond(tk) {
+			return tk, ndx
+		}
+	}
+	return nil, -1
+}
+
+func (tks *Tokens) Filter(cond TkCond) *Tokens {
+	var out Tokens
+	for _, tk := range *tks {
+		if cond(tk) {
+			out = append(out, tk)
+		}
+	}
+	return &out
+}
+
+// TODO: TODO TODO TODO:! REALLY IMPORTANT::: try to find a way to remove the necessity of using (task *Task). this is just wrong!
 func (tk *Token) String(task *Task) string {
 	switch tk.Type {
 	case TokenText:
@@ -254,7 +297,7 @@ type temporalNode struct {
 }
 
 type Task struct {
-	Tokens      []*Token
+	Tokens      Tokens
 	ID          *int
 	Hints       []*string
 	Priority    *string
@@ -283,19 +326,9 @@ func (t *Task) Depth() int {
 }
 
 func (t *Task) update(new *Task) error {
-	var curCreationDtToken *Token
-	for _, tk := range t.Tokens {
-		if tk.Type == TokenDate && tk.Key == "c" {
-			curCreationDtToken = tk
-		}
-	}
+	curCreationDtToken, _ := t.Tokens.Find(TkByTypeKey(TokenDate, "c"))
 	if curCreationDtToken != nil {
-		var newCreationDtToken *Token
-		for _, tk := range new.Tokens {
-			if tk.Type == TokenDate && tk.Key == "c" {
-				newCreationDtToken = tk
-			}
-		}
+		newCreationDtToken, _ := new.Tokens.Find(TkByTypeKey(TokenDate, "c"))
 		if newCreationDtToken != nil {
 			newCreationDtToken.raw = curCreationDtToken.raw
 			newCreationDtToken.Value = curCreationDtToken.Value.(*time.Time)
@@ -334,13 +367,7 @@ func (t *Task) renewLud() {
 	t.Time.LastUpdated = &rightNow
 	ludText := fmt.Sprintf("$lud=%s", unparseRelativeDatetime(rightNow, *t.Time.CreationDate))
 
-	var token *Token
-	for ndx := range t.Tokens {
-		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == "lud" {
-			token = t.Tokens[ndx]
-			break
-		}
-	}
+	token, _ := t.Tokens.Find(TkByTypeKey(TokenDate, "lud"))
 	if token == nil {
 		t.Tokens = append(t.Tokens, &Token{
 			Type: TokenDate, Key: "lud",
@@ -354,13 +381,7 @@ func (t *Task) renewLud() {
 
 func (t *Task) updateDate(field string, newDt *time.Time) error {
 	var curDtTxt, newDtTxt string
-	var token *Token
-	for ndx := range t.Tokens {
-		if t.Tokens[ndx].Type == TokenDate && t.Tokens[ndx].Key == field {
-			token = t.Tokens[ndx]
-			break
-		}
-	}
+	token, _ := t.Tokens.Find(TkByTypeKey(TokenDate, field))
 	if token == nil {
 		return fmt.Errorf("%w: token date for field '%s' not found", terrors.ErrNotFound, field)
 	}
@@ -388,12 +409,11 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 // :: everything besides $c and $lud
 func (t *Task) Norm() string {
 	var out []string
-	for _, token := range t.Tokens {
-		if token.Type == TokenDate && slices.Contains([]string{"c", "lud"}, token.Key) {
-			continue
-		}
-		out = append(out, token.String(t))
-	}
+	t.Tokens.Filter(func(tk *Token) bool {
+		return !(tk.Type == TokenDate && (tk.Key == "c" || tk.Key == "lud"))
+	}).ForEach(func(tk *Token) {
+		out = append(out, tk.String(t))
+	})
 	return strings.Join(out, " ")
 }
 
@@ -402,20 +422,18 @@ func (t *Task) Norm() string {
 // :: only non-special text
 func (t *Task) NormRegular() string { // Text
 	var out []string
-	for _, token := range t.Tokens {
-		if token.Type == TokenText {
-			out = append(out, token.String(t))
-		}
-	}
+	t.Tokens.Filter(TkByType(TokenText)).ForEach(func(tk *Token) {
+		out = append(out, tk.String(t))
+	})
 	return strings.Join(out, " ")
 }
 
 // the text of the task joined in from the tokens
 func (t *Task) Raw() string {
 	var out []string
-	for _, token := range t.Tokens {
-		out = append(out, token.String(t))
-	}
+	t.Tokens.ForEach(func(tk *Token) {
+		out = append(out, tk.String(t))
+	})
 	return strings.Join(out, " ")
 }
 

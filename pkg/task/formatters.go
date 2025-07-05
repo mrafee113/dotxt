@@ -381,14 +381,16 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 	}
 	specialTokenMap := func() map[string]*Token {
 		out := make(map[string]*Token)
-		for ndx := range t.Tokens {
-			if slices.Contains([]TokenType{
-				TokenDate, TokenID, TokenDuration,
-				TokenPriority, TokenProgress,
-			}, t.Tokens[ndx].Type) {
-				out[t.Tokens[ndx].Key] = t.Tokens[ndx]
+		t.Tokens.Filter(func(tk *Token) bool {
+			switch tk.Type {
+			case TokenDate, TokenID, TokenDuration, TokenPriority, TokenProgress:
+				return true
+			default:
+				return false
 			}
-		}
+		}).ForEach(func(tk *Token) {
+			out[tk.Key] = tk
+		})
 		return out
 	}()
 
@@ -426,24 +428,24 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 	}()
 
 	var reminderCount int
-	for ndx := range t.Tokens {
-		switch t.Tokens[ndx].Type {
+	t.Tokens.ForEach(func(tk *Token) {
+		switch tk.Type {
 		case TokenPriority, TokenProgress:
-			continue
+			return
 		case TokenText:
 			out.tokens = append(out.tokens, &rToken{
-				token: t.Tokens[ndx], raw: t.Tokens[ndx].String(t),
+				token: tk, raw: tk.String(t),
 			})
 		case TokenID:
 			out.tokens = append(out.tokens, &rToken{
-				token: t.Tokens[ndx],
-				raw:   formatID(*t.Tokens[ndx]),
+				token: tk,
+				raw:   formatID(*tk),
 				color: "",
 			})
-			listMetadata.idList[*t.Tokens[ndx].Value.(*string)] = true
+			listMetadata.idList[*tk.Value.(*string)] = true
 		case TokenHint:
 			var color string
-			switch t.Tokens[ndx].Key {
+			switch tk.Key {
 			case "@":
 				color = "print.color-at"
 			case "#":
@@ -452,82 +454,82 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 				color = "print.color-plus"
 			}
 			out.tokens = append(out.tokens, &rToken{
-				token: t.Tokens[ndx],
-				raw:   t.Tokens[ndx].String(t), color: color,
+				token: tk,
+				raw:   tk.String(t), color: color,
 			})
 		case TokenDate:
-			if slices.Contains([]string{"due", "end", "dead"}, t.Tokens[ndx].Key) {
-				val, err := t.Time.getField(t.Tokens[ndx].Key)
+			if slices.Contains([]string{"due", "end", "dead"}, tk.Key) {
+				val, err := t.Time.getField(tk.Key)
 				if err != nil {
-					addAsRegular(t.Tokens[ndx])
-					continue
+					addAsRegular(tk)
+					return
 				}
-				relStr, ok := temporalFormatFallback[t.Tokens[ndx].Key]
+				relStr, ok := temporalFormatFallback[tk.Key]
 				if !ok {
-					addAsRegular(t.Tokens[ndx])
-					continue
+					addAsRegular(tk)
+					return
 				}
 				rel, err := t.Time.getField(relStr)
 				if err != nil {
-					addAsRegular(t.Tokens[ndx])
-					continue
+					addAsRegular(tk)
+					return
 				}
-				color := "print.color-date-" + t.Tokens[ndx].Key
+				color := "print.color-date-" + tk.Key
 				if t.Time.DueDate != nil && t.Time.DueDate.Sub(rightNow) <= 0 {
-					if t.Tokens[ndx].Key == "due" {
+					if tk.Key == "due" {
 						color = "print.color-burnt"
 					}
 					if t.Time.Deadline != nil && t.Time.Deadline.Sub(rightNow) > 0 &&
-						t.Tokens[ndx].Key == "dead" {
+						tk.Key == "dead" {
 						color = "print.color-imminent-deadline"
 					}
 					if t.Time.EndDate != nil && t.Time.EndDate.Sub(rightNow) > 0 &&
-						t.Tokens[ndx].Key == "end" {
+						tk.Key == "end" {
 						color = "print.color-running-event"
 					}
 				}
 				out.tokens = append(out.tokens, &rToken{
-					token: t.Tokens[ndx],
-					raw:   fmt.Sprintf("$%s=%s", t.Tokens[ndx].Key, formatAbsoluteDatetime(val, rel)),
+					token: tk,
+					raw:   fmt.Sprintf("$%s=%s", tk.Key, formatAbsoluteDatetime(val, rel)),
 					color: color,
 				})
 			}
-			if strings.HasPrefix(t.Tokens[ndx].Key, "r") {
+			if strings.HasPrefix(tk.Key, "r") {
 				if reminderCount >= len(t.Time.Reminders) {
-					addAsRegular(t.Tokens[ndx])
-					continue
+					addAsRegular(tk)
+					return
 				}
 				val := t.Time.Reminders[reminderCount]
 				reminderCount++
 				relStr, ok := temporalFormatFallback["r"]
 				if !ok {
-					addAsRegular(t.Tokens[ndx])
-					continue
+					addAsRegular(tk)
+					return
 				}
 				rel, err := t.Time.getField(relStr)
 				if err != nil {
-					addAsRegular(t.Tokens[ndx])
-					continue
+					addAsRegular(tk)
+					return
 				}
 				if val.Sub(rightNow) < 0 {
-					continue
+					return
 				}
 				out.tokens = append(out.tokens, &rToken{
-					token: t.Tokens[ndx],
+					token: tk,
 					raw:   fmt.Sprintf("$r=%s", formatAbsoluteDatetime(val, rel)),
 					color: "print.color-date-r",
 				})
 			}
 		case TokenDuration:
 			out.tokens = append(out.tokens, &rToken{
-				token: t.Tokens[ndx],
+				token: tk,
 				raw:   fmt.Sprintf("$every=%s", formatDuration(t.Time.Every)),
 				color: "print.color-every",
 			})
 		default:
-			addAsRegular(t.Tokens[ndx])
+			addAsRegular(tk)
 		}
-	}
+	})
 	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false, -1)))
 	listMetadata.idLen = max(listMetadata.idLen, len(strconv.Itoa(*t.ID)))
 	if dominantColor != "" || defaultColor != "" {

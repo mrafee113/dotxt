@@ -126,7 +126,7 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 				}
 				vals[ndx] = val
 			} else {
-				t, err := time.Parse("Jan", parts[ndx])
+				t, err := time.ParseInLocation("Jan", parts[ndx], time.Local)
 				if err != nil {
 					return nil, fmt.Errorf("%w: %w: invalid date value which is neither 'Jan' nor a number: %s",
 						terrors.ErrParse, terrors.ErrValue, parts[ndx])
@@ -137,7 +137,7 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 			parts[ndx] = fmt.Sprintf("%02s", parts[ndx])
 		}
 		handleSmallYear := func(year string) string {
-			t, _ := time.Parse("06", year)
+			t, _ := time.ParseInLocation("06", year, time.Local)
 			return t.Format("2006")
 		}
 		switch n {
@@ -333,6 +333,7 @@ func unparseRelativeDatetime(dt, rel time.Time) string {
 	return unparseDuration(dt.Sub(rel))
 }
 
+// TODO: refactor: rewrite from task perspective and use unparse...(key string) and also unparseNew...(key string, newVal time.Time)
 func (tk *Token) unparseRelativeDatetime(t *Temporal, val *time.Time) (string, error) {
 	curDtTxt := strings.TrimPrefix(tk.raw, fmt.Sprintf("$%s=", tk.Key))
 	fallback, _, err := getTemporalFallback(tk.Key, curDtTxt)
@@ -347,8 +348,11 @@ func (tk *Token) unparseRelativeDatetime(t *Temporal, val *time.Time) (string, e
 		return "", err
 	}
 	newDtTxt := unparseRelativeDatetime(*val, *rel)
-	if temporalFallback[tk.Key] != fallback {
-		newDtTxt = fmt.Sprintf("%s:%s", fallback, newDtTxt)
+	if ndx := strings.IndexRune(curDtTxt, ':'); ndx > 0 {
+		_, ok := temporalFallback[curDtTxt[:ndx]]
+		if ok {
+			newDtTxt = fmt.Sprintf("%s:%s", fallback, newDtTxt)
+		}
 	}
 	newDtTxt = fmt.Sprintf("$%s=%s", tk.Key, newDtTxt)
 	return newDtTxt, nil
@@ -818,16 +822,8 @@ func ParseTask(id *int, line string) (*Task, error) {
 			Key: "lud", Value: &ludVal,
 		})
 	}
-	findToken := func(tipe TokenType, key string) (*Token, int) {
-		for ndx := range task.Tokens {
-			if task.Tokens[ndx].Type == tipe && task.Tokens[ndx].Key == key {
-				return task.Tokens[ndx], ndx
-			}
-		}
-		return nil, -1
-	}
 	if task.Time.DueDate != nil && !task.Time.DueDate.After(*task.Time.CreationDate) {
-		tk, _ := findToken(TokenDate, "due")
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if tk != nil {
 			dateToTextToken(tk)
 			task.Time.DueDate = nil
@@ -836,7 +832,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		}
 	}
 	if task.Time.Deadline != nil && (task.Time.DueDate == nil || !task.Time.Deadline.After(*task.Time.DueDate)) {
-		tk, _ := findToken(TokenDate, "dead")
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "dead"))
 		if tk != nil {
 			dateToTextToken(tk)
 			task.Time.Deadline = nil
@@ -845,7 +841,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		}
 	}
 	if task.Time.EndDate != nil && (task.Time.DueDate == nil || !task.Time.EndDate.After(*task.Time.DueDate)) {
-		tk, _ := findToken(TokenDate, "end")
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "end"))
 		if tk != nil {
 			dateToTextToken(tk)
 			task.Time.EndDate = nil
@@ -854,14 +850,14 @@ func ParseTask(id *int, line string) (*Task, error) {
 		}
 	}
 	if task.Time.EndDate != nil && task.Time.Deadline != nil {
-		tk, _ := findToken(TokenDate, "dead")
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "dead"))
 		if tk != nil {
 			dateToTextToken(tk)
 			task.Time.Deadline = nil
 		} else {
 			errs = append(errs, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
 		}
-		tk, _ = findToken(TokenDate, "end")
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenDate, "end"))
 		if tk != nil {
 			dateToTextToken(tk)
 			task.Time.EndDate = nil
@@ -870,7 +866,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		}
 	}
 	if !task.Time.LastUpdated.After(*task.Time.CreationDate) {
-		tk, _ := findToken(TokenDate, "lud")
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "lud"))
 		if tk != nil {
 			tk.raw = "$lud=" + unparseDuration(time.Duration(0))
 			ludVal := task.Time.CreationDate.Add(time.Second)
@@ -882,14 +878,14 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 	for ndx := len(task.Time.Reminders) - 1; ndx >= 0; ndx-- {
 		if !task.Time.Reminders[ndx].After(*task.Time.CreationDate) {
-			for ndxTk := range task.Tokens {
-				if task.Tokens[ndxTk].Type == TokenDate &&
-					strings.HasPrefix(task.Tokens[ndxTk].Key, "r") &&
-					*task.Tokens[ndxTk].Value.(*time.Time) == *task.Time.Reminders[ndx] {
-					task.Time.Reminders = slices.Delete(task.Time.Reminders, ndx, ndx+1)
-					dateToTextToken(task.Tokens[ndxTk])
-					break
-				}
+			tk, _ := task.Tokens.Find(func(tk *Token) bool {
+				return tk.Type == TokenDate &&
+					strings.HasPrefix(tk.Key, "r") &&
+					*tk.Value.(*time.Time) == *task.Time.Reminders[ndx]
+			})
+			if tk != nil {
+				task.Time.Reminders = slices.Delete(task.Time.Reminders, ndx, ndx+1)
+				dateToTextToken(tk)
 			}
 		}
 	}

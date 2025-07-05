@@ -167,11 +167,11 @@ func PrependToTask(id int, text, path string) error {
 	var newText string
 	if task.Priority != nil && *task.Priority != "" {
 		var out []string
-		for _, tk := range task.Tokens {
-			if tk.Type != TokenPriority {
-				out = append(out, tk.String(task))
-			}
-		}
+		task.Tokens.Filter(func(tk *Token) bool {
+			return tk.Type != TokenPriority
+		}).ForEach(func(tk *Token) {
+			out = append(out, tk.String(task))
+		})
 		curText := strings.Join(out, " ")
 		newText = fmt.Sprintf("(%s) %s %s", *task.Priority, text, curText)
 	} else {
@@ -347,11 +347,7 @@ func DoneTask(ids []int, path string) error {
 
 	var out []string
 	for _, task := range tasks {
-		var textArr []string
-		for _, token := range task.Tokens {
-			textArr = append(textArr, token.String(task))
-		}
-		out = append(out, strings.Join(textArr, " "))
+		out = append(out, task.Raw())
 	}
 	return appendToDoneFile(strings.Join(out, "\n"), path)
 }
@@ -428,12 +424,7 @@ func IncrementProgressCount(id int, path string, value int) error {
 	}
 	rVal := task.Prog.Count + value
 	task.Prog.Count = max(min(rVal, task.Prog.DoneCount), 0)
-	var pToken *Token
-	for ndx := range task.Tokens {
-		if task.Tokens[ndx].Type == TokenProgress {
-			pToken = task.Tokens[ndx]
-		}
-	}
+	pToken, _ := task.Tokens.Find(TkByType(TokenProgress))
 	if pToken == nil {
 		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
 	}
