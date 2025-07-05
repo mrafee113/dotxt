@@ -750,7 +750,7 @@ func TestUnparseDuration(t *testing.T) {
 	)
 	t.Run("huge positive", func(t *testing.T) {
 		dur := unparseDuration(6*year + 1000*month + 1000*day + 1000*hour + 1000*min + 1000*sec)
-		assert.Equal("265y17d8h56M40s", dur)
+		assert.Equal("265y2w3d8h56M40s", dur)
 	})
 	t.Run("negative", func(t *testing.T) {
 		dur := unparseDuration(-1 * day)
@@ -1249,17 +1249,17 @@ func TestParseUnparseCoherency(t *testing.T) {
 			assert.Equal("-1d", helper("-1d"))
 		})
 		t.Run("weeks are turned to days", func(t *testing.T) {
-			assert.Equal("1y2m25d5h6M7s", helper("1y2m3w4d5h6M7s"))
+			assert.Equal("1y2m3w4d5h6M7s", helper("1y2m3w4d5h6M7s"))
 		})
 		t.Run("overflows are corrected", func(t *testing.T) {
 			assert.Equal("1d6h", helper("30h"))
-			assert.Equal("2y7m9d13h31M20s", helper("1y15m9w70d36h90M80s"))
+			assert.Equal("2y7m1w2d13h31M20s", helper("1y15m9w70d36h90M80s"))
 		})
 		t.Run("float values are poured to other units", func(t *testing.T) {
 			assert.Equal("1y6m2d12h", helper("1.5y"))
 		})
 		t.Run("units are ordered descending", func(t *testing.T) {
-			assert.Equal("1y2m25d5h6M7s", helper("2m4d3w7s6M1y5h"))
+			assert.Equal("1y2m3w4d5h6M7s", helper("2m4d3w7s6M1y5h"))
 		})
 	})
 	t.Run("progress", func(t *testing.T) {

@@ -128,7 +128,7 @@ func TestRenewLud(t *testing.T) {
 			if tk.Type == TokenDate && tk.Key == "lud" {
 				found = true
 				assert.Exactly(rightNow, *tk.Value.(*time.Time))
-				assert.Equal("$lud=7d", tk.raw)
+				assert.Equal("$lud=1w", tk.raw)
 			}
 		}
 		assert.True(found, "not found")
@@ -164,13 +164,13 @@ func TestUpdateDate(t *testing.T) {
 		dt := rightNow.Add(7 * 24 * 60 * 60 * time.Second)
 		err := task.updateDate("due", &dt)
 		require.NoError(t, err)
-		assert.Equal("$due=7d", task.Norm())
+		assert.Equal("$due=1w", task.Norm())
 		assert.Equal(dt, *task.Time.DueDate)
 		found := false
 		for _, tk := range task.Tokens {
 			if tk.Type == TokenDate && tk.Key == "due" {
 				found = true
-				assert.Equal("$due=7d", tk.raw)
+				assert.Equal("$due=1w", tk.raw)
 				assert.Equal(dt, *tk.Value.(*time.Time))
 			}
 		}

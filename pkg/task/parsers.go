@@ -285,6 +285,7 @@ func unparseDuration(dur time.Duration) string {
 		secPerMin = 60
 		secPerHr  = secPerMin * 60
 		secPerDay = secPerHr * 24
+		secPerWk  = secPerDay * 7
 		secPerMo  = secPerDay * 30
 		secPerYr  = secPerDay * 365
 	)
@@ -293,6 +294,8 @@ func unparseDuration(dur time.Duration) string {
 	totalSec %= secPerYr
 	months := totalSec / secPerMo
 	totalSec %= secPerMo
+	weeks := totalSec / secPerWk
+	totalSec %= secPerWk
 	days := totalSec / secPerDay
 	totalSec %= secPerDay
 	hours := totalSec / secPerHr
@@ -306,6 +309,9 @@ func unparseDuration(dur time.Duration) string {
 	}
 	if months > 0 {
 		parts = append(parts, fmt.Sprintf("%dm", months))
+	}
+	if weeks > 0 {
+		parts = append(parts, fmt.Sprintf("%dw", weeks))
 	}
 	if days > 0 {
 		parts = append(parts, fmt.Sprintf("%dd", days))
