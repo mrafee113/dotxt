@@ -5,6 +5,7 @@ import (
 	"dotxt/pkg/terrors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -812,11 +813,11 @@ func TestParseAbsoluteDatetime(t *testing.T) {
 		})
 		t.Run("%m", func(t *testing.T) {
 			v := helper("5")
-			dateCheck(v, 2025, 5, 1)
+			dateCheck(v, rightNow.Year(), 5, 1)
 		})
 		t.Run("%b", func(t *testing.T) {
 			v := helper("dec")
-			dateCheck(v, 2025, 12, 1)
+			dateCheck(v, rightNow.Year(), 12, 1)
 		})
 	})
 	t.Run("valid: zero fills", func(t *testing.T) {
@@ -1182,12 +1183,12 @@ func TestParseUnparseCoherency(t *testing.T) {
 			}
 		})
 		t.Run("absolute tokens unparsed as relative will be relative", func(t *testing.T) {
-			task, _ := ParseTask(nil, "$due=dec-25")
+			task, _ := ParseTask(nil, "$due="+strconv.Itoa(rightNow.Year()+1)+"-dec-25")
 			tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 			if assert.NotNil(tk) {
 				out, err := tk.unparseRelativeDatetime(task.Time, nil)
 				assert.NoError(err)
-				tVal, _ := time.ParseInLocation("2006-Jan-02", rightNow.Format("2006")+"-dec-25", time.Local)
+				tVal, _ := time.ParseInLocation("2006-Jan-02", strconv.Itoa(rightNow.Year()+1)+"-dec-25", time.Local)
 				assert.Equal("$due="+unparseRelativeDatetime(tVal, rightNow), out)
 			}
 		})
