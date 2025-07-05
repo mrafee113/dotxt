@@ -380,11 +380,7 @@ func StoreFile(path string) error {
 	}
 	var lines []string
 	for _, task := range fileTasks {
-		var textArr []string
-		for _, token := range task.Tokens {
-			textArr = append(textArr, token.String(task)) // TODO
-		}
-		lines = append(lines, strings.Join(textArr, " "))
+		lines = append(lines, task.Raw())
 	}
 	if err = mkDirs(filepath.Dir(path)); err != nil {
 		return err
