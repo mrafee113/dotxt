@@ -75,16 +75,11 @@ func TestParseTask(t *testing.T) {
 		}
 	})
 
-	t.Run("validate auto creation of creationDate/lud", func(t *testing.T) {
+	t.Run("validate auto creation of creationDate", func(t *testing.T) {
 		task, _ := ParseTask(nil, "testing")
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "c"))
 		if assert.NotNil(tk) {
 			assert.Exactly(&rightNow, tk.Value.(*time.Time), "'c'")
-		}
-		tk, _ = task.Tokens.Find(TkByTypeKey(TokenDate, "lud"))
-		if assert.NotNil(tk) {
-			ludVal := rightNow.Add(time.Second)
-			assert.Exactly(ludVal, *tk.Value.(*time.Time), "'lud'")
 		}
 	})
 
@@ -283,8 +278,9 @@ func TestParseTask(t *testing.T) {
 		assert.Exactly(dt, *task.Time.DueDate)
 	})
 	t.Run("validate valid relative dates: valid", func(t *testing.T) {
-		task, _ = ParseTask(nil, "$due=lud:+1y2m3w4d5h6M7s")
-		dt = rightNow.Add(38898367 * time.Second)
+		task, _ = ParseTask(nil, "$due=c:+1y2m3w4d5h6M7s")
+		day := 24 * 60 * 60 * time.Second
+		dt = rightNow.Add(365*day + 2*30*day + 3*7*day + 4*day + 5*60*60*time.Second + 6*60*time.Second + 7*time.Second)
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if assert.NotNil(tk) {
 			assert.Exactly(dt, *tk.Value.(*time.Time))
@@ -312,7 +308,7 @@ func TestParseTask(t *testing.T) {
 	})
 
 	t.Run("validate date semantics: maximum count", func(t *testing.T) {
-		for _, key := range []string{"c", "lud", "due", "end", "dead", "r"} {
+		for _, key := range []string{"c", "due", "end", "dead", "r"} {
 			// if not `r`, only the first value is accepted
 			// 	and any other ones are disposed of
 			task, _ = ParseTask(nil, fmt.Sprintf("$%s=2026-06-06T00-00 $%s=2027-06-06T00-00", key, key))
@@ -345,18 +341,6 @@ func TestParseTask(t *testing.T) {
 			assert.Equal("$c=1y", tk.raw)
 		}
 		assert.Exactly(rightNow, *task.Time.CreationDate, "CreationDate")
-	})
-	t.Run("validate date semantics: lud maximum value", func(t *testing.T) {
-		task, _ = ParseTask(nil, "$lud=1y")
-		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "lud"))
-		if assert.NotNil(tk) {
-			assert.Exactly(rightNow.Add(time.Second), *tk.Value.(*time.Time))
-		}
-		tk, _ = task.Tokens.Find(TkByType(TokenText))
-		if assert.NotNil(tk) {
-			assert.Equal("$lud=1y", tk.raw)
-		}
-		assert.Exactly(rightNow.Add(time.Second), *task.Time.LastUpdated, "LastUpdated")
 	})
 	t.Run("validate date semantics: dead-due existence dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$dead=2026-06-06T00-00")
@@ -414,13 +398,6 @@ func TestParseTask(t *testing.T) {
 		}
 		assert.Nil(task.Time.Deadline, "Deadline")
 		assert.Nil(task.Time.EndDate, "EndDate") // when end & dead, then both lose depth
-	})
-	t.Run("validate date semantics: lud-c value dependency", func(t *testing.T) {
-		task, _ = ParseTask(nil, "$c=2025-05-05T05-05 $lud=2025-05-04T05-05")
-		assert.True(task.Time.LastUpdated.After(*task.Time.CreationDate))
-		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05")
-		*dt = dt.Add(time.Second)
-		assert.Exactly(*dt, *task.Time.LastUpdated) // when lud <= c: lud=c+0s
 	})
 	t.Run("validate date semantics: due-c value dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$c=2025-05-05T05-05 $due=2023-05-05T05-05")
@@ -964,7 +941,7 @@ func TestResolveDates(t *testing.T) {
 					continue
 				}
 				switch key {
-				case "c", "lud", "due", "end", "dead", "r":
+				case "c", "due", "end", "dead", "r":
 					var dt any
 					dt, err := parseAbsoluteDatetime(value)
 					if err != nil {
@@ -983,7 +960,7 @@ func TestResolveDates(t *testing.T) {
 		return tokens, resolveDates(tokens)
 	}
 	t.Run("normal", func(t *testing.T) {
-		tokens, errs := helper("$c=2025-05-05T05-05 $due=1w $dead=2w $lud=12s $r=-5h $r=+5M")
+		tokens, errs := helper("$c=2025-05-05T05-05 $due=1w $dead=2w $r=-5h $r=+5M")
 		require.Empty(t, errs)
 		for _, tk := range tokens {
 			assert.Equal(TokenDate, tk.Type)

@@ -78,7 +78,6 @@ print:
   
   temporal-format:
     c: rn
-    lud: rn
     due: rn
     end: due
     dead: due

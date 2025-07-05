@@ -494,7 +494,7 @@ func resolveDates(tokens []*Token) []error {
 	for len(resolved)-1 < totalDateCount {
 		changed := false
 		// this order is based on temporalFallback and please review this if you change that
-		for _, key := range append([]string{"c", "lud", "due", "end", "dead"}, reminderKeys...) {
+		for _, key := range append([]string{"c", "due", "end", "dead"}, reminderKeys...) {
 			n, ok := nodes[key]
 			if !ok {
 				continue
@@ -700,7 +700,7 @@ func parseTokens(line string) ([]*Token, []error) {
 					Type: TokenID, raw: tokenStr,
 					Key: k, Value: utils.MkPtr(value),
 				})
-			case "c", "lud", "due", "end", "dead", "r":
+			case "c", "due", "end", "dead", "r":
 				var dt any
 				dt, err := parseAbsoluteDatetime(value)
 				if err != nil {
@@ -784,13 +784,6 @@ func ParseTask(id *int, line string) (*Task, error) {
 					continue
 				}
 				task.Time.CreationDate = val
-			case "lud":
-				val := token.Value.(*time.Time)
-				if val.After(rightNow) {
-					dateToTextToken(tokens[ndx])
-					continue
-				}
-				task.Time.LastUpdated = val
 			case "due":
 				task.Time.DueDate = token.Value.(*time.Time)
 			case "r":
@@ -812,14 +805,6 @@ func ParseTask(id *int, line string) (*Task, error) {
 		task.Tokens = append(task.Tokens, &Token{
 			Type: TokenDate, raw: fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow)),
 			Key: "c", Value: &rightNow,
-		})
-	}
-	if task.Time.LastUpdated == nil {
-		task.Time.LastUpdated = &rightNow
-		ludVal := rightNow.Add(time.Second)
-		task.Tokens = append(task.Tokens, &Token{
-			Type: TokenDate, raw: "$lud=" + unparseDuration(time.Duration(0)),
-			Key: "lud", Value: &ludVal,
 		})
 	}
 	if task.Time.DueDate != nil && !task.Time.DueDate.After(*task.Time.CreationDate) {
@@ -863,17 +848,6 @@ func ParseTask(id *int, line string) (*Task, error) {
 			task.Time.EndDate = nil
 		} else {
 			errs = append(errs, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
-		}
-	}
-	if !task.Time.LastUpdated.After(*task.Time.CreationDate) {
-		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "lud"))
-		if tk != nil {
-			tk.raw = "$lud=" + unparseDuration(time.Duration(0))
-			ludVal := task.Time.CreationDate.Add(time.Second)
-			tk.Value = &ludVal
-			task.Time.LastUpdated = &ludVal
-		} else {
-			errs = append(errs, fmt.Errorf("%w: lud date token", terrors.ErrNotFound))
 		}
 	}
 	for ndx := len(task.Time.Reminders) - 1; ndx >= 0; ndx-- {

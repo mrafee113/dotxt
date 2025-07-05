@@ -217,7 +217,6 @@ type Progress struct {
 
 type Temporal struct {
 	CreationDate *time.Time
-	LastUpdated  *time.Time
 	DueDate      *time.Time
 	Reminders    []*time.Time
 	EndDate      *time.Time
@@ -231,8 +230,6 @@ func (t *Temporal) getField(key string) (*time.Time, error) {
 		return &rightNow, nil
 	case "c":
 		return t.CreationDate, nil
-	case "lud":
-		return t.LastUpdated, nil
 	case "due":
 		return t.DueDate, nil
 	case "end":
@@ -250,8 +247,6 @@ func (t *Temporal) setField(key string, val *time.Time) error {
 	switch key {
 	case "c":
 		t.CreationDate = val
-	case "lud":
-		t.LastUpdated = val
 	case "due":
 		t.DueDate = val
 	case "end":
@@ -268,7 +263,7 @@ func (t *Temporal) setField(key string, val *time.Time) error {
 // The default fields for each temporal field used for
 // formatting datetime relatively
 var temporalFormatFallback = map[string]string{
-	"c": "rn", "lud": "rn", "due": "rn",
+	"c": "rn", "due": "rn",
 	"end": "due", "dead": "due",
 	"r": "rn",
 }
@@ -283,7 +278,7 @@ func readTemporalFormatFallback() {
 var temporalFallback = map[string]string{
 	"rn":  "rn",
 	"c":   "rn",
-	"lud": "c", "due": "c",
+	"due": "c",
 	"end": "due", "dead": "due", "r": "due",
 }
 
@@ -347,7 +342,6 @@ func (t *Task) update(new *Task) error {
 	id := t.ID
 	*t = *new
 	t.ID = id
-	t.renewLud()
 	return nil
 }
 
@@ -361,22 +355,6 @@ func (t *Task) updateFromText(new string) error {
 		return err
 	}
 	return nil
-}
-
-func (t *Task) renewLud() {
-	t.Time.LastUpdated = &rightNow
-	ludText := fmt.Sprintf("$lud=%s", unparseRelativeDatetime(rightNow, *t.Time.CreationDate))
-
-	token, _ := t.Tokens.Find(TkByTypeKey(TokenDate, "lud"))
-	if token == nil {
-		t.Tokens = append(t.Tokens, &Token{
-			Type: TokenDate, Key: "lud",
-			raw: ludText, Value: &rightNow,
-		})
-	} else {
-		token.Value = &rightNow
-		token.raw = ludText
-	}
 }
 
 func (t *Task) updateDate(field string, newDt *time.Time) error {
@@ -406,11 +384,11 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 
 // A reduced form of the raw string that represents tasks
 // more rigidly used for comparison
-// :: everything besides $c and $lud
+// :: everything besides $c
 func (t *Task) Norm() string {
 	var out []string
 	t.Tokens.Filter(func(tk *Token) bool {
-		return !(tk.Type == TokenDate && (tk.Key == "c" || tk.Key == "lud"))
+		return !(tk.Type == TokenDate && tk.Key == "c")
 	}).ForEach(func(tk *Token) {
 		out = append(out, tk.String(t))
 	})
@@ -461,7 +439,7 @@ func DebugTask(t *Task) {
 		fmt.Println("task == nil")
 		return
 	}
-	print("id: %v, explicitId: %v\ntext: %v\nhints: %v\npriority: %v\nparent: %v\n\ncreationDate: %v\nlastUpdated: %v\n\ndueDate: %v\nreminders: %v\nendDate: %v\ndeadline: %v\nevery: %v\n\nprogress: %v\n",
-		t.ID, t.EID, t.Raw(), t.Hints, t.Priority, t.PID, t.Time.CreationDate, t.Time.LastUpdated,
+	print("id: %v, explicitId: %v\ntext: %v\nhints: %v\npriority: %v\nparent: %v\n\ncreationDate: %v\n\ndueDate: %v\nreminders: %v\nendDate: %v\ndeadline: %v\nevery: %v\n\nprogress: %v\n",
+		t.ID, t.EID, t.Raw(), t.Hints, t.Priority, t.PID, t.Time.CreationDate,
 		t.Time.DueDate, t.Time.Reminders, t.Time.EndDate, t.Time.Deadline, t.Time.Every, t.Prog)
 }
