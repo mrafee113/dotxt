@@ -76,10 +76,23 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 	out.WriteString(fold(" "))
 
 	if r.tsk.IsCollapsed() {
-		count := len(r.tsk.Children)
+		count := func() int {
+			cnt := 0
+			var dfs func(node *Task)
+			dfs = func(node *Task) {
+				cnt++
+				for _, child := range node.Children {
+					dfs(child)
+				}
+			}
+			for _, node := range r.tsk.Children {
+				dfs(node)
+			}
+			return cnt
+		}()
 		var val string
 		if count > 0 {
-			val = fmt.Sprintf("+ (%d)", len(r.tsk.Children))
+			val = fmt.Sprintf("+ (%d)", count)
 		} else {
 			val = "+"
 		}
