@@ -75,11 +75,18 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 	}
 	out.WriteString(fold(" "))
 
-	if r.tsk.EIDCollapse && r.tsk.Parent == nil {
-		if color {
-			out.WriteString(colorize(viper.GetString("print.color-collapsed"), fold("+")))
+	if r.tsk.IsCollapsed() {
+		count := len(r.tsk.Children)
+		var val string
+		if count > 0 {
+			val = fmt.Sprintf("+ (%d)", len(r.tsk.Children))
 		} else {
-			out.WriteString(fold("+"))
+			val = "+"
+		}
+		if color {
+			out.WriteString(colorize(viper.GetString("print.color-collapsed"), fold(val)))
+		} else {
+			out.WriteString(fold(val))
 		}
 		out.WriteString(fold(" "))
 	}

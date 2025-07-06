@@ -292,18 +292,17 @@ type temporalNode struct {
 }
 
 type Task struct {
-	Tokens      Tokens
-	ID          *int
-	Hints       []*string
-	Priority    *string
-	EID         *string // explicit id ($id=)
-	EIDCollapse bool
-	Children    []*Task
-	PID         *string // parent id ($P=)
-	Parent      *Task
+	Tokens   Tokens
+	ID       *int
+	Hints    []*string
+	Priority *string
+	EID      *string // explicit id ($id=)
+	Children []*Task
+	PID      *string // parent id ($P=)
+	Parent   *Task
 
 	Time *Temporal
-	Prog *Progress
+	Prog *Progress // TODO: TEST the effect of this in stringify when combined with children in
 }
 
 func (t *Task) String() string {
@@ -318,6 +317,22 @@ func (t *Task) Depth() int {
 		count++
 	}
 	return count
+}
+
+func (t *Task) IsCollapsed() bool {
+	tk, _ := t.Tokens.Find(TkByTypeKey(TokenID, "id"))
+	return tk != nil && strings.HasPrefix(tk.raw, "$-id")
+}
+
+func (t *Task) ParentCollapsed() bool {
+	node := t.Parent
+	for node != nil {
+		if node.IsCollapsed() {
+			return true
+		}
+		node = node.Parent
+	}
+	return false
 }
 
 func (t *Task) update(new *Task) error {

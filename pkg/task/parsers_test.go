@@ -193,19 +193,6 @@ func TestParseTask(t *testing.T) {
 		}
 	})
 
-	t.Run("validate $-id collapse", func(t *testing.T) {
-		path, _ := parseFilepath("idC")
-		Lists.Empty(path)
-		AddTaskFromStr("A $-id=1", path)
-		task := Lists[path].Tasks[0]
-		assert.True(task.EIDCollapse)
-		tk, _ := task.Tokens.Find(TkByType(TokenID))
-		if assert.NotNil(tk) {
-			assert.Equal("id", tk.Key)
-			assert.Contains(tk.raw, "$-id=")
-		}
-	})
-
 	t.Run("validate invalid absolute dates: %Y", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=2025")
 		assert.Nil(task.Time.DueDate)

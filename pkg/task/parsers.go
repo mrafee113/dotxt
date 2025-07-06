@@ -765,9 +765,6 @@ func ParseTask(id *int, line string) (*Task, error) {
 			switch token.Key {
 			case "id":
 				task.EID = val
-				if strings.HasPrefix(token.raw, "$-id") {
-					task.EIDCollapse = true
-				}
 			case "P":
 				task.PID = val
 			}

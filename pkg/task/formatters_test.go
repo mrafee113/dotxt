@@ -541,13 +541,26 @@ func TestStringify(t *testing.T) {
 		path, _ := parseFilepath("test")
 		Lists.Empty(path)
 		AddTaskFromStr("(testing) heyto $due=1w $-id=first $P=dead", path)
+		AddTaskFromStr("$id=1", path)
+		AddTaskFromStr("(testing) heyto $due=1w $P=1 $-id=second", path)
+		AddTaskFromStr("$P=second 1", path)
+		AddTaskFromStr("$P=second 2", path)
+		AddTaskFromStr("$P=second 3", path)
 		cleanupRelations(path)
-		task := Lists[path].Tasks[0]
+
 		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
+
+		task := Lists[path].Tasks[0]
 		rtask := task.Render(&l)
 		rtask.idLen = 2
 		str := rtask.stringify(false, 50)
 		assert.Equal("00 + (testing) heyto $due=1w $-id=first $P=dead", str)
+
+		task = Lists[path].Tasks[2]
+		rtask = task.Render(&l)
+		rtask.idLen = 2
+		str = rtask.stringify(false, 50)
+		assert.Equal("   02 + (3) (testing) heyto $due=1w $P=1 \n      $-id=second", str)
 	})
 }
 

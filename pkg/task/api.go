@@ -78,16 +78,6 @@ func cleanupRelations(path string) error {
 		task.Parent = parent
 		parent.Children = append(parent.Children, task)
 	}
-	var dfs func(*Task)
-	dfs = func(node *Task) {
-		for _, child := range node.Children {
-			child.EIDCollapse = node.EIDCollapse
-			dfs(child)
-		}
-	}
-	for _, task := range Lists[path].Tasks {
-		dfs(task)
-	}
 	return nil
 }
 

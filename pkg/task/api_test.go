@@ -609,16 +609,4 @@ func TestCleanupRelations(t *testing.T) {
 	assert.Nil(get(2).Parent)
 	assert.Empty(get(2).Children)
 	assert.Equal(0, get(2).Depth())
-
-	root := func(node *Task) *Task {
-		for node.Parent != nil {
-			node = node.Parent
-		}
-		return node
-	}
-	for _, task := range Lists[path].Tasks {
-		if root(task).Norm() == "3 id $-id=first" {
-			assert.True(task.EIDCollapse)
-		}
-	}
 }

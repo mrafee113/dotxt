@@ -556,7 +556,7 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 	listMetadata := rList{path: path, idList: make(map[string]bool)}
 	sessionMetadata.lists[path] = &listMetadata
 	for _, task := range Lists[path].Tasks {
-		if task.Parent != nil && task.EIDCollapse {
+		if task.ParentCollapsed() {
 			continue
 		}
 		rtask := task.Render(&listMetadata)
