@@ -8,6 +8,7 @@ import (
 	"math"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -196,6 +197,7 @@ func formatPriorities(tasks []*rTask) {
 			}
 			groups[prefix] = append(groups[prefix], rt)
 		}
+		sort.Strings(prefixes)
 
 		weights := make([]int, len(prefixes))
 		for i, prefix := range prefixes {
