@@ -33,10 +33,19 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 	var out strings.Builder
 	idPrefix := ""
 	newLinePrefix := strings.Repeat(" ", r.idLen+1)
-	if depth := r.tsk.Depth(); depth > 0 {
-		depthSpace := strings.Repeat(" ", depth*(r.idLen+1))
+	newLineLen := r.idLen + 1
+	depth := r.tsk.Depth() * (r.idLen + 1)
+	progLen := r.countLen + 1 + r.doneCountLen + 6 + 1 +
+		viper.GetInt("print.progress.bartext-len") + 1
+	if depth > 0 {
+		depthSpace := strings.Repeat(" ", depth)
 		idPrefix += depthSpace
 		newLinePrefix += depthSpace
+		newLineLen += depth
+	}
+	if r.tsk.Prog != nil {
+		newLinePrefix += strings.Repeat(" ", progLen)
+		newLineLen += progLen
 	}
 	var length int
 	var fold func(string) string
@@ -50,7 +59,7 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 			return str
 		}
 		if length >= maxWidth-1 { // current line has no space whatsoever
-			length = r.idLen + 1
+			length = newLineLen
 			if str == " " {
 				return "\n" + newLinePrefix
 			}
@@ -58,12 +67,12 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 		}
 		if n > maxWidth || r.idLen+1+n > maxWidth { // string is so long it has to be split
 			oldLen := length
-			length = r.idLen + 1
+			length = newLineLen
 			return str[:maxWidth-oldLen-1] + "\\\n" +
 				newLinePrefix + fold(str[maxWidth-oldLen-1:])
 		}
 		// str is long enough to not fit current line and not long enough to be splitted
-		length = r.idLen + 1 + n
+		length = newLineLen + n
 		return "\n" + newLinePrefix + str
 	}
 

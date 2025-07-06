@@ -449,17 +449,6 @@ func TestStringify(t *testing.T) {
 	assert := assert.New(t)
 	id1 := 12
 	path, _ := parseFilepath("file")
-	helper := func(line string) string {
-		task, _ := ParseTask(&id1, line)
-		l := rList{path: path, idList: make(map[string]bool)}
-		rtask := task.Render(&l)
-		rtask.idLen = 2
-		return rtask.stringify(false, 50)
-	}
-	out := helper("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/12/15/cat text $r=-3d $every=1m")
-	assert.Equal("12 12/15( 80%) =======>   (unit) (A) +prj #tag @at\n   $due=1d $dead=1w $r=22' $id=3 $P=2 text $r=-3d \n   $every=1m", out)
-	assert.Equal("12 ", out[:3], "id")
-	assert.Equal("12/15( 80%) =======>   (unit) ", out[3:33], "progress")
 	testLength := func(out string) bool {
 		exceeds := false
 		for _, each := range strings.Split(out, "\n") {
@@ -469,6 +458,20 @@ func TestStringify(t *testing.T) {
 		}
 		return exceeds
 	}
+	helper := func(line string) string {
+		task, _ := ParseTask(&id1, line)
+		l := rList{path: path, idList: make(map[string]bool)}
+		rtask := task.Render(&l)
+		rtask.idLen = 2
+		rtask.doneCountLen = 2
+		rtask.countLen = 2
+		return rtask.stringify(false, 50)
+	}
+	out := helper("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/12/15/cat text $r=-3d $every=1m")
+	assert.Equal("12 12/15( 80%) =======>   (unit) (A) +prj #tag @at\n                          $due=1d $dead=1w $r=22' \n                          $id=3 $P=2 text $r=-3d \n                          $every=1m", out)
+	assert.Equal("12 ", out[:3], "id")
+	assert.Equal("12/15( 80%) =======>   (unit) ", out[3:33], "progress")
+	assert.False(testLength(out))
 	t.Run("fold", func(t *testing.T) {
 		// fits
 		out = helper("===========")
@@ -519,7 +522,9 @@ func TestStringify(t *testing.T) {
 			l := rList{path: path, idList: make(map[string]bool)}
 			rtask := task.Render(&l)
 			rtask.idLen = 2
-			return rtask.stringify(false, 50)
+			str := rtask.stringify(false, 50)
+			assert.False(testLength(str))
+			return str
 		}
 		assert.Equal("00 0 no id", helper(0))
 		assert.Equal("01 1 $id=1", helper(1))
@@ -532,9 +537,9 @@ func TestStringify(t *testing.T) {
 		assert.Equal("05 5 $id=5", helper(8))
 		assert.Equal("   06 6 $id=6 $P=5", helper(9))
 		assert.Equal("      07 7 $id=7 $P=6", helper(10))
-		assert.Equal("         10 10 $P=7 one two three four five six \n            seven eight nine ten eleven ==================\\\n            =========================================== \n            twelve thirteen fourteen sixteen seventeen \n            eighteen nineteen twenty twenty-one", helper(11))
+		assert.Equal("         10 10 $P=7 one two three four five six \n            seven eight nine ten eleven =========\\\n            =====================================\\\n            =============== twelve thirteen \n            fourteen sixteen seventeen eighteen \n            nineteen twenty twenty-one", helper(11))
 		assert.Equal("         11 11 $P=7 =============================\\\n            ================================", helper(12))
-		assert.Equal("         09 9 $P=7 ==============================\\\n            ==============================================\\\n            ==============================================\\\n            ===", helper(13))
+		assert.Equal("         09 9 $P=7 ==============================\\\n            =====================================\\\n            =====================================\\\n            =====================", helper(13))
 		assert.Equal("08 8 no id", helper(14))
 	})
 	t.Run("id collapse", func(t *testing.T) {
@@ -554,13 +559,29 @@ func TestStringify(t *testing.T) {
 		rtask := task.Render(&l)
 		rtask.idLen = 2
 		str := rtask.stringify(false, 50)
+		assert.False(testLength(str))
 		assert.Equal("00 + (testing) heyto $due=1w $-id=first $P=dead", str)
 
 		task = Lists[path].Tasks[2]
 		rtask = task.Render(&l)
 		rtask.idLen = 2
 		str = rtask.stringify(false, 50)
+		assert.False(testLength(str))
 		assert.Equal("   02 + (3) (testing) heyto $due=1w $P=1 \n      $-id=second", str)
+	})
+	t.Run("progress fold", func(t *testing.T) {
+		path, _ := parseFilepath("test")
+		Lists.Empty(path)
+		AddTaskFromStr("(6) #Literature #classics +ugliness @y:1831 #rate:4.02/8k/211k @auth:Victor-Hugo The Hunchback of Notre-Dame $p=page/165/510/books $c=2025-05-17T17-06-25", path)
+		cleanupRelations(path)
+		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
+		task := Lists[path].Tasks[0]
+		rtask := task.Render(&l)
+		rtask.idLen = 2
+		rtask.countLen = 3
+		rtask.doneCountLen = 3
+		str := rtask.stringify(false, 50)
+		assert.False(testLength(str))
 	})
 }
 
@@ -613,22 +634,22 @@ func TestPrintLists(t *testing.T) {
 		assert.Equal(50, utf8.RuneCountInString(out[1])) // category header
 
 		assert.Equal(50, utf8.RuneCountInString(out[2]))
-		assert.Equal(48, utf8.RuneCountInString(out[3]))
-		assert.Equal(20, utf8.RuneCountInString(out[4]))
+		assert.Equal(50, utf8.RuneCountInString(out[3]))
+		assert.Equal(48, utf8.RuneCountInString(out[4]))
 
-		assert.Equal(37, utf8.RuneCountInString(out[6]))
-		assert.Equal(43, utf8.RuneCountInString(out[7]))
-		assert.Equal(26, utf8.RuneCountInString(out[8]))
+		assert.Equal(39, utf8.RuneCountInString(out[6]))
+		assert.Equal(50, utf8.RuneCountInString(out[7]))
+		assert.Equal(37, utf8.RuneCountInString(out[8]))
 
-		assert.Equal(50, utf8.RuneCountInString(out[9])) // category header
-		assert.Equal(15, len(out[10]))
+		assert.Equal(68, utf8.RuneCountInString(out[9])) // category header
+		assert.Equal(30, len(out[10]))
 	})
 	t.Run("category headers", func(t *testing.T) {
 		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
 		assert.Equal(50, utf8.RuneCountInString(out[1]))
-		assert.Equal(50, utf8.RuneCountInString(out[5]))
-		assert.Equal(50, utf8.RuneCountInString(out[9]))
+		assert.Equal(42, utf8.RuneCountInString(out[5]))
+		assert.Equal(68, utf8.RuneCountInString(out[9]))
 	})
 }
 
