@@ -567,7 +567,7 @@ func TestStringify(t *testing.T) {
 		rtask.idLen = 2
 		str = rtask.stringify(false, 50)
 		assert.False(testLength(str))
-		assert.Equal("   02 + (3) (testing) heyto $due=1w $P=1 \n      $-id=second", str)
+		assert.Equal("   02 +|3 (testing) heyto $due=1w $P=1 $-id=second", str)
 	})
 	t.Run("progress fold", func(t *testing.T) {
 		path, _ := parseFilepath("test")

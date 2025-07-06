@@ -101,7 +101,7 @@ func (r *rTask) stringify(color bool, maxWidth int) string {
 		}()
 		var val string
 		if count > 0 {
-			val = fmt.Sprintf("+ (%d)", count)
+			val = fmt.Sprintf("+|%d", count)
 		} else {
 			val = "+"
 		}
