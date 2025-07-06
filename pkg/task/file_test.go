@@ -124,6 +124,7 @@ func TestParseDirpath(t *testing.T) {
 
 func TestPrepFileTaskFromPath(t *testing.T) {
 	assert := assert.New(t)
+	Lists = make(lists)
 	path := "file"
 	_, err := prepFileTaskFromPath(path)
 	assert.ErrorIs(err, terrors.ErrListNotInMemory)

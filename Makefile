@@ -12,4 +12,7 @@ build:
 clean:
 	cd $(PROJECT_ROOT) && go clean && rm -f $(BINARY_NAME)
 
+clean-cache:
+	cd $(PROJECT_ROOT) && go clean -cache && go clean -testcache && go clean -i -r
+
 .PHONY: build clean
