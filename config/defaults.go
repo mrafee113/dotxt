@@ -54,8 +54,8 @@ print:
   color-tag: *light-pink
 
   ids:
-    saturation: 0.7
-    lightness: 0.6
+    saturation: 0.35
+    lightness: 0.55
     start-hue: 30
     end-hue: 210
 
