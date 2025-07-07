@@ -24,9 +24,9 @@ func sortDoneCount(l, r *Task) int {
 	} else if l.Prog == nil && r.Prog == nil {
 		return 2
 	}
-	if l.Prog.DoneCount > 0 && r.Prog.DoneCount == 0 {
+	if l.Prog.DoneCount > r.Prog.DoneCount {
 		return -1
-	} else if l.Prog.DoneCount == 0 && r.Prog.DoneCount > 0 {
+	} else if l.Prog.DoneCount < r.Prog.DoneCount {
 		return 1
 	}
 	return 2
@@ -114,9 +114,9 @@ func sortText(l, r *Task) int {
 func sortHelper(l, r *Task) int {
 	if v := sortNil(l, r); v != 2 {
 		return v
-	} else if v = sortDoneCount(l, r); v != 2 {
-		return v
 	} else if v = sortCategory(l, r); v != 2 {
+		return v
+	} else if v = sortDoneCount(l, r); v != 2 {
 		return v
 	} else if v = sortPriority(l, r); v != 2 {
 		return v
