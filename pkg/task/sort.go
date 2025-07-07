@@ -16,13 +16,19 @@ func sortNil(l, r *Task) int {
 	return 2
 }
 
-func sortDoneCount(l, r *Task) int {
+func sortProgressValue(l, r *Task) int {
 	if l.Prog != nil && r.Prog == nil {
 		return -1
 	} else if l.Prog == nil && r.Prog != nil {
 		return 1
 	} else if l.Prog == nil && r.Prog == nil {
 		return 2
+	}
+	lP, rP := 100*l.Prog.Count/l.Prog.DoneCount, 100*r.Prog.Count/r.Prog.DoneCount
+	if lP > rP {
+		return -1
+	} else if lP < rP {
+		return 1
 	}
 	if l.Prog.DoneCount > r.Prog.DoneCount {
 		return -1
@@ -116,9 +122,9 @@ func sortHelper(l, r *Task) int {
 		return v
 	} else if v = sortCategory(l, r); v != 2 {
 		return v
-	} else if v = sortDoneCount(l, r); v != 2 {
-		return v
 	} else if v = sortPriority(l, r); v != 2 {
+		return v
+	} else if v = sortProgressValue(l, r); v != 2 {
 		return v
 	} else if v = sortHints(l, r); v != 2 {
 		return v
