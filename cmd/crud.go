@@ -54,14 +54,25 @@ func loadorcreateFuncStoreFile(path string, f func() error) error {
 	return task.StoreFile(path)
 }
 
+func prepTodoListArg(cmd *cobra.Command) (string, error) {
+	path, err := cmd.Flags().GetString("list")
+	if err != nil {
+		return "", nil
+	}
+	if strings.TrimSpace(path) == "" {
+		return task.DefaultTodo, nil
+	}
+	return path, nil
+}
+
 var addCmd = &cobra.Command{
-	Use:   "add <task> [--to=<todolist=todo>]",
+	Use:   "add <task> [--list=<todolist=todo>]",
 	Short: "add task",
-	Long: `add <task> [--to=<todolist=todo>]
+	Long: `add <task> [--list=<todolist=todo>]
   adds task to todolist`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		arg := strings.Join(args, " ")
-		path, err := task.GetTodoPathArgFromCmd(cmd, "to")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -72,13 +83,13 @@ var addCmd = &cobra.Command{
 }
 
 func setAddCmdFlags() {
-	addCmd.Flags().String("to", "", "designate the target todolist")
+	addCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var delCmd = &cobra.Command{
-	Use:   "del <id>... [--from=<todolist=todo>]",
+	Use:   "del <id>... [--list==<todolist=todo>]",
 	Short: "delete task",
-	Long: `del|rm <id>... [--from=<todolist=todo>]
+	Long: `del|rm <id>... [--list==<todolist=todo>]
   removes task from todolist`,
 	Aliases: []string{"rm"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -94,7 +105,7 @@ var delCmd = &cobra.Command{
 			ids = append(ids, num)
 		}
 
-		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -105,13 +116,13 @@ var delCmd = &cobra.Command{
 }
 
 func setDelCmdFlags() {
-	delCmd.Flags().String("from", "", "designate the target todolist")
+	delCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var appendCmd = &cobra.Command{
-	Use:   "app <id> <task> [--to=<todolist=todo>]",
+	Use:   "app <id> <task> [--list=<todolist=todo>]",
 	Short: "append to task",
-	Long: `append|app <task> [--to=<todolist=todo>],
+	Long: `append|app <task> [--list=<todolist=todo>],
   appends text to the end of the designated task`,
 	Aliases: []string{"append"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -130,7 +141,7 @@ var appendCmd = &cobra.Command{
 			return terrors.ErrEmptyText
 		}
 
-		path, err := task.GetTodoPathArgFromCmd(cmd, "to")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -141,13 +152,13 @@ var appendCmd = &cobra.Command{
 }
 
 func setAppendCmdFlags() {
-	appendCmd.Flags().String("to", "", "designate the target todolist")
+	appendCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var prependCmd = &cobra.Command{
-	Use:   "prepend <id> <task> [--to=<todolist=todo>]",
+	Use:   "prepend <id> <task> [--list=<todolist=todo>]",
 	Short: "prepend to task",
-	Long: `prepend|prep <task> [--to=<todolist=todo>],
+	Long: `prepend|prep <task> [--list=<todolist=todo>],
   prepends text to the end of the designated task`,
 	Aliases: []string{"prep"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -166,7 +177,7 @@ var prependCmd = &cobra.Command{
 			return terrors.ErrEmptyText
 		}
 
-		path, err := task.GetTodoPathArgFromCmd(cmd, "to")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -177,13 +188,13 @@ var prependCmd = &cobra.Command{
 }
 
 func setPrependCmdFlags() {
-	prependCmd.Flags().String("to", "", "designate the target todolist")
+	prependCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var replaceCmd = &cobra.Command{
-	Use:   "replace <id> <task> [--to=<todolist=todo>]",
+	Use:   "replace <id> <task> [--list=<todolist=todo>]",
 	Short: "replace line with a new task",
-	Long: `replace|update <id> <task> [--to=<todolist=todo>]
+	Long: `replace|update <id> <task> [--list=<todolist=todo>]
   replace line with a new task`,
 	Aliases: []string{"update"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -197,7 +208,7 @@ var replaceCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		path, err := task.GetTodoPathArgFromCmd(cmd, "to")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -209,17 +220,17 @@ var replaceCmd = &cobra.Command{
 }
 
 func setReplaceCmdFlags() {
-	replaceCmd.Flags().String("to", "", "designate the target todolist")
+	replaceCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var deduplicateCmd = &cobra.Command{
-	Use:   "deduplicate [--from=<todolist=todo>]",
+	Use:   "deduplicate [--list==<todolist=todo>]",
 	Short: "deduplicate list",
-	Long: `deduplicate [--from=<todolist=todo>]
+	Long: `deduplicate [--list==<todolist=todo>]
   removes duplicated lines from a list. repetetive spaces and meta variables are ignored.`,
 	Aliases: []string{"dedup"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -230,13 +241,13 @@ var deduplicateCmd = &cobra.Command{
 }
 
 func setDeduplicateCmdFlags() {
-	deduplicateCmd.Flags().String("from", "", "designate the target todolist")
+	deduplicateCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var deprioritizeCmd = &cobra.Command{
-	Use:   "depri <id>... [--from=<todolist=todo>]",
+	Use:   "depri <id>... [--list==<todolist=todo>]",
 	Short: "deprioritize task",
-	Long: `depri|dp <id>... [--from=<todolist=todo>]
+	Long: `depri|dp <id>... [--list==<todolist=todo>]
   deprioritizes task(s) (removes priority) from list`,
 	Aliases: []string{"dp"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -252,7 +263,7 @@ var deprioritizeCmd = &cobra.Command{
 			ids = append(ids, num)
 		}
 
-		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -268,13 +279,13 @@ var deprioritizeCmd = &cobra.Command{
 }
 
 func setDeprioritizeCmdFlags() {
-	deprioritizeCmd.Flags().String("from", "", "designate the target todolist")
+	deprioritizeCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var prioritizeCmd = &cobra.Command{
-	Use:   "pri <id> <priority> [--to=<todolist=todo>]",
+	Use:   "pri <id> <priority> [--list=<todolist=todo>]",
 	Short: "prioritize task",
-	Long: `pri|p <id> <priority> [--to=<todolist=todo>]
+	Long: `pri|p <id> <priority> [--list=<todolist=todo>]
   prioritizes task given the id and a priority text in a list`,
 	Aliases: []string{"p"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -292,7 +303,7 @@ var prioritizeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		path, err := task.GetTodoPathArgFromCmd(cmd, "to")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -303,13 +314,13 @@ var prioritizeCmd = &cobra.Command{
 }
 
 func setPrioritizeCmdFlags() {
-	prioritizeCmd.Flags().String("to", "", "designate the target todolist")
+	prioritizeCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var doneCmd = &cobra.Command{
-	Use:   "done <id> [--from=<todolist=todo>]",
+	Use:   "done <id> [--list==<todolist=todo>]",
 	Short: "finish and move task",
-	Long: `do|done <id> [--from=<todolist=todo>]
+	Long: `do|done <id> [--list==<todolist=todo>]
   finish task`,
 	Aliases: []string{"do"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -324,7 +335,7 @@ var doneCmd = &cobra.Command{
 			}
 			ids = append(ids, num)
 		}
-		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -335,13 +346,13 @@ var doneCmd = &cobra.Command{
 }
 
 func setDoneCmdFlags() {
-	doneCmd.Flags().String("from", "", "designate the target todolist")
+	doneCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var revertCmd = &cobra.Command{
-	Use:   "revert <id>... [--from=<todolist=todo>]",
+	Use:   "revert <id>... [--list==<todolist=todo>]",
 	Short: "revert tasks from done to list",
-	Long: `revert <id>... [--from=<todolist=todo>]
+	Long: `revert <id>... [--list==<todolist=todo>]
   reverts tasks from done to list`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
@@ -356,7 +367,7 @@ var revertCmd = &cobra.Command{
 			ids = append(ids, num)
 		}
 
-		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -367,7 +378,7 @@ var revertCmd = &cobra.Command{
 }
 
 func setRevertCmdFlags() {
-	revertCmd.Flags().String("from", "", "designate the target todolist")
+	revertCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var moveCmd = &cobra.Command{
@@ -416,9 +427,9 @@ var moveCmd = &cobra.Command{
 }
 
 var migrateCmd = &cobra.Command{
-	Use:   "migrate <from> [--to=<todolist=todo>]",
+	Use:   "migrate <from> [--list=<todolist=todo>]",
 	Short: "migrate tasks from a given file",
-	Long: `migrate <from> [--to=<todolist=todo>]
+	Long: `migrate <from> [--list=<todolist=todo>]
   migrate tasks from a given file`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
@@ -439,13 +450,13 @@ var migrateCmd = &cobra.Command{
 }
 
 func setMigrateCmdFlags() {
-	migrateCmd.Flags().String("to", "", "designate the target todolist")
+	migrateCmd.Flags().String("list", "", "designate the target todolist")
 }
 
 var lsNCmd = &cobra.Command{
-	Use:   "lsn id [--from=<todolist=todo>]",
+	Use:   "lsn id [--list==<todolist=todo>]",
 	Short: "print a single task from list",
-	Long: `lsn id [--from=<todolist=todo>]
+	Long: `lsn id [--list==<todolist=todo>]
   print a single task from list`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
@@ -455,7 +466,7 @@ var lsNCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -468,5 +479,5 @@ var lsNCmd = &cobra.Command{
 }
 
 func setlsNCmdFlags() {
-	lsNCmd.Flags().String("from", "", "designate the target todolist")
+	lsNCmd.Flags().String("list", "", "designate the target todolist")
 }

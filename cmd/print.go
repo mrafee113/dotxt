@@ -61,9 +61,9 @@ func setPrintCmdFlags() {
 }
 
 var toggleCollapseCmd = &cobra.Command{
-	Use:   "tc id [--from=<todolist=todo>]",
+	Use:   "tc id [--list==<todolist=todo>]",
 	Short: "toggle the collapse/expanse of the children of a task",
-	Long: `tc id [--from=<todolist=todo>]
+	Long: `tc id [--list==<todolist=todo>]
   toggle the collapse/expanse of the children of a task`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
@@ -73,7 +73,7 @@ var toggleCollapseCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -85,5 +85,5 @@ var toggleCollapseCmd = &cobra.Command{
 }
 
 func setToggleCollapsedCmdFlags() {
-	toggleCollapseCmd.Flags().String("from", "", "designate the target todolist")
+	toggleCollapseCmd.Flags().String("list", "", "designate the target todolist")
 }

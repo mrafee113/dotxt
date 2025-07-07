@@ -11,8 +11,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 /* file structure
@@ -31,17 +29,6 @@ dotxt-config-dir/
 */
 
 const DefaultTodo = "todo"
-
-func GetTodoPathArgFromCmd(cmd *cobra.Command, arg string) (string, error) {
-	path, err := cmd.Flags().GetString(arg)
-	if err != nil {
-		return "", nil
-	}
-	if strings.TrimSpace(path) == "" {
-		return DefaultTodo, nil
-	}
-	return path, nil
-}
 
 func todosDir() string {
 	return filepath.Join(config.ConfigPath(), "todos")

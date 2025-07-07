@@ -3,46 +3,14 @@ package task
 import (
 	"dotxt/config"
 	"dotxt/pkg/terrors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGetTodoPathArgFromCmd(t *testing.T) {
-	assert := assert.New(t)
-	helper := func(key, value string) *cobra.Command {
-		cmd := &cobra.Command{Use: "test"}
-		cmd.Flags().String(key, "", "")
-		cmd.SetArgs([]string{fmt.Sprintf("--%s=%s", key, value)})
-		err := cmd.Execute()
-		assert.NoError(err)
-		return cmd
-	}
-	t.Run("with value", func(t *testing.T) {
-		cmd := helper("testarg", "file")
-		out, err := GetTodoPathArgFromCmd(cmd, "testarg")
-		assert.NoError(err)
-		assert.Equal("file", out)
-	})
-	t.Run("no value", func(t *testing.T) {
-		cmd := helper("testarg", "")
-		out, err := GetTodoPathArgFromCmd(cmd, "testarg")
-		assert.NoError(err)
-		assert.Equal(DefaultTodo, out)
-	})
-	t.Run("irrelavent arg", func(t *testing.T) {
-		cmd := helper("testarg", "")
-		out, err := GetTodoPathArgFromCmd(cmd, "irrelaventArg")
-		assert.NoError(err)
-		assert.Empty(out)
-	})
-}
 
 func TestMkDirs(t *testing.T) {
 	assert := assert.New(t)

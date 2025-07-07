@@ -14,9 +14,9 @@ func init() {
 }
 
 var incCmd = &cobra.Command{
-	Use:   "inc id [val=1] [--from=<todolist=todo>]",
+	Use:   "inc id [val=1] [--list==<todolist=todo>]",
 	Short: "increment the count of a progress task",
-	Long: `inc id [val=1] [--from=<todolist=todo>]
+	Long: `inc id [val=1] [--list==<todolist=todo>]
   increment the count of a progress task`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
@@ -33,7 +33,7 @@ var incCmd = &cobra.Command{
 				return err
 			}
 		}
-		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		path, err := prepTodoListArg(cmd)
 		if err != nil {
 			return err
 		}
@@ -45,5 +45,5 @@ var incCmd = &cobra.Command{
 }
 
 func setIncCmdFlags() {
-	incCmd.Flags().String("from", "", "designate the target todolist")
+	incCmd.Flags().String("list", "", "designate the target todolist")
 }
