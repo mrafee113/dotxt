@@ -610,3 +610,19 @@ func TestCleanupRelations(t *testing.T) {
 	assert.Empty(get(2).Children)
 	assert.Equal(0, get(2).Depth())
 }
+
+func TestToggleCollapsed(t *testing.T) {
+	assert := assert.New(t)
+	path, _ := parseFilepath("toggleC")
+	Lists.Empty(path)
+	AddTaskFromStr("was collapsed $-id=first", path)
+	AddTaskFromStr("was expanded $id=second", path)
+
+	err := ToggleCollapsed(0, path)
+	assert.NoError(err)
+	assert.False(Lists[path].Tasks[0].IsCollapsed())
+
+	err = ToggleCollapsed(1, path)
+	assert.NoError(err)
+	assert.True(Lists[path].Tasks[1].IsCollapsed())
+}

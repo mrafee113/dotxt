@@ -2,14 +2,17 @@ package cmd
 
 import (
 	"dotxt/pkg/task"
+	"dotxt/pkg/terrors"
+	"strconv"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 func init() {
-	rootCmd.AddCommand(printCmd)
+	rootCmd.AddCommand(printCmd, toggleCollapseCmd)
 	setPrintCmdFlags()
+	setToggleCollapsedCmdFlags()
 }
 
 var printCmd = &cobra.Command{
@@ -55,4 +58,32 @@ func setPrintCmdFlags() {
 	viper.BindPFlag("maxlen", printCmd.Flags().Lookup("maxlen"))
 	printCmd.Flags().Int("minlen", 80, "maximum length")
 	viper.BindPFlag("minlen", printCmd.Flags().Lookup("minlen"))
+}
+
+var toggleCollapseCmd = &cobra.Command{
+	Use:   "tc id [--from=<todolist=todo>]",
+	Short: "toggle the collapse/expanse of the children of a task",
+	Long: `tc id [--from=<todolist=todo>]
+  toggle the collapse/expanse of the children of a task`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return terrors.ErrNoArgsProvided
+		}
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return err
+		}
+		path, err := task.GetTodoPathArgFromCmd(cmd, "from")
+		if err != nil {
+			return err
+		}
+
+		return loadFuncStoreFile(path, func() error {
+			return task.ToggleCollapsed(id, path)
+		})
+	},
+}
+
+func setToggleCollapsedCmdFlags() {
+	toggleCollapseCmd.Flags().String("from", "", "designate the target todolist")
 }

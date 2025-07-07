@@ -464,3 +464,24 @@ func CheckAndRecurTasks(path string) error {
 	}
 	return nil
 }
+
+func ToggleCollapsed(id int, path string) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	task, err := getTaskFromId(id, path)
+	if err != nil {
+		return err
+	}
+	tk, _ := task.Tokens.Find(TkByTypeKey(TokenID, "id"))
+	if tk == nil {
+		return fmt.Errorf("%w: task doesn't have token $id", terrors.ErrNotFound)
+	}
+	if strings.HasPrefix(tk.raw, "$-id") {
+		tk.raw = strings.Replace(tk.raw, "$-id", "$id", 1)
+	} else {
+		tk.raw = strings.Replace(tk.raw, "$id", "$-id", 1)
+	}
+	return nil
+}
