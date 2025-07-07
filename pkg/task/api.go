@@ -414,18 +414,42 @@ func IncrementProgressCount(id int, path string, value int) error {
 	}
 	rVal := task.Prog.Count + value
 	task.Prog.Count = max(min(rVal, task.Prog.DoneCount), 0)
-	pToken, _ := task.Tokens.Find(TkByType(TokenProgress))
-	if pToken == nil {
-		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
-	}
-	prog := task.Prog
-	progText, err := unparseProgress(*prog)
+	progText, err := unparseProgress(*task.Prog)
 	if err != nil {
 		return err
 	}
 	progText = fmt.Sprintf("$p=%s", progText)
+	pToken, _ := task.Tokens.Find(TkByType(TokenProgress))
+	if pToken == nil {
+		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+	}
 	pToken.raw = progText
-	pToken.Value = utils.MkPtr(*prog)
+	return nil
+}
+
+func SetProgressCount(id int, path string, value int) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	task, err := getTaskFromId(id, path)
+	if err != nil {
+		return err
+	}
+	if task.Prog == nil {
+		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+	}
+	task.Prog.Count = max(min(value, task.Prog.DoneCount), 0)
+	progText, err := unparseProgress(*task.Prog)
+	if err != nil {
+		return err
+	}
+	progText = fmt.Sprintf("$p=%s", progText)
+	pToken, _ := task.Tokens.Find(TkByType(TokenProgress))
+	if pToken == nil {
+		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+	}
+	pToken.raw = progText
 	return nil
 }
 
