@@ -516,10 +516,10 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		if assert.NotNil(tk) {
 			assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
 		}
+		assert.Equal("2 $every=1y $due=2y", Lists[path].Tasks[2].Norm())
 	})
 	t.Run("invalid", func(t *testing.T) {
 		assert.Equal("1", Lists[path].Tasks[1].Norm())
-		assert.Equal("2 $every=1y", Lists[path].Tasks[2].Norm())
 		assert.Equal("3 $due=1w $every=1y", Lists[path].Tasks[3].Norm())
 		assert.Equal("4 $due=1w $dead=1m $every=1y", Lists[path].Tasks[4].Norm())
 		assert.Equal("5 $due=1w $end=1m $every=1y", Lists[path].Tasks[5].Norm())

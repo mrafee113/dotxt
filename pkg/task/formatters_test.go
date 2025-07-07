@@ -287,9 +287,9 @@ func TestColorIds(t *testing.T) {
 	assert := assert.New(t)
 	out := colorizeIds(map[string]bool{"1": true, "2": true, "3": true})
 	// 1:"#E09952", 2:"#99E052", 3:"#52E099"
-	assert.Equal("#E09952", out["1"])
-	assert.Equal("#99E052", out["2"])
-	assert.Equal("#52E099", out["3"])
+	assert.Equal("#B48C64", out["1"])
+	assert.Equal("#8CB464", out["2"])
+	assert.Equal("#64B48C", out["3"])
 }
 
 func TestFormatCategoryHeader(t *testing.T) {
@@ -402,8 +402,8 @@ func TestRenderList(t *testing.T) {
 		assert.Error(RenderList(nil, path))
 	})
 	t.Run("id color", func(t *testing.T) {
-		assert.Equal("#52E052", sm.lists[path].tasks[0].tokens[8].color)
-		assert.Equal("#E09952", sm.lists[path].tasks[0].tokens[9].color)
+		assert.Equal("#64B464", sm.lists[path].tasks[0].tokens[8].color)
+		assert.Equal("#B48C64", sm.lists[path].tasks[0].tokens[9].color)
 	})
 	t.Run("priority color", func(t *testing.T) {
 		assert.Equal("#52E0E0", sm.lists[path].tasks[0].tokens[1].color)

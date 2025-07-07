@@ -804,6 +804,14 @@ func ParseTask(id *int, line string) (*Task, error) {
 			Key: "c", Value: &rightNow,
 		})
 	}
+	if task.Time.DueDate == nil && task.Time.Every != nil {
+		val := task.Time.CreationDate.Add(*task.Time.Every)
+		task.Time.DueDate = &val
+		task.Tokens = append(task.Tokens, &Token{
+			Type: TokenDate, raw: fmt.Sprintf("$due=%s", unparseRelativeDatetime(val, *task.Time.CreationDate)),
+			Key: "due", Value: &val,
+		})
+	}
 	if task.Time.DueDate != nil && !task.Time.DueDate.After(*task.Time.CreationDate) {
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if tk != nil {

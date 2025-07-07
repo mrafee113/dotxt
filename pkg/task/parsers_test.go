@@ -407,6 +407,18 @@ func TestParseTask(t *testing.T) {
 		assert.Equal("$r=c:-1w", tk.raw)
 	})
 
+	t.Run("validate date semantics: every-due dependency", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$every=1y") // every with no due
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
+		if assert.NotNil(task.Time.DueDate) {
+			due := task.Time.CreationDate.Add(*task.Time.Every)
+			assert.Equal(due, *task.Time.DueDate)
+		}
+		if assert.NotNil(tk) {
+			assert.Equal("$due=1y", tk.String(task))
+		}
+	})
+
 	t.Run("validate every", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$every=9y364d23h59M59s")
 		val := (9*365*24*60*60 + 364*24*60*60 + 23*60*60 + 59*60 + 59) * time.Second
