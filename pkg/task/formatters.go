@@ -1,6 +1,7 @@
 package task
 
 import (
+	"dotxt/config"
 	"dotxt/pkg/terrors"
 	"dotxt/pkg/utils"
 	"fmt"
@@ -330,7 +331,11 @@ func resolvColor(color string) string {
 }
 
 func colorize(color, text string) string {
-	return utils.Colorize(resolvColor(color), text)
+	color = resolvColor(color)
+	if config.Color && color != "" {
+		return fmt.Sprintf("${color %s}%s", color, text)
+	}
+	return text
 }
 
 func colorizeToken(raw, color, dominantColor string) string {

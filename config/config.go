@@ -16,9 +16,11 @@ const (
 	EnvCFG    = "DOTXT_CONFIG"
 )
 
-var DefaultPath = "~/.config/dotxt"
-
-var configPath string
+var (
+	DefaultPath = "~/.config/dotxt"
+	configPath  string
+	Color       bool
+)
 
 func ConfigPath() string {
 	return configPath

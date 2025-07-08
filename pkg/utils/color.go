@@ -4,16 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-
-	"github.com/spf13/viper"
 )
-
-func Colorize(color, text string) string {
-	if viper.GetBool("color") && color != "" {
-		return fmt.Sprintf("${color %s}%s", color, text)
-	}
-	return text
-}
 
 // AI generated
 func HsvToHex(h, s, v float64) string {

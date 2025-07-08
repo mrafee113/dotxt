@@ -1,8 +1,10 @@
 package task
 
 import (
+	"dotxt/pkg/logging"
 	"dotxt/pkg/terrors"
 	"dotxt/pkg/utils"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -11,8 +13,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-
-	"github.com/spf13/viper"
 )
 
 /*
@@ -653,7 +653,7 @@ func parseTokens(line string) ([]*Token, []error) {
 		if err != nil {
 			errs = append(errs, err)
 		}
-		tokens = append(tokens, &Token{Type: TokenText, raw: tokenStr, Value: utils.MkPtr(tokenStr)})
+		tokens = append(tokens, &Token{Type: TokenText, raw: tokenStr, Value: &tokenStr})
 	}
 	if i, j, err := parsePriority(line); err == nil {
 		p := line[i:j]
@@ -756,7 +756,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 
 	task := &Task{ID: id, Time: utils.MkPtr(Temporal{})}
-	tokens, errs := parseTokens(line)
+	tokens, warns := parseTokens(line)
 	for ndx := range tokens {
 		token := tokens[ndx]
 		switch token.Type {
@@ -818,7 +818,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 			dateToTextToken(tk)
 			task.Time.DueDate = nil
 		} else {
-			errs = append(errs, fmt.Errorf("%w: due date token", terrors.ErrNotFound))
+			warns = append(warns, fmt.Errorf("%w: due date token", terrors.ErrNotFound))
 		}
 	}
 	if task.Time.Deadline != nil && (task.Time.DueDate == nil || !task.Time.Deadline.After(*task.Time.DueDate)) {
@@ -827,7 +827,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 			dateToTextToken(tk)
 			task.Time.Deadline = nil
 		} else {
-			errs = append(errs, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
+			warns = append(warns, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
 		}
 	}
 	if task.Time.EndDate != nil && (task.Time.DueDate == nil || !task.Time.EndDate.After(*task.Time.DueDate)) {
@@ -836,7 +836,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 			dateToTextToken(tk)
 			task.Time.EndDate = nil
 		} else {
-			errs = append(errs, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
+			warns = append(warns, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
 		}
 	}
 	if task.Time.EndDate != nil && task.Time.Deadline != nil {
@@ -845,14 +845,14 @@ func ParseTask(id *int, line string) (*Task, error) {
 			dateToTextToken(tk)
 			task.Time.Deadline = nil
 		} else {
-			errs = append(errs, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
+			warns = append(warns, fmt.Errorf("%w: dead date token", terrors.ErrNotFound))
 		}
 		tk, _ = task.Tokens.Find(TkByTypeKey(TokenDate, "end"))
 		if tk != nil {
 			dateToTextToken(tk)
 			task.Time.EndDate = nil
 		} else {
-			errs = append(errs, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
+			warns = append(warns, fmt.Errorf("%w: end date token", terrors.ErrNotFound))
 		}
 	}
 	for ndx := len(task.Time.Reminders) - 1; ndx >= 0; ndx-- {
@@ -868,10 +868,8 @@ func ParseTask(id *int, line string) (*Task, error) {
 			}
 		}
 	}
-	if viper.GetBool("debug") {
-		for _, err := range errs {
-			fmt.Fprintln(os.Stderr, err)
-		}
+	for _, err := range warns {
+		logging.Logger.Warnf("task=\"%s\" warn=\"%s\"", task.String(), err)
 	}
 	return task, nil
 }
@@ -886,16 +884,23 @@ func ParseTasks(filepath string) ([]*Task, error) {
 	}
 	lines := strings.Split(string(data), "\n")
 	var tasks []*Task
-	var errs error = fmt.Errorf("")
+	var errs error
 	for id, line := range lines {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
 		task, err := ParseTask(&id, line)
 		if err != nil {
-			errs = fmt.Errorf("%w\nline %d: %w", errs, id, err)
+			if errors.Is(err, terrors.ErrEmptyText) {
+				continue
+			}
+			if errs == nil {
+				errs = fmt.Errorf("line %d: %w", id, err)
+			} else {
+				errs = fmt.Errorf("%w\nline %d: %w", errs, id, err)
+			}
 		}
 		tasks = append(tasks, task)
 	}
-	return tasks, nil
+	return tasks, errs
 }

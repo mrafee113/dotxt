@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"dotxt/config"
+	"dotxt/pkg/logging"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -48,14 +49,12 @@ Global Flags:
 		arg, err := rootCmd.PersistentFlags().GetString("config")
 		cobra.CheckErr(err)
 		cobra.CheckErr(config.InitViper(arg))
+		logging.ConsoleLevel = min(logging.ConsoleLevel, viper.GetInt("logging.console-level"))
+		cobra.CheckErr(logging.Initialize())
 	})
 	rootCmd.PersistentFlags().StringP("config", "c", "", "yaml config filepath")
-	rootCmd.PersistentFlags().Bool("color", false, "enable colored mode")
-	viper.BindPFlag("color", rootCmd.PersistentFlags().Lookup("color"))
-	rootCmd.PersistentFlags().Bool("conky", false, "enable conky mode")
-	viper.BindPFlag("conky", rootCmd.PersistentFlags().Lookup("conky"))
-	rootCmd.PersistentFlags().Bool("debug", false, "enable debugging mode")
-	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
+	rootCmd.PersistentFlags().IntVar(&logging.ConsoleLevel, "clvl", 5, "console log -1 <= level <= 5")
+	rootCmd.PersistentFlags().BoolVar(&config.Color, "color", false, "enable colored mode")
 }
 
 func Execute() error {

@@ -1,6 +1,10 @@
 package config
 
 const DefaultConfig = `
+logging:
+  console-level: 5
+  file-level: -1
+
 colors:
   black: &black "#000000"
   red: &red "#B61C1C"

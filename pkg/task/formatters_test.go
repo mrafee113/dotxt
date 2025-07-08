@@ -2,6 +2,7 @@ package task
 
 import (
 	"bytes"
+	"dotxt/config"
 	"dotxt/pkg/utils"
 	"fmt"
 	"math"
@@ -266,8 +267,8 @@ func TestResolvColor(t *testing.T) {
 
 func TestColorizeToken(t *testing.T) {
 	assert := assert.New(t)
-	prevColor := viper.GetBool("color")
-	viper.Set("color", true)
+	prevColor := config.Color
+	config.Color = true
 
 	t.Run("dominant", func(t *testing.T) {
 		color := colorizeToken("text", "print.progress.doneCount", "print.progress.count")
@@ -280,7 +281,7 @@ func TestColorizeToken(t *testing.T) {
 		assert.Contains(color, viper.GetString("print.progress.doneCount"))
 	})
 
-	viper.Set("color", prevColor)
+	config.Color = prevColor
 }
 
 func TestColorIds(t *testing.T) {

@@ -2,6 +2,7 @@ package task
 
 import (
 	"dotxt/config"
+	"dotxt/pkg/logging"
 	"dotxt/pkg/terrors"
 	"fmt"
 	"os"
@@ -18,8 +19,11 @@ const dtFormat = "2006-01-02T15-04"
 
 func TestMain(m *testing.M) {
 	config.InitViper("/tmp/dotxt-testing")
-	err := os.MkdirAll("/tmp/dotxt-testing", 0755)
-	if err != nil {
+	if err := os.MkdirAll("/tmp/dotxt-testing", 0755); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	if err := logging.Initialize(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -61,6 +65,10 @@ func TestParseTask(t *testing.T) {
 	var err error
 	var task *Task
 	var dt time.Time
+
+	t.Run("deformed", func(t *testing.T) {
+		ParseTask(nil, "hey $yoyo")
+	})
 
 	t.Run("weird char support", func(t *testing.T) {
 		weirdChars := "`!@#$%^&**()-_=+\\/'\"[]{};:.,"

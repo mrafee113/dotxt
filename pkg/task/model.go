@@ -306,6 +306,9 @@ type Task struct {
 }
 
 func (t *Task) String() string {
+	if t.ID == nil {
+		return t.Raw()
+	}
 	return fmt.Sprintf("%-2d %s", *t.ID, t.Raw())
 }
 
