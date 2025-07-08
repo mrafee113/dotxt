@@ -271,10 +271,15 @@ func formatProgress(p *Progress, countLen, doneCountLen int) []rToken {
 			percent = 100
 		}
 		hue := 120.0 * float64(percent) / 100.0
+
 		startSaturation := viper.GetFloat64("print.progress.percentage.start-saturation")
 		endSaturation := viper.GetFloat64("print.progress.percentage.end-saturation")
-		lightness := viper.GetFloat64("print.progress.percentage.lightness")
-		saturation := startSaturation + (endSaturation-startSaturation)*math.Pow(float64(percent)/100, 2.0)
+		saturation := startSaturation + (endSaturation-startSaturation)*((math.Pow(math.E, float64(percent)/100)-1)/(math.E-1))
+
+		startLightness := viper.GetFloat64("print.progress.percentage.start-lightness")
+		endLightness := viper.GetFloat64("print.progress.percentage.end-lightness")
+		lightness := startLightness + (endLightness-startLightness)*((math.Pow(math.E, 1-float64(percent)/100)-1)/(math.E-1))
+
 		return utils.HslToHex(hue, saturation, lightness)
 	}
 

@@ -63,9 +63,10 @@ print:
     count: *default
     done-count: *light-grey
     percentage:
-      start-saturation: 0.3
-      end-saturation: 0.9
-      lightness: 0.6
+      start-saturation: 0.45
+      end-saturation: 0.7
+      start-lightness: 0.47
+      end-lightness: 0.55
     unit: *default
     bartext-len: 10
     header: *dark-purple

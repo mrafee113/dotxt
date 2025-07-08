@@ -397,16 +397,15 @@ func TestRenderList(t *testing.T) {
 	Lists.Append(path, task3)
 	err := RenderList(&sm, path)
 	assert.NoError(err)
-
 	t.Run("nil metadata", func(t *testing.T) {
 		assert.Error(RenderList(nil, path))
 	})
 	t.Run("id color", func(t *testing.T) {
-		assert.Equal("#64B464", sm.lists[path].tasks[1].tokens[8].color)
-		assert.Equal("#B48C64", sm.lists[path].tasks[1].tokens[9].color)
+		assert.Equal("#64B464", sm.lists[path].tasks[0].tokens[8].color)
+		assert.Equal("#B48C64", sm.lists[path].tasks[0].tokens[9].color)
 	})
 	t.Run("priority color", func(t *testing.T) {
-		assert.Equal("#52E0E0", sm.lists[path].tasks[1].tokens[1].color)
+		assert.Equal("#52E0E0", sm.lists[path].tasks[0].tokens[1].color)
 	})
 	t.Run("lengths", func(t *testing.T) {
 		assert.Equal(105, sm.maxLen)
