@@ -116,7 +116,7 @@ func TestGetTaskIndexFromId(t *testing.T) {
 	_, err = getTaskIndexFromId(5, path)
 	require.NotNil(t, err)
 	assert.ErrorIs(err, terrors.ErrNotFound)
-	assert.ErrorContains(err, "task corresponding to id 5 not found")
+	assert.ErrorContains(err, "task id '5'")
 }
 
 func TestGetTaskFromId(t *testing.T) {
@@ -299,7 +299,7 @@ func TestGetIndexesFromIds(t *testing.T) {
 	t.Run("missing id", func(t *testing.T) {
 		_, err := getIndexesFromIds([]int{9}, path)
 		assert.ErrorIs(err, terrors.ErrNotFound)
-		assert.ErrorContains(err, "ids not found")
+		assert.ErrorContains(err, "task ids '9'")
 		assert.ErrorContains(err, "9")
 	})
 	t.Run("support duplicates", func(t *testing.T) {
@@ -439,7 +439,7 @@ func TestIncrementProgressCount(t *testing.T) {
 		err := IncrementProgressCount(1, path, 2)
 		require.Error(t, err)
 		assert.ErrorIs(err, terrors.ErrValue)
-		assert.ErrorContains(err, "task '1' does not have a progress")
+		assert.ErrorContains(err, "task with id '1' has no progress")
 	})
 	t.Run("positive", func(t *testing.T) {
 		task := Lists[path].Tasks[0]

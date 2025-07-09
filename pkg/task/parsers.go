@@ -67,12 +67,12 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 		timeStr = absDt[ndx+1:]
 		absDt = absDt[:ndx]
 		if len(timeStr) == 0 {
-			return nil, fmt.Errorf("%w: invalid use of T", terrors.ErrParse)
+			return nil, fmt.Errorf("%w: invalid use of 'T'", terrors.ErrParse)
 		}
 		parts := strings.Split(timeStr, "-")
 		n := len(parts)
 		if n == 0 || n > 3 {
-			return nil, fmt.Errorf("%w: invalid use T: either no string afterwards or too many dashes", terrors.ErrParse)
+			return nil, fmt.Errorf("%w: invalid use 'T': either no string afterwards or too many dashes", terrors.ErrParse)
 		}
 		vals := make([]int, n)
 		for ndx := range parts {
@@ -81,7 +81,7 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 				return nil, fmt.Errorf("%w: %w: invalid hour, minute or second: %w", terrors.ErrParse, terrors.ErrValue, err)
 			}
 			if val >= 60 {
-				return nil, fmt.Errorf("%w: %w: invalid hour, minute or second value: %d", terrors.ErrParse, terrors.ErrValue, val)
+				return nil, fmt.Errorf("%w: %w: invalid hour, minute or second value: '%d'", terrors.ErrParse, terrors.ErrValue, val)
 			}
 			vals[ndx] = val
 			parts[ndx] = fmt.Sprintf("%02s", parts[ndx])
@@ -89,7 +89,7 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 		switch n {
 		case 3:
 			if vals[0] >= 24 {
-				return nil, fmt.Errorf("%w: %w: invalid hour value: %d", terrors.ErrParse, terrors.ErrValue, vals[0])
+				return nil, fmt.Errorf("%w: %w: invalid hour value: '%d'", terrors.ErrParse, terrors.ErrValue, vals[0])
 			}
 			timeStr = fmt.Sprintf("%s-%s-%s", parts[0], parts[1], parts[2])
 		case 2:
@@ -121,14 +121,14 @@ func parseAbsoluteDatetime(absDt string) (*time.Time, error) {
 			val, err := strconv.Atoi(parts[ndx])
 			if err == nil {
 				if val >= 3000 {
-					return nil, fmt.Errorf("%w: %w: invalid year, month or day value: %d",
+					return nil, fmt.Errorf("%w: %w: invalid year, month or day value: '%d'",
 						terrors.ErrParse, terrors.ErrValue, val)
 				}
 				vals[ndx] = val
 			} else {
 				t, err := time.ParseInLocation("Jan", parts[ndx], time.Local)
 				if err != nil {
-					return nil, fmt.Errorf("%w: %w: invalid date value which is neither 'Jan' nor a number: %s",
+					return nil, fmt.Errorf("%w: %w: invalid date value which is neither 'Jan' nor a number: '%s'",
 						terrors.ErrParse, terrors.ErrValue, parts[ndx])
 				}
 				vals[ndx] = math.MaxInt
@@ -259,13 +259,13 @@ func parseDuration(dur string) (*time.Duration, error) {
 		case 's':
 			multiplier = time.Second
 		default:
-			return nil, fmt.Errorf("%w: unexpected time unit %q", terrors.ErrParse, char)
+			return nil, fmt.Errorf("%w: unexpected time unit '%q'", terrors.ErrParse, char)
 		}
 		duration += float64(multiplier) * num
 		numStr = ""
 	}
 	if numStr != "" {
-		return nil, fmt.Errorf("%w: trailing numbers without a time unit %q", terrors.ErrParse, numStr)
+		return nil, fmt.Errorf("%w: trailing numbers without a time unit '%q'", terrors.ErrParse, numStr)
 	}
 	return utils.MkPtr(time.Duration(sign) * time.Duration(duration)), nil
 }
@@ -365,7 +365,7 @@ func getTemporalFallback(field, dt string) (string, string, error) {
 	}
 	if ndx := strings.IndexRune(dt, ':'); ndx != -1 {
 		if ndx == 0 || ndx == len(dt)-1 {
-			return "", "", fmt.Errorf("%w: invalid use of var:dt", terrors.ErrParse)
+			return "", "", fmt.Errorf("%w: invalid use of 'var:dt': '%s'", terrors.ErrParse, dt)
 		}
 		fallback = dt[:ndx]
 		_, ok := temporalFallback[fallback]
@@ -392,7 +392,7 @@ func parseTmpRelativeDatetime(field, dt string) (*temporalNode, error) {
 func parseProgress(token string) (*Progress, error) {
 	parts := strings.Split(token, "/")
 	if len(parts) < 3 {
-		return nil, fmt.Errorf("%w: $progress: number of '/' is less than 2: required fields not provided: %s", terrors.ErrParse, token)
+		return nil, fmt.Errorf("%w: $progress: number of '/' is less than 2: required fields not provided in '%s'", terrors.ErrParse, token)
 	}
 	unit, count, doneCount := parts[0], parts[1], parts[2]
 	var category string
@@ -408,14 +408,14 @@ func parseProgress(token string) (*Progress, error) {
 		return nil, fmt.Errorf("%w: %w: $progress: doneCount to int: %w", terrors.ErrParse, terrors.ErrValue, err)
 	}
 	if doneCountInt < 1 {
-		return nil, fmt.Errorf("%w: %w: $progress: doneCount minimum is 1: %d", terrors.ErrParse, terrors.ErrValue, doneCountInt)
+		return nil, fmt.Errorf("%w: %w: $progress: doneCount minimum is 1: '%d'", terrors.ErrParse, terrors.ErrValue, doneCountInt)
 	}
 	countInt, err := strconv.Atoi(count)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w: $progress: count to int: %w", terrors.ErrParse, terrors.ErrValue, err)
+		return nil, fmt.Errorf("%w: %w: $progress: count to int: '%w'", terrors.ErrParse, terrors.ErrValue, err)
 	}
 	if countInt < 0 {
-		return nil, fmt.Errorf("%w: %w: $progress: count minimum is 0: %d", terrors.ErrParse, terrors.ErrValue, countInt)
+		return nil, fmt.Errorf("%w: %w: $progress: count minimum is 0: '%d'", terrors.ErrParse, terrors.ErrValue, countInt)
 	}
 	countInt = min(countInt, doneCountInt)
 	return &Progress{
@@ -429,13 +429,13 @@ func unparseProgress(progress Progress) (string, error) {
 		return "", fmt.Errorf("%w: progress unit cannot be empty", terrors.ErrValue)
 	}
 	if progress.DoneCount <= 0 {
-		return "", fmt.Errorf("%w: progress doneCount cannot be less than 1: %d", terrors.ErrValue, progress.DoneCount)
+		return "", fmt.Errorf("%w: progress doneCount '%d' cannot be less than 1", terrors.ErrValue, progress.DoneCount)
 	}
 	if progress.Count < 0 {
-		return "", fmt.Errorf("%w: progress count cannot be less than 0: %d", terrors.ErrValue, progress.Count)
+		return "", fmt.Errorf("%w: progress count '%d' cannot be less than 0", terrors.ErrValue, progress.Count)
 	}
 	if progress.Count > progress.DoneCount {
-		return "", fmt.Errorf("%w: progress count cannot be greater than doneCount: %d > %d", terrors.ErrValue, progress.Count, progress.DoneCount)
+		return "", fmt.Errorf("%w: progress count '%d' cannot be greater than doneCount '%d'", terrors.ErrValue, progress.Count, progress.DoneCount)
 	}
 	base := fmt.Sprintf("%s/%d/%d", progress.Unit, progress.Count, progress.DoneCount)
 	if progress.Category != "" {
@@ -869,7 +869,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		}
 	}
 	for _, err := range warns {
-		logging.Logger.Warnf("task=\"%s\" warn=\"%s\"", task.String(), err)
+		logging.Logger.Debugf("task=\"%s\" warn=\"%s\"", task.String(), err)
 	}
 	return task, nil
 }

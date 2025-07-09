@@ -39,19 +39,19 @@ func parseFilepath(path string) (string, error) {
 		return filepath.Join(todosDir(), "todo"), nil
 	}
 	if path[len(path)-1] == '/' {
-		return "", fmt.Errorf("%w: path cannot end in a /", terrors.ErrParse)
+		return "", fmt.Errorf("%w: path cannot end in a / '%s'", terrors.ErrParse, path)
 	}
 	if filepath.IsAbs(path) {
 		if strings.HasPrefix(path, filepath.Join(todosDir())+"/") {
 			return path, nil
 		} else {
-			return "", fmt.Errorf("%w: filepath not under /todos %s", terrors.ErrParse, path)
+			return "", fmt.Errorf("%w: filepath not under /todos '%s'", terrors.ErrParse, path)
 		}
 	}
 	if tmpPath := filepath.Join(todosDir(), path); filepath.IsAbs(tmpPath) {
 		return tmpPath, nil
 	}
-	return "", fmt.Errorf("%w: failed to parse filepath %s", terrors.ErrParse, path)
+	return "", fmt.Errorf("%w: filepath '%s'", terrors.ErrParse, path)
 }
 
 func parseDirpath(path string) (string, error) {
@@ -62,13 +62,13 @@ func parseDirpath(path string) (string, error) {
 		if strings.HasPrefix(path, filepath.Join(todosDir())) {
 			return path, nil
 		} else {
-			return "", fmt.Errorf("%w: dirpath not under /todos %s", terrors.ErrParse, path)
+			return "", fmt.Errorf("%w: dirpath not under /todos '%s'", terrors.ErrParse, path)
 		}
 	}
 	if tmpPath := filepath.Join(todosDir(), path); filepath.IsAbs(tmpPath) {
 		return tmpPath, nil
 	}
-	return "", fmt.Errorf("%w: failed to parse filepath %s", terrors.ErrParse, path)
+	return "", fmt.Errorf("%w: dirpath '%s'", terrors.ErrParse, path)
 }
 
 func mkDirs(path string) error {
@@ -141,7 +141,7 @@ func CheckFileExistence(path string) error {
 	if utils.FileExists(path) {
 		return nil
 	}
-	return fmt.Errorf("%w: %s", os.ErrNotExist, path)
+	return fmt.Errorf("%w: '%s'", os.ErrNotExist, path)
 }
 
 func locateFiles() error {
@@ -194,7 +194,7 @@ func resolveSymlinkPath(path string) (string, error) {
 	if err != nil && os.IsNotExist(err) {
 		return path, nil
 	} else if err != nil {
-		return "", fmt.Errorf("%w: could not lstat %q", err, path)
+		return "", fmt.Errorf("%w: could not lstat '%q'", err, path)
 	}
 	if info.Mode().IsRegular() {
 		return path, nil
@@ -202,18 +202,18 @@ func resolveSymlinkPath(path string) (string, error) {
 	if info.Mode()&os.ModeSymlink != 0 {
 		targetPath, err := filepath.EvalSymlinks(path)
 		if err != nil {
-			return "", fmt.Errorf("%w: could not resolve symlink %q", err, path)
+			return "", fmt.Errorf("%w: could not resolve symlink '%q'", err, path)
 		}
 		targetInfo, err := os.Stat(targetPath)
 		if err != nil {
-			return "", fmt.Errorf("%w: could not stat target %q", err, targetPath)
+			return "", fmt.Errorf("%w: could not stat target '%q'", err, targetPath)
 		}
 		if targetInfo.Mode().IsRegular() {
 			return targetPath, nil
 		}
-		return "", fmt.Errorf("symlink %q points to non-regular file %q", path, targetPath)
+		return "", fmt.Errorf("symlink '%q' points to non-regular file '%q'", path, targetPath)
 	}
-	return "", fmt.Errorf("%q is neither a regular file nor a symlink to one", path)
+	return "", fmt.Errorf("'%q' is neither a regular file nor a symlink to one", path)
 }
 
 func appendToDoneFile(text, path string) error {
@@ -257,7 +257,7 @@ func appendToDoneFile(text, path string) error {
 func removeFromDoneFile(ids []int, path string) ([]string, error) {
 	var tasks []string
 	if len(ids) < 1 {
-		return tasks, fmt.Errorf("%w: ids is empty", terrors.ErrValue)
+		return tasks, fmt.Errorf("%w: empty array ids", terrors.ErrValue)
 	}
 	path, err := parseFilepath(path)
 	if err != nil {
@@ -363,7 +363,7 @@ func StoreFile(path string) error {
 	}
 	fileTasks, ok := Lists.Tasks(path)
 	if !ok {
-		return fmt.Errorf("%w: %s", terrors.ErrListNotInMemory, path)
+		return fmt.Errorf("%w: '%s'", terrors.ErrListNotInMemory, path)
 	}
 	var lines []string
 	for _, task := range fileTasks {

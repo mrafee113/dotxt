@@ -100,7 +100,7 @@ var delCmd = &cobra.Command{
 		for _, arg := range args {
 			num, err := strconv.Atoi(arg)
 			if err != nil {
-				return fmt.Errorf("%w: failed to parse task id <%s>: %w", terrors.ErrParse, arg, err)
+				return terrors.ErrorArgParse("id", err)
 			}
 			ids = append(ids, num)
 		}
@@ -127,14 +127,14 @@ var appendCmd = &cobra.Command{
 	Aliases: []string{"append"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return terrors.NewArgNotProvidedError("id")
+			return terrors.ErrorArgNotProvided("id")
 		}
 		if len(args) < 2 {
 			return terrors.ErrEmptyText
 		}
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
-			return fmt.Errorf("%w: failed to parse id '%s': %w", terrors.ErrParse, args[0], err)
+			return terrors.ErrorArgParse("id", err)
 		}
 		text := strings.Join(args[1:], " ")
 		if strings.TrimSpace(text) == "" {
@@ -163,14 +163,14 @@ var prependCmd = &cobra.Command{
 	Aliases: []string{"prep"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return terrors.NewArgNotProvidedError("id")
+			return terrors.ErrorArgNotProvided("id")
 		}
 		if len(args) < 2 {
 			return terrors.ErrEmptyText
 		}
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
-			return fmt.Errorf("%w: failed to parse id '%s': %w", terrors.ErrParse, args[0], err)
+			return terrors.ErrorArgParse("id", err)
 		}
 		text := strings.Join(args[1:], " ")
 		if strings.TrimSpace(text) == "" {
@@ -199,7 +199,7 @@ var replaceCmd = &cobra.Command{
 	Aliases: []string{"update"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return terrors.NewArgNotProvidedError("id")
+			return terrors.ErrorArgNotProvided("id")
 		}
 		if len(args) < 2 {
 			return terrors.ErrEmptyText
@@ -252,13 +252,13 @@ var deprioritizeCmd = &cobra.Command{
 	Aliases: []string{"dp"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return terrors.NewArgNotProvidedError("id")
+			return terrors.ErrorArgNotProvided("id")
 		}
 		var ids []int
 		for _, arg := range args {
 			num, err := strconv.Atoi(arg)
 			if err != nil {
-				return fmt.Errorf("%w: failed to parse task id <%s>: %w", terrors.ErrParse, arg, err)
+				return terrors.ErrorArgParse("id", err)
 			}
 			ids = append(ids, num)
 		}
@@ -290,13 +290,13 @@ var prioritizeCmd = &cobra.Command{
 	Aliases: []string{"p"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return terrors.NewArgNotProvidedError("id")
+			return terrors.ErrorArgNotProvided("id")
 		}
 		if len(args) < 2 {
-			return terrors.NewArgNotProvidedError("priority")
+			return terrors.ErrorArgNotProvided("priority")
 		}
 		if len(args) > 2 || strings.IndexFunc(args[1], unicode.IsSpace) != -1 {
-			return fmt.Errorf("%w: priority cannot contain spaces", terrors.ErrValue)
+			return fmt.Errorf("%w: %w: priority cannot contain spaces: '%s'", terrors.ErrArg, terrors.ErrValue, strings.Join(args[1:], " "))
 		}
 
 		id, err := strconv.Atoi(args[0])
@@ -325,13 +325,13 @@ var doneCmd = &cobra.Command{
 	Aliases: []string{"do"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return terrors.NewArgNotProvidedError("id")
+			return terrors.ErrorArgNotProvided("id")
 		}
 		var ids []int
 		for _, arg := range args {
 			num, err := strconv.Atoi(arg)
 			if err != nil {
-				return fmt.Errorf("%w: failed to parse task id <%s>: %w", terrors.ErrParse, arg, err)
+				return terrors.ErrorArgParse("id", err)
 			}
 			ids = append(ids, num)
 		}
@@ -362,7 +362,7 @@ var revertCmd = &cobra.Command{
 		for _, arg := range args {
 			num, err := strconv.Atoi(arg)
 			if err != nil {
-				return fmt.Errorf("%w: failed to parse task id <%s>: %w", terrors.ErrParse, arg, err)
+				return terrors.ErrorArgParse("id", err)
 			}
 			ids = append(ids, num)
 		}
@@ -389,13 +389,13 @@ var moveCmd = &cobra.Command{
 	Aliases: []string{"mv"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return terrors.NewArgNotProvidedError("from")
+			return terrors.ErrorArgNotProvided("from")
 		}
 		if len(args) < 2 {
-			return terrors.NewArgNotProvidedError("id")
+			return terrors.ErrorArgNotProvided("id")
 		}
 		if len(args) < 3 {
-			return terrors.NewArgNotProvidedError("to")
+			return terrors.ErrorArgNotProvided("to")
 		}
 
 		from, idString, to := args[0], args[1], args[2]

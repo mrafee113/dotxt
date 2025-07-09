@@ -238,7 +238,7 @@ func (t *Temporal) getField(key string) (*time.Time, error) {
 		return t.Deadline, nil
 	}
 	if key == "r" {
-		return nil, fmt.Errorf("key r not supported since it's a slice of *time.Time")
+		return nil, fmt.Errorf("key 'r' not supported since it's a slice of *time.Time")
 	}
 	return nil, fmt.Errorf("%w: key '%s' not found", terrors.ErrNotFound, key)
 }
@@ -255,7 +255,7 @@ func (t *Temporal) setField(key string, val *time.Time) error {
 		t.Deadline = val
 	}
 	if key == "r" {
-		return fmt.Errorf("key r not supported since it's a slice of *time.Time")
+		return fmt.Errorf("key 'r' not supported since it's a slice of *time.Time")
 	}
 	return fmt.Errorf("%w: key '%s' not found", terrors.ErrNotFound, key)
 }

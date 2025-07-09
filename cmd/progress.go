@@ -59,7 +59,7 @@ var setCoundCmd = &cobra.Command{
 			return terrors.ErrNoArgsProvided
 		}
 		if len(args) < 2 {
-			return terrors.NewArgNotProvidedError("val")
+			return terrors.ErrorArgNotProvided("val")
 		}
 		id, err := strconv.Atoi(args[0])
 		if err != nil {

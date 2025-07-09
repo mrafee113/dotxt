@@ -700,21 +700,21 @@ func TestUnparseProgress(t *testing.T) {
 		_, err := unparseProgress(Progress{Unit: "unit"})
 		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrValue)
-			assert.ErrorContains(err, "doneCount cannot be less than 1")
+			assert.ErrorContains(err, "doneCount '0' cannot be less than 1")
 		}
 	})
 	t.Run("invalid: minimum count", func(t *testing.T) {
 		_, err := unparseProgress(Progress{Unit: "unit", Count: -1, DoneCount: 100})
 		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrValue)
-			assert.ErrorContains(err, "count cannot be less than 0")
+			assert.ErrorContains(err, "count '-1' cannot be less than 0")
 		}
 	})
 	t.Run("invalid: maximum count", func(t *testing.T) {
 		_, err := unparseProgress(Progress{Unit: "unit", Count: 200, DoneCount: 100})
 		if assert.Error(err, "err") {
 			assert.ErrorIs(err, terrors.ErrValue)
-			assert.ErrorContains(err, "count cannot be greater than doneCount")
+			assert.ErrorContains(err, "count '200' cannot be greater than doneCount '100'")
 		}
 	})
 }
@@ -831,13 +831,13 @@ func TestParseAbsoluteDatetime(t *testing.T) {
 		_, err := parseAbsoluteDatetime("2025-05-05T")
 		require.Error(t, err)
 		assert.ErrorIs(err, terrors.ErrParse)
-		assert.ErrorContains(err, "invalid use of T")
+		assert.ErrorContains(err, "invalid use of 'T'")
 	})
 	t.Run("invalid time: too many dashes after T", func(t *testing.T) {
 		_, err := parseAbsoluteDatetime("2025-05-05T05-05-05-40")
 		require.Error(t, err)
 		assert.ErrorIs(err, terrors.ErrParse)
-		assert.ErrorContains(err, "invalid use T: either no string afterwards or too many dashes")
+		assert.ErrorContains(err, "invalid use 'T': either no string afterwards or too many dashes")
 	})
 	t.Run("invalid time: non-integer value for time", func(t *testing.T) {
 		for _, dt := range []string{"Ta-1-2", "T1-a-2", "T1-2-a"} {

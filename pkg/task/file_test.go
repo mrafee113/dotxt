@@ -271,7 +271,7 @@ func TestRemoveFromDoneFile(t *testing.T) {
 		_, err := removeFromDoneFile([]int{}, "file")
 		require.NotNil(t, err)
 		assert.ErrorIs(err, terrors.ErrValue)
-		assert.ErrorContains(err, "ids is empty")
+		assert.ErrorContains(err, "empty array ids")
 	})
 	t.Run("non-existing id", func(t *testing.T) {
 		_, err := removeFromDoneFile([]int{5}, name)

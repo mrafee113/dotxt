@@ -64,7 +64,7 @@ func InitViper(arg string) error {
 
 	err = viper.ReadConfig(bytes.NewReader([]byte(DefaultConfig)))
 	if err != nil {
-		return fmt.Errorf("%w: failed parsing default configurations: %w", terrors.ErrParse, err)
+		return fmt.Errorf("%w: default configurations: %w", terrors.ErrParse, err)
 	}
 	err = viper.ReadInConfig()
 	if err != nil {

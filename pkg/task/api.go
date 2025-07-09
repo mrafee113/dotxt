@@ -116,7 +116,7 @@ func getTaskIndexFromId(id int, path string) (int, error) {
 		}
 	}
 	if taskNdx == -1 {
-		return taskNdx, fmt.Errorf("%w: task corresponding to id %d not found", terrors.ErrNotFound, id)
+		return taskNdx, fmt.Errorf("%w: task id '%d'", terrors.ErrNotFound, id)
 	}
 	return taskNdx, nil
 }
@@ -297,7 +297,7 @@ func getIndexesFromIds(ids []int, path string) ([]int, error) {
 				notFound = append(notFound, fmt.Sprintf("%d", ndx))
 			}
 		}
-		return []int{}, fmt.Errorf("%w: ids not found: %s", terrors.ErrNotFound, strings.Join(notFound, ", "))
+		return []int{}, fmt.Errorf("%w: task ids '%s'", terrors.ErrNotFound, strings.Join(notFound, ", "))
 	}
 	return indexes, nil
 }
@@ -410,7 +410,7 @@ func IncrementProgressCount(id int, path string, value int) error {
 		return err
 	}
 	if task.Prog == nil {
-		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+		return fmt.Errorf("%w: task with id '%d' has no progress", terrors.ErrValue, id)
 	}
 	rVal := task.Prog.Count + value
 	task.Prog.Count = max(min(rVal, task.Prog.DoneCount), 0)
@@ -421,7 +421,7 @@ func IncrementProgressCount(id int, path string, value int) error {
 	progText = fmt.Sprintf("$p=%s", progText)
 	pToken, _ := task.Tokens.Find(TkByType(TokenProgress))
 	if pToken == nil {
-		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+		return fmt.Errorf("%w: task with id '%d' has no progress", terrors.ErrValue, id)
 	}
 	pToken.raw = progText
 	return nil
@@ -437,7 +437,7 @@ func SetProgressCount(id int, path string, value int) error {
 		return err
 	}
 	if task.Prog == nil {
-		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+		return fmt.Errorf("%w: task with id '%d' has no progress", terrors.ErrValue, id)
 	}
 	task.Prog.Count = max(min(value, task.Prog.DoneCount), 0)
 	progText, err := unparseProgress(*task.Prog)
@@ -447,7 +447,7 @@ func SetProgressCount(id int, path string, value int) error {
 	progText = fmt.Sprintf("$p=%s", progText)
 	pToken, _ := task.Tokens.Find(TkByType(TokenProgress))
 	if pToken == nil {
-		return fmt.Errorf("%w: task '%d' does not have a progress associated with it", terrors.ErrValue, id)
+		return fmt.Errorf("%w: task with id '%d' has no progress", terrors.ErrValue, id)
 	}
 	pToken.raw = progText
 	return nil
@@ -500,7 +500,7 @@ func ToggleCollapsed(id int, path string) error {
 	}
 	tk, _ := task.Tokens.Find(TkByTypeKey(TokenID, "id"))
 	if tk == nil {
-		return fmt.Errorf("%w: task doesn't have token $id", terrors.ErrNotFound)
+		return fmt.Errorf("%w: task with id '%d' has no $id", terrors.ErrNotFound, id)
 	}
 	if strings.HasPrefix(tk.raw, "$-id") {
 		tk.raw = strings.Replace(tk.raw, "$-id", "$id", 1)
