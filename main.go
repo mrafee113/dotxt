@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func main() {
+func checkQuietFlag() {
 	for ndx := 1; ndx < len(os.Args); ndx++ {
 		arg := os.Args[ndx]
 		if arg == "-q" || arg == "--quiet" || strings.HasPrefix(arg, "--quiet=") {
@@ -31,6 +31,10 @@ func main() {
 			break
 		}
 	}
+}
+
+func main() {
+	checkQuietFlag()
 	defer func() {
 		if err := logging.Close(); err != nil {
 			os.Exit(2)
