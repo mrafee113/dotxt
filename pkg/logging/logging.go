@@ -32,9 +32,13 @@ func init() {
 }
 
 func InitConsole() {
+	var out io.Writer = os.Stdout
+	if config.Quiet {
+		out = io.Discard
+	}
 	consoleCore = utils.MkPtr(zapcore.NewCore(
 		consoleEnc,
-		zapcore.Lock(os.Stdout),
+		zapcore.Lock(zapcore.AddSync(out)),
 		zapcore.Level(ConsoleLevel),
 	))
 }
@@ -54,12 +58,11 @@ func InitFile() error {
 		return err
 	}
 	fileHandle = f
-	fileSync := zapcore.AddSync(io.Writer(f))
 
 	FileLevel = viper.GetInt("logging.file-level")
 	fileCore = utils.MkPtr(zapcore.NewCore(
 		fileEnc,
-		fileSync,
+		zapcore.AddSync(io.Writer(f)),
 		zapcore.Level(FileLevel),
 	))
 	return nil

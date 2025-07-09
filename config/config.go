@@ -20,6 +20,7 @@ var (
 	DefaultPath = "~/.config/dotxt"
 	configPath  string
 	Color       bool
+	Quiet       bool
 )
 
 func ConfigPath() string {

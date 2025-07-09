@@ -4,6 +4,7 @@ import (
 	"dotxt/config"
 	"dotxt/pkg/logging"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -62,4 +63,8 @@ Global Flags:
 
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+func Silence() {
+	rootCmd.SetOut(io.Discard)
 }
