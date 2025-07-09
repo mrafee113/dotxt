@@ -8,8 +8,7 @@ import (
 
 func main() {
 	defer func() {
-		err := logging.Close()
-		if err != nil {
+		if err := logging.Close(); err != nil {
 			os.Exit(2)
 		}
 	}()

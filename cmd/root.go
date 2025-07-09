@@ -12,9 +12,10 @@ import (
 const version = "0.0.0"
 
 var rootCmd = &cobra.Command{
-	Use:          "dotxt",
-	Short:        fmt.Sprintf("dotxt %s: a text based todo list inspired by todotxt", version),
-	SilenceUsage: true,
+	Use:           "dotxt",
+	Short:         fmt.Sprintf("dotxt %s: a text based todo list inspired by todotxt", version),
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 func init() {
@@ -50,7 +51,9 @@ Global Flags:
 		cobra.CheckErr(err)
 		cobra.CheckErr(config.InitViper(arg))
 		logging.ConsoleLevel = min(logging.ConsoleLevel, viper.GetInt("logging.console-level"))
-		cobra.CheckErr(logging.Initialize())
+
+		cobra.CheckErr(logging.InitFile())
+		logging.Initialize()
 	})
 	rootCmd.PersistentFlags().StringP("config", "c", "", "yaml config filepath")
 	rootCmd.PersistentFlags().IntVar(&logging.ConsoleLevel, "clvl", 5, "console log -1 <= level <= 5")
