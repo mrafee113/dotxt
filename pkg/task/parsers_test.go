@@ -459,7 +459,7 @@ func TestParseTask(t *testing.T) {
 	})
 
 	t.Run("validate quoted texts", func(t *testing.T) {
-		task, _ := ParseTask(nil, "t1 't2 \\' t2' \"t3 \\\" t3\" `t4 \\` t4`")
+		task, _ := ParseTask(nil, "t1 't2 \\' t2' \"t3 \\\" t3\" `t4 \\` t4` \\'\\'\\'")
 		tk, ndx := task.Tokens.Find(TkByTypeKey(TokenText, ""))
 		if assert.NotNil(tk) {
 			assert.Equal("t1", *tk.Value.(*string))
@@ -480,6 +480,9 @@ func TestParseTask(t *testing.T) {
 			assert.Equal("`t4 \\` t4`", *tk.Value.(*string))
 			assert.Equal("`t4 \\` t4`", tk.raw)
 		}
+		tk = task.Tokens[len(task.Tokens)-2]
+		assert.Empty(tk.Key)
+		assert.Equal(`\'\'\'`, *tk.Value.(*string))
 	})
 }
 
@@ -1052,6 +1055,13 @@ func TestTokenizeLine(t *testing.T) {
 		v = tokenizeLine("t1 \"t2 \\\" t3\"")
 		assert.Equal("t1", v[0])
 		assert.Equal("\"t2 \\\" t3\"", v[1])
+		v = tokenizeLine("t1 \\' t2 \\\" t3 \\`")
+		assert.Equal("t1", v[0])
+		assert.Equal("\\'", v[1])
+		assert.Equal("t2", v[2])
+		assert.Equal("\\\"", v[3])
+		assert.Equal("t3", v[4])
+		assert.Equal("\\`", v[5])
 	})
 	t.Run("unterminated quote rolls back", func(t *testing.T) {
 		v := tokenizeLine("t1 \" t2 t3")

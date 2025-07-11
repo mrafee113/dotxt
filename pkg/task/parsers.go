@@ -568,17 +568,24 @@ func tokenizeLine(line string) []string {
 			cur.Reset()
 		}
 	}
+	quotes := []rune{'"', '\'', '`'}
+	isQuote := func(q rune) bool {
+		return slices.Contains(quotes, q)
+	}
 
 	for i := 0; i < n; {
 		r := rs[i]
 
-		if r == '\\' && i+1 < n && rs[i+1] == ' ' {
-			cur.WriteRune(' ')
+		if r == '\\' && i+1 < n && (rs[i+1] == ' ' || isQuote(rune(rs[i+1]))) {
+			if isQuote(rune(rs[i+1])) {
+				cur.WriteRune('\\')
+			}
+			cur.WriteRune(rs[i+1])
 			i += 2
 			continue
 		}
 
-		if r == '"' || r == '\'' || r == '`' {
+		if isQuote(r) {
 			snapTokens := slices.Clone(tokens)
 			snapStr := cur.String()
 			snapI := i
