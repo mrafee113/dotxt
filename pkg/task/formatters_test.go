@@ -341,6 +341,35 @@ func TestRender(t *testing.T) {
 		assert.Equal("print.color-date-r", rtask.tokens[11].color)
 		assert.Equal("$every=1m", rtask.tokens[12].raw)
 		assert.Equal("print.color-every", rtask.tokens[12].color)
+
+		t.Run("quotes", func(t *testing.T) {
+			line := `"t1 t1" "t2 \"t2\" t2" `
+			line += `'t3 t3' 't4 \'t4\' t4' `
+			line += "`t5 t5` `t6 \\`t6\\` t6` "
+			line += `"t7 \"t7 \\\'t7 't7" `
+			line += "\"t8 \\\"t8 \\\\\\'t8 't8 \\\\\\`t8 `t8\" "
+			line += "\"t9 \\\"t9 \\\\\\'t9 't9 \\\\\\`t9 `t9 ```\""
+			task, _ := ParseTask(utils.MkPtr(2), line)
+			rtask := task.Render(&l)
+			assert.Equal(`"t1 t1"`, rtask.tokens[0].raw)
+			assert.Equal("print.quotes.double", rtask.tokens[0].color)
+			assert.Equal(`'t2 "t2" t2'`, rtask.tokens[1].raw)
+			assert.Equal("print.quotes.double", rtask.tokens[1].color)
+			assert.Equal(`'t3 t3'`, rtask.tokens[2].raw)
+			assert.Equal("print.quotes.single", rtask.tokens[2].color)
+			assert.Equal("`t4 't4' t4`", rtask.tokens[3].raw)
+			assert.Equal("print.quotes.single", rtask.tokens[3].color)
+			assert.Equal("`t5 t5`", rtask.tokens[4].raw)
+			assert.Equal("print.quotes.backticks", rtask.tokens[4].color)
+			assert.Equal("\"t6 `t6` t6\"", rtask.tokens[5].raw)
+			assert.Equal("print.quotes.backticks", rtask.tokens[5].color)
+			assert.Equal("`t7 \"t7 \\\\\\'t7 't7`", rtask.tokens[6].raw)
+			assert.Equal("print.quotes.double", rtask.tokens[6].color)
+			assert.Equal("```t8 \"t8 \\\\\\'t8 't8 \\\\\\`t8 `t8```", rtask.tokens[7].raw)
+			assert.Equal("print.quotes.double", rtask.tokens[7].color)
+			assert.Equal("```t9 \"t9 \\\\\\'t9 't9 \\\\\\`t9 `t9 \\`\\`\\````", rtask.tokens[8].raw)
+			assert.Equal("print.quotes.double", rtask.tokens[8].color)
+		})
 	})
 	t.Run("after due", func(t *testing.T) {
 		l := rList{path: "/tmp/file", idList: make(map[string]bool)}

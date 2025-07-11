@@ -156,6 +156,17 @@ func (tks *Tokens) Find(cond TkCond) (*Token, int) {
 	return nil, -1
 }
 
+func (tks *Tokens) FindFrom(cond TkCond, index int) (*Token, int) {
+	index = min(max(index, 0), len(*tks))
+	for ndx := index; ndx < len(*tks); ndx++ {
+		tk := (*tks)[ndx]
+		if cond(tk) {
+			return tk, ndx
+		}
+	}
+	return nil, -1
+}
+
 func (tks *Tokens) Filter(cond TkCond) *Tokens {
 	var out Tokens
 	for _, tk := range *tks {

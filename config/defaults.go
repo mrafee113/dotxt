@@ -9,10 +9,12 @@ colors:
   black: &black "#000000"
   red: &red "#B61C1C"
   light-orange: &light-orange "#e88761"
+  warm-orange: &warm-orange "#FD971F"
   green: &green "#21FC00"
   blue: &blue "#4895bf"
   purple: &purple "#9e64ea"
   cyan: &cyan "#05FCC6"
+  cool-cyan: &cool-cyan "#66D9EF"
   light-jade: &light-jade "#6aa88f"
   light-grey: &light-grey "#919191"
   medium-grey: &medium-grey "#696969"
@@ -21,6 +23,7 @@ colors:
   light-red: &light-red "#FC7876"
   darker-light-red: &darker-light-red "#fb4141"
   light-green: &light-green "#78FC76"
+  bright-green: &bright-green "#A6E22E"
   yellow: &yellow "#FCFC64"
   light-yellow: &light-yellow "#f4f07f"
   pale-yellow: &pale-yellow "#f9f7b9"
@@ -56,6 +59,11 @@ print:
   color-at: *blue
   color-plus: *light-jade
   color-tag: *light-pink
+
+  quotes:
+    double: *bright-green
+    single: *warm-orange
+    backticks: *cool-cyan
 
   ids:
     saturation: 0.35

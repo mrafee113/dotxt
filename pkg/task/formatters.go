@@ -447,9 +447,52 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 		case TokenPriority, TokenProgress:
 			return
 		case TokenText:
-			out.tokens = append(out.tokens, &rToken{
-				token: tk, raw: tk.String(t),
-			})
+			if tk.Key != "quote" {
+				out.tokens = append(out.tokens, &rToken{
+					token: tk, raw: tk.String(t),
+				})
+			} else {
+				val := tk.String(t)
+				quote := val[0]
+				val = val[1 : len(val)-1]
+				var color string
+				switch quote {
+				case '"':
+					color = "print.quotes.double"
+				case '\'':
+					color = "print.quotes.single"
+				case '`':
+					color = "print.quotes.backticks"
+				}
+				quotes := []byte{'"', '\'', '`'}
+				quotes = func() []byte { // rotate such that: index -> 0
+					k := slices.Index(quotes, quote)
+					n := len(quotes)
+					k = (n - (k % n)) % n
+					return append(quotes[n-k:], quotes[:n-k]...)
+				}()
+				var found bool
+				for ndx, q := range quotes {
+					if strings.ContainsRune(val, rune(q)) {
+						if ndx == 0 {
+							val = strings.ReplaceAll(val, "\\"+string(q), string(q))
+						}
+						continue
+					}
+					val = fmt.Sprintf("%c%s%c", q, val, q)
+					found = true
+					break
+				}
+				if !found {
+					val = strings.ReplaceAll(val, "```", "\\`\\`\\`")
+					val = fmt.Sprintf("```%s```", val)
+				}
+				out.tokens = append(out.tokens, &rToken{
+					token: tk, raw: val,
+					color: color,
+				})
+			}
+
 		case TokenID:
 			out.tokens = append(out.tokens, &rToken{
 				token: tk,

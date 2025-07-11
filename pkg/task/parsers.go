@@ -550,8 +550,7 @@ tokenizeLine splits a line into tokens with the following rules:
   - "\ " produces a literal space in the token.
   - Double, single, or back-tick quotes group everything (including spaces) until
     the matching closing quote; inside them only \" (or \' or \`) is special.
-    The opening and closing characters of \" and \' are also kept intact in the token;
-    but the \` are stripped away.
+    The opening and closing characters of \", \', and \` are also kept intact in the token.
   - If a quote never closes, we abandon the quote and treat the rest as plain text.
   - If a \; is provided the token is forced to be split
   - The function replaces any \n with '\ '
@@ -585,20 +584,17 @@ func tokenizeLine(line string) []string {
 			snapI := i
 
 			open := r
-			if open != '`' {
-				cur.WriteRune(open)
-			}
+			cur.WriteRune(open)
 			i++ // consume the opening quote
 			for i < n {
 				if rs[i] == '\\' && i+1 < n && rs[i+1] == open {
+					cur.WriteRune('\\')
 					cur.WriteRune(open)
 					i += 2
 					continue
 				}
 				if rs[i] == open {
-					if open != '`' {
-						cur.WriteRune(open)
-					}
+					cur.WriteRune(open)
 					i++ // consume closing
 					break
 				}
@@ -739,6 +735,13 @@ func parseTokens(line string) ([]*Token, []error) {
 			default:
 				handleTokenText(tokenStr, nil)
 			}
+		case '\'', '"', '`':
+			if len(tokenStr) == 1 || !slices.Contains([]byte{'"', '\'', '`'}, tokenStr[len(tokenStr)-1]) {
+				handleTokenText(tokenStr, nil)
+				continue
+			}
+			var ptr *string = utils.MkPtr(tokenStr)
+			tokens = append(tokens, &Token{Type: TokenText, Key: "quote", raw: *ptr, Value: ptr})
 		default:
 			handleTokenText(tokenStr, nil)
 		}

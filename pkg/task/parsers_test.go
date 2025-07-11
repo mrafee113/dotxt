@@ -70,10 +70,6 @@ func TestParseTask(t *testing.T) {
 		for _, char := range weirdChars {
 			task, err = ParseTask(nil, string(char))
 			if assert.NoError(err, "ParseTask") {
-				if char == '`' {
-					assert.Equalf(task.Norm(), "", "char '`'")
-					continue
-				}
 				assert.Equalf(task.Norm(), string(char), "char '%s'", string(char))
 			}
 		}
@@ -460,6 +456,30 @@ func TestParseTask(t *testing.T) {
 			assert.Equal("$every=-1w", tk.raw)
 		}
 		assert.Nil(task.Time.Every, "Every")
+	})
+
+	t.Run("validate quoted texts", func(t *testing.T) {
+		task, _ := ParseTask(nil, "t1 't2 \\' t2' \"t3 \\\" t3\" `t4 \\` t4`")
+		tk, ndx := task.Tokens.Find(TkByTypeKey(TokenText, ""))
+		if assert.NotNil(tk) {
+			assert.Equal("t1", *tk.Value.(*string))
+			assert.Equal("t1", tk.raw)
+		}
+		tk, ndx = task.Tokens.FindFrom(TkByTypeKey(TokenText, "quote"), ndx+1)
+		if assert.NotNil(tk) {
+			assert.Equal("'t2 \\' t2'", *tk.Value.(*string))
+			assert.Equal("'t2 \\' t2'", tk.raw)
+		}
+		tk, ndx = task.Tokens.FindFrom(TkByTypeKey(TokenText, "quote"), ndx+1)
+		if assert.NotNil(tk) {
+			assert.Equal("\"t3 \\\" t3\"", *tk.Value.(*string))
+			assert.Equal("\"t3 \\\" t3\"", tk.raw)
+		}
+		tk, _ = task.Tokens.FindFrom(TkByTypeKey(TokenText, "quote"), ndx+1)
+		if assert.NotNil(tk) {
+			assert.Equal("`t4 \\` t4`", *tk.Value.(*string))
+			assert.Equal("`t4 \\` t4`", tk.raw)
+		}
 	})
 }
 
@@ -1025,10 +1045,13 @@ func TestTokenizeLine(t *testing.T) {
 		assert.Equal("t1", v[0])
 		assert.Equal("'t2 \"t3\\ t4` t5`'", v[1])
 	})
-	t.Run("escaped quote inside double quotes", func(t *testing.T) {
+	t.Run("escaping quotes results with backslash", func(t *testing.T) {
 		v := tokenizeLine("t1 't2 \\' t3'")
 		assert.Equal("t1", v[0])
-		assert.Equal("'t2 ' t3'", v[1])
+		assert.Equal("'t2 \\' t3'", v[1])
+		v = tokenizeLine("t1 \"t2 \\\" t3\"")
+		assert.Equal("t1", v[0])
+		assert.Equal("\"t2 \\\" t3\"", v[1])
 	})
 	t.Run("unterminated quote rolls back", func(t *testing.T) {
 		v := tokenizeLine("t1 \" t2 t3")
@@ -1046,15 +1069,11 @@ func TestTokenizeLine(t *testing.T) {
 		assert.Equal(".", v[4])
 	})
 	t.Run("quotes are kept in the token", func(t *testing.T) {
-		v := tokenizeLine("t1 \"t2 t2\" 't3 t3'")
+		v := tokenizeLine("t1 \"t2 t2\" 't3 t3' `t4 t4`")
 		assert.Equal("t1", v[0])
 		assert.Equal("\"t2 t2\"", v[1])
 		assert.Equal("'t3 t3'", v[2])
-	})
-	t.Run("backticks aren't kept in the token", func(t *testing.T) {
-		v := tokenizeLine("t1 `t2 t2`")
-		assert.Equal("t1", v[0])
-		assert.Equal("t2 t2", v[1])
+		assert.Equal("`t4 t4`", v[3])
 	})
 }
 
