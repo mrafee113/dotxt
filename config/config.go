@@ -56,7 +56,7 @@ func InitViper(arg string) error {
 		return err
 	}
 	path := ConfigPath()
-	viper.SetConfigType("yaml")
+	viper.SetConfigType("toml")
 	viper.SetConfigName("dotxt")
 	viper.AddConfigPath(path)
 	viper.SetEnvPrefix(EnvPrefix)
@@ -76,7 +76,7 @@ func InitViper(arg string) error {
 	if err != nil {
 		return err
 	}
-	err = viper.SafeWriteConfigAs(filepath.Join(path, "dotxt.yaml"))
+	err = viper.SafeWriteConfigAs(filepath.Join(path, "dotxt.toml"))
 	if _, ok := err.(viper.ConfigFileAlreadyExistsError); ok {
 		return nil
 	}

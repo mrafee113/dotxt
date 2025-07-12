@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func init() {
@@ -21,8 +20,14 @@ var printCmd = &cobra.Command{
 	Long: `print <todolist=todo>...
   print tasks from lists`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		maxlen := viper.GetInt("maxlen")
-		minlen := viper.GetInt("minlen")
+		maxlen, err := cmd.Flags().GetInt("maxlen")
+		if err != nil {
+			return err
+		}
+		minlen, err := cmd.Flags().GetInt("minlen")
+		if err != nil {
+			return err
+		}
 
 		all, err := cmd.Flags().GetBool("all")
 		if err != nil {
@@ -55,9 +60,7 @@ var printCmd = &cobra.Command{
 func setPrintCmdFlags() {
 	printCmd.Flags().Bool("all", false, "print all lists")
 	printCmd.Flags().Int("maxlen", 80, "maximum length")
-	viper.BindPFlag("maxlen", printCmd.Flags().Lookup("maxlen"))
 	printCmd.Flags().Int("minlen", 80, "maximum length")
-	viper.BindPFlag("minlen", printCmd.Flags().Lookup("minlen"))
 }
 
 var toggleCollapseCmd = &cobra.Command{

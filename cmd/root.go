@@ -5,6 +5,7 @@ import (
 	"dotxt/pkg/logging"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -53,7 +54,8 @@ Global Flags:
 		cobra.CheckErr(config.InitViper(arg))
 		logging.ConsoleLevel = min(logging.ConsoleLevel, viper.GetInt("logging.console-level"))
 
-		cobra.CheckErr(logging.InitFile())
+		cobra.CheckErr(logging.InitFile(filepath.Join(config.ConfigPath(), "log")))
+		logging.InitConsole(config.Quiet)
 		logging.Initialize()
 	})
 	rootCmd.PersistentFlags().StringP("config", "c", "", "yaml config filepath")

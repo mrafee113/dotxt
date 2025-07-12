@@ -1,11 +1,9 @@
 package logging
 
 import (
-	"dotxt/config"
 	"dotxt/pkg/utils"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -27,13 +25,13 @@ var (
 
 func init() {
 	initFileEnc()
-	InitConsole()
+	InitConsole(false)
 	Initialize()
 }
 
-func InitConsole() {
+func InitConsole(quiet bool) {
 	var out io.Writer = os.Stdout
-	if config.Quiet {
+	if quiet {
 		out = io.Discard
 	}
 	consoleCore = utils.MkPtr(zapcore.NewCore(
@@ -51,9 +49,8 @@ func initFileEnc() {
 	fileEnc = zapcore.NewConsoleEncoder(fileEncCfg)
 }
 
-func InitFile() error {
-	filepath := filepath.Join(config.ConfigPath(), "log")
-	f, err := os.OpenFile(filepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+func InitFile(logpath string) error {
+	f, err := os.OpenFile(logpath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}

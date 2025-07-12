@@ -1,99 +1,119 @@
 package config
 
-const DefaultConfig = `
-logging:
-  console-level: 5
-  file-level: -1
+import (
+	"dotxt/pkg/logging"
+	"html/template"
+	"strings"
+)
 
-colors:
-  black: &black "#000000"
-  red: &red "#B61C1C"
-  light-orange: &light-orange "#e88761"
-  warm-orange: &warm-orange "#FD971F"
-  green: &green "#21FC00"
-  blue: &blue "#4895bf"
-  purple: &purple "#9e64ea"
-  cyan: &cyan "#05FCC6"
-  cool-cyan: &cool-cyan "#66D9EF"
-  light-jade: &light-jade "#6aa88f"
-  light-grey: &light-grey "#919191"
-  medium-grey: &medium-grey "#696969"
-  dark-grey: &dark-grey "#4C4C4C"
-  dark-purple: &dark-purple "#6b5f73"
-  light-red: &light-red "#FC7876"
-  darker-light-red: &darker-light-red "#fb4141"
-  light-green: &light-green "#78FC76"
-  bright-green: &bright-green "#A6E22E"
-  yellow: &yellow "#FCFC64"
-  light-yellow: &light-yellow "#f4f07f"
-  pale-yellow: &pale-yellow "#f9f7b9"
-  pale-cyan: &pale-cyan "#c6eceb"
-  dark-yellow: &dark-yellow "#b2bc45"
-  light-blue: &light-blue "#6CC0FC"
-  light-purple: &light-purple "#d994fc"
-  light-cyan: &light-cyan "#9FFCF3"
-  light-pink: &light-pink "#fc8ae1"
-  brown: &brown "#c48660"
-  light-gold: &light-gold "#ffec99"
-  white: &white "#FFFFFF"
-  dark-white: &dark-white "#c4c4c4"
-  default: &default "#DEF4ED"
+var colors = map[string]string{
+	"black":        "#000000",
+	"blue":         "#4895bf",
+	"blue-light":   "#6CC0FC",
+	"brown":        "#c48660",
+	"cyan":         "#05FCC6",
+	"cyan-cool":    "#66D9EF",
+	"cyan-light":   "#9FFCF3",
+	"cyan-pale":    "#c6eceb",
+	"default":      "#DEF4ED",
+	"gold-light":   "#ffec99",
+	"green":        "#21FC00",
+	"green-bright": "#A6E22E",
+	"green-light":  "#78FC76",
+	"grey":         "#696969",
+	"grey-dark":    "#4C4C4C",
+	"grey-light":   "#919191",
+	"jade-light":   "#6aa88f",
+	"orange-light": "#e88761",
+	"orange-warm":  "#FD971F",
+	"pink-light":   "#fc8ae1",
+	"purple":       "#9e64ea",
+	"purple-dark":  "#6b5f73",
+	"purple-light": "#d994fc",
+	"red":          "#B61C1C",
+	"red-dark":     "#fb4141",
+	"red-light":    "#FC7876",
+	"white":        "#FFFFFF",
+	"white-dark":   "#c4c4c4",
+	"yellow":       "#FCFC64",
+	"yellow-dark":  "#b2bc45",
+	"yellow-light": "#f4f07f",
+	"yellow-pale":  "#f9f7b9",
+}
 
-print:
-  color-header: *light-red
-  color-default: *default
-  color-index: *light-grey
+var DefaultConfig string = `
+[logging]
+console-level = 5
+file-level    = -1
 
-  color-burnt: *dark-grey
-  color-running-event-text: *pale-yellow
-  color-running-event: *light-gold
-  color-imminent-deadline: *darker-light-red
-  color-date-due: *light-red
-  color-date-end: *light-red
-  color-date-dead: *light-red   # deadline
-  color-date-r: *light-jade     # reminders
-  color-every: *light-yellow
-  color-dead-relations: *medium-grey
-  color-collapsed: *light-orange
+[print]
+color-header             = '{{ index .Colors "red-light" }}'
+color-default            = '{{ index .Colors "default" }}'
+color-index              = '{{ index .Colors "grey-light" }}'
+color-burnt              = '{{ index .Colors "grey-dark" }}'
+color-running-event-text = '{{ index .Colors "yellow-pale" }}'
+color-running-event      = '{{ index .Colors "gold-light" }}'
+color-imminent-deadline  = '{{ index .Colors "red-dark" }}'
+color-date-due           = '{{ index .Colors "red-light" }}'
+color-date-end           = '{{ index .Colors "red-light" }}'
+color-date-dead          = '{{ index .Colors "red-light" }}'
+color-date-r             = '{{ index .Colors "jade-light" }}'
+color-every              = '{{ index .Colors "yellow-light" }}'
+color-dead-relations     = '{{ index .Colors "grey" }}'
+color-collapsed          = '{{ index .Colors "orange-light" }}'
+color-at                 = '{{ index .Colors "blue" }}'
+color-plus               = '{{ index .Colors "jade-light" }}'
+color-tag                = '{{ index .Colors "pink-light" }}'
 
-  color-at: *blue
-  color-plus: *light-jade
-  color-tag: *light-pink
+[print.quotes]
+double    = '{{ index .Colors "green-bright" }}'
+single    = '{{ index .Colors "orange-warm" }}'
+backticks = '{{ index .Colors "cyan-cool" }}'
 
-  quotes:
-    double: *bright-green
-    single: *warm-orange
-    backticks: *cool-cyan
+[print.ids]
+saturation = 0.35
+lightness  = 0.55
+start-hue  = 30
+end-hue    = 210
 
-  ids:
-    saturation: 0.35
-    lightness: 0.55
-    start-hue: 30
-    end-hue: 210
+[print.progress]
+count        = '{{ index .Colors "default" }}'
+done-count   = '{{ index .Colors "grey-light" }}'
+unit         = '{{ index .Colors "default" }}'
+bartext-len  = 10
+header       = '{{ index .Colors "purple-dark" }}'
 
-  progress:
-    count: *default
-    done-count: *light-grey
-    percentage:
-      start-saturation: 0.45
-      end-saturation: 0.7
-      start-lightness: 0.47
-      end-lightness: 0.55
-    unit: *default
-    bartext-len: 10
-    header: *dark-purple
+[print.progress.percentage]
+start-saturation = 0.45
+end-saturation   = 0.7
+start-lightness  = 0.47
+end-lightness    = 0.55
 
-  priority:
-    saturation: 0.7
-    lightness: 0.6
-    group-depth: 5
-    start-hue: 0
-    end-hue: 360
-  
-  temporal-format:
-    c: rn
-    due: rn
-    end: due
-    dead: due
-    r: rn
+[print.priority]
+saturation  = 0.7
+lightness   = 0.6
+group-depth = 5
+start-hue   = 0
+end-hue     = 360
+
+[print.temporal-format]
+c    = "rn"
+due  = "rn"
+end  = "due"
+dead = "due"
+r    = "rn"
 `
+
+func init() {
+	tmpl, err := template.New("config").Parse(DefaultConfig)
+	if err != nil {
+		logging.Logger.Fatalf("error parsing template: %v", err)
+	}
+
+	var str strings.Builder
+	err = tmpl.Execute(&str, struct{ Colors map[string]string }{colors})
+	if err != nil {
+		logging.Logger.Fatalf("error executing template: %v", err)
+	}
+	DefaultConfig = str.String()
+}
