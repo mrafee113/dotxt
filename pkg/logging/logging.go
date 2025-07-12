@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	Logger *zap.SugaredLogger
+	Logger        *zap.SugaredLogger
+	ConsoleLogger *zap.SugaredLogger
 
 	FileLevel  int
 	fileHandle *os.File
@@ -74,6 +75,7 @@ func Initialize() {
 	}
 	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.PanicLevel))
 	Logger = logger.Sugar()
+	ConsoleLogger = zap.New(*consoleCore, zap.AddCaller(), zap.AddStacktrace(zapcore.PanicLevel)).Sugar()
 }
 
 func Close() error {

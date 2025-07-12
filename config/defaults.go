@@ -92,16 +92,8 @@ end-lightness    = 0.55
 [print.priority]
 saturation  = 0.7
 lightness   = 0.6
-group-depth = 5
 start-hue   = 0
 end-hue     = 360
-
-[print.temporal-format]
-c    = "rn"
-due  = "rn"
-end  = "due"
-dead = "due"
-r    = "rn"
 `
 
 func init() {

@@ -641,7 +641,6 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 }
 
 func PrintLists(paths []string, maxLen, minlen int) error {
-	readTemporalFormatFallback()
 	var err error
 	for ndx := range paths {
 		paths[ndx], err = prepFileTaskFromPath(paths[ndx])
@@ -715,7 +714,6 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 
 // single task
 func PrintTask(id int, path string) error {
-	readTemporalFormatFallback()
 	path, err := prepFileTaskFromPath(path)
 	if err != nil {
 		return err

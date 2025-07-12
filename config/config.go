@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"dotxt/pkg/logging"
 	"dotxt/pkg/terrors"
 	"dotxt/pkg/utils"
 	"fmt"
@@ -71,6 +72,13 @@ func InitViper(arg string) error {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return err
 		}
+	}
+	errs := validateConfig()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			logging.Logger.Error(err)
+		}
+		os.Exit(2)
 	}
 	err = os.MkdirAll(path, 0755)
 	if err != nil {

@@ -7,10 +7,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"maps"
-
-	"github.com/spf13/viper"
 )
 
 type List struct {
@@ -277,11 +273,6 @@ var temporalFormatFallback = map[string]string{
 	"c": "rn", "due": "rn",
 	"end": "due", "dead": "due",
 	"r": "rn",
-}
-
-func readTemporalFormatFallback() {
-	tmp := viper.GetStringMapString("print.temporal-format")
-	maps.Copy(temporalFormatFallback, tmp)
 }
 
 // The default fields for each temporal field used for

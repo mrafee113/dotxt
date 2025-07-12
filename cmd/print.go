@@ -3,6 +3,7 @@ package cmd
 import (
 	"dotxt/pkg/task"
 	"dotxt/pkg/terrors"
+	"fmt"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -24,9 +25,15 @@ var printCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if maxlen > 300 {
+			return fmt.Errorf("%w: %w: maxlen must be less than or equals to '%d' and not '%d'", terrors.ErrFlag, terrors.ErrValue, 300, maxlen)
+		}
 		minlen, err := cmd.Flags().GetInt("minlen")
 		if err != nil {
 			return err
+		}
+		if minlen < 50 {
+			return fmt.Errorf("%w: %w: minlen must be greater than or equals to '%d' and not '%d'", terrors.ErrFlag, terrors.ErrValue, 50, minlen)
 		}
 
 		all, err := cmd.Flags().GetBool("all")

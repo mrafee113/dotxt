@@ -3,6 +3,7 @@ package cmd
 import (
 	"dotxt/config"
 	"dotxt/pkg/logging"
+	"dotxt/pkg/terrors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -50,11 +51,21 @@ Global Flags:
 `)
 	cobra.OnInitialize(func() {
 		arg, err := rootCmd.PersistentFlags().GetString("config")
-		cobra.CheckErr(err)
-		cobra.CheckErr(config.InitViper(arg))
-		logging.ConsoleLevel = min(logging.ConsoleLevel, viper.GetInt("logging.console-level"))
+		if err != nil {
+			logging.Logger.Fatal(err)
+		}
+		if err := config.InitViper(arg); err != nil {
+			logging.Logger.Fatal(err)
+		}
+		if lvl := viper.GetInt("logging.console-level"); -1 <= lvl && lvl <= 5 {
+			logging.ConsoleLevel = min(logging.ConsoleLevel, viper.GetInt("logging.console-level"))
+		} else {
+			logging.Logger.Fatal(fmt.Errorf("%w: %w: flag 'clvl' must be between '-1' and '5' and not '%d'", terrors.ErrFlag, terrors.ErrValue, lvl))
+		}
 
-		cobra.CheckErr(logging.InitFile(filepath.Join(config.ConfigPath(), "log")))
+		if err := logging.InitFile(filepath.Join(config.ConfigPath(), "log")); err != nil {
+			logging.Logger.Fatal(err)
+		}
 		logging.InitConsole(config.Quiet)
 		logging.Initialize()
 	})
