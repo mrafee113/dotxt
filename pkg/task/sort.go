@@ -3,26 +3,141 @@ package task
 import (
 	"slices"
 	"strings"
+	"time"
 )
 
-func sortNil(l, r *Task) int {
-	if l == nil && r != nil {
-		return 1
-	} else if l != nil && r == nil {
+// pay good attention to the values
+func sortNil[T any](lv, rv *T) int {
+	if lv != nil && rv == nil {
 		return -1
-	} else if l == nil && r == nil {
+	} else if lv == nil && rv != nil {
+		return 1
+	} else if lv == nil && rv == nil {
+		return 2
+	}
+	return 3
+}
+
+func sortString(lv, rv string) int {
+	if len(lv) != 0 && len(rv) == 0 {
+		return -1
+	} else if len(lv) == 0 && len(rv) != 0 {
+		return 1
+	} else if lv < rv {
+		return -1
+	} else if lv > rv {
+		return 1
+	}
+	return 2
+}
+
+func sortId(lv, rv *int) int {
+	if v := sortNil(lv, rv); v != 3 {
+		return v
+	}
+	if *lv < *rv {
+		return -1
+	} else if *lv > *rv {
+		return 1
+	}
+	return 2
+}
+
+func sortID(lv, rv *string) int {
+	if v := sortNil(lv, rv); v != 3 {
+		return v
+	}
+	if *lv < *rv {
+		return -1
+	} else if *lv > *rv {
+		return 1
+	}
+	return 2
+}
+
+func sortTime(lv, rv *time.Time) int {
+	if v := sortNil(lv, rv); v != 3 {
+		return v
+	}
+	if lva, rva := lv.After(rightNow), rv.After(rightNow); lva && !rva {
+		return -1
+	} else if !lva && rva {
+		return 1
+	}
+	if lv.Before(*rv) {
+		return -1
+	} else if lv.After(*rv) {
+		return 1
+	}
+	return 2
+}
+
+func sortReminders(lr, rr []*time.Time) int {
+	if len(lr) != 0 && len(rr) == 0 {
+		return -1
+	} else if len(lr) == 0 && len(rr) != 0 {
+		return 1
+	} else if len(lr) == 0 && len(rr) == 0 {
+		return 2
+	}
+	lr = slices.Clone(lr)
+	rr = slices.Clone(rr)
+	slices.SortFunc(lr, func(l, r *time.Time) int {
+		if v := sortTime(l, r); v != 2 {
+			return v
+		}
 		return 0
+	})
+	slices.SortFunc(rr, func(l, r *time.Time) int {
+		if v := sortTime(l, r); v != 2 {
+			return v
+		}
+		return 0
+	})
+	minLen := min(len(lr), len(rr))
+	for ndx := range minLen {
+		if v := sortTime(lr[ndx], rr[ndx]); v != 2 {
+			return v
+		}
+	}
+	if len(lr) > len(rr) {
+		return -1
+	} else if len(lr) < len(rr) {
+		return 1
+	}
+	return 2
+}
+
+func sortDatetime(l, r *Task) int {
+	if v := sortTime(l.Time.Deadline, r.Time.Deadline); v != 2 {
+		return v
+	} else if v := sortTime(l.Time.EndDate, r.Time.EndDate); v != 2 {
+		return v
+	} else if v := sortTime(l.Time.DueDate, r.Time.DueDate); v != 2 {
+		return v
+	} else if v := sortTime(l.Time.CreationDate, r.Time.CreationDate); v != 2 { // this is pointless lol
+		return v
+	} else if v := sortReminders(l.Time.Reminders, r.Time.Reminders); v != 2 {
+		return v
+	}
+	return 2
+}
+
+func sortDuration(lv, rv *time.Duration) int {
+	if v := sortNil(lv, rv); v != 3 {
+		return v
+	}
+	if *lv < *rv {
+		return -1
+	} else if *lv > *rv {
+		return 1
 	}
 	return 2
 }
 
 func sortProgressValue(l, r *Task) int {
-	if l.Prog != nil && r.Prog == nil {
-		return -1
-	} else if l.Prog == nil && r.Prog != nil {
-		return 1
-	} else if l.Prog == nil && r.Prog == nil {
-		return 2
+	if v := sortNil(l.Prog, r.Prog); v != 3 {
+		return v
 	}
 	lP, rP := 100*l.Prog.Count/l.Prog.DoneCount, 100*r.Prog.Count/r.Prog.DoneCount
 	if lP > rP {
@@ -38,66 +153,51 @@ func sortProgressValue(l, r *Task) int {
 	return 2
 }
 
-func sortCategory(l, r *Task) int {
-	if l.Prog != nil && r.Prog == nil {
-		return -1
-	} else if l.Prog == nil && r.Prog != nil {
-		return 1
-	} else if l.Prog == nil && r.Prog == nil {
-		return 2
+func sortProgressCategory(l, r *Task) int {
+	if v := sortNil(l.Prog, r.Prog); v != 3 {
+		return v
 	}
-	if l.Prog.Category != "" && r.Prog.Category == "" {
-		return -1
-	} else if l.Prog.Category == "" && r.Prog.Category != "" {
-		return 1
-	} else if l.Prog.Category < r.Prog.Category {
-		return -1
-	} else if l.Prog.Category > r.Prog.Category {
-		return 1
-	}
-	return 2
+	return sortString(l.Prog.Category, r.Prog.Category)
 }
 
 func sortPriority(l, r *Task) int {
-	if l.Priority != nil && r.Priority == nil {
-		return -1
-	} else if l.Priority == nil && r.Priority != nil {
-		return 1
-	} else if l.Priority == nil && r.Priority == nil {
-		return 2
+	if v := sortNil(l.Priority, r.Priority); v != 3 {
+		return v
 	}
-	if *l.Priority != "" && *r.Priority == "" {
-		return -1
-	} else if *l.Priority == "" && *r.Priority != "" {
-		return 1
-	} else if *l.Priority != "" && *r.Priority != "" && *l.Priority < *r.Priority {
-		return -1
-	} else if *l.Priority != "" && *r.Priority != "" && *l.Priority > *r.Priority {
-		return 1
-	}
-	return 2
+	return sortString(*l.Priority, *r.Priority)
 }
 
 func sortHints(l, r *Task) int {
-	extractPlus := func(hints []*string) []string {
+	extractPlus := func(hints []*string) (int, string, int, string) {
 		var out []string
+		var rest []string
 		for _, h := range hints {
 			if len(*h) > 0 && (*h)[0] == '+' {
 				out = append(out, *h)
+			} else {
+				rest = append(rest, *h)
 			}
 		}
 		slices.Sort(out)
-		return out
+		return len(out), strings.Join(out, ","), len(rest), strings.Join(rest, ",")
 	}
-	lHints, rHints := extractPlus(l.Hints), extractPlus(r.Hints)
-	lHint, rHint := strings.Join(lHints, ","), strings.Join(rHints, ",")
-	if len(lHints) > 0 && len(rHints) == 0 {
+	lPlusLen, lPlus, lHintsLen, lHints := extractPlus(l.Hints)
+	rPlusLen, rPlus, rHintsLen, rHints := extractPlus(r.Hints)
+	if lPlusLen > 0 && rPlusLen == 0 {
 		return -1
-	} else if len(lHints) == 0 && len(rHints) > 0 {
+	} else if lPlusLen == 0 && rPlusLen > 0 {
 		return 1
-	} else if len(lHints) > 0 && len(rHints) > 0 && lHint < rHint {
+	} else if lPlusLen > 0 && rPlusLen > 0 && lPlus < rPlus {
 		return -1
-	} else if len(lHints) > 0 && len(rHints) > 0 && lHint > rHint {
+	} else if lPlusLen > 0 && rPlusLen > 0 && lPlus > rPlus {
+		return 1
+	} else if lHintsLen > 0 && rHintsLen == 0 {
+		return -1
+	} else if lHintsLen == 0 && rHintsLen > 0 {
+		return 1
+	} else if lHintsLen > 0 && rHintsLen > 0 && lHints < rHints {
+		return -1
+	} else if lHintsLen > 0 && rHintsLen > 0 && lHints > rHints {
 		return 1
 	}
 	return 2
@@ -105,22 +205,34 @@ func sortHints(l, r *Task) int {
 
 func sortText(l, r *Task) int {
 	lText, rText := l.NormRegular(), r.NormRegular()
-	if len(lText) > 0 && len(rText) == 0 {
+	return sortString(lText, rText)
+}
+
+func sortChildren(l, r *Task) int {
+	if len(l.Children) > 0 && len(r.Children) == 0 {
 		return -1
-	} else if len(lText) == 0 && len(rText) > 0 {
+	} else if len(l.Children) == 0 && len(r.Children) > 0 {
 		return 1
-	} else if len(lText) > 0 && len(rText) > 0 && lText < rText {
-		return -1
-	} else if len(lText) > 0 && len(rText) > 0 && lText > rText {
-		return 1
+	} else if len(l.Children) > 0 && len(r.Children) > 0 {
+		lndx, rndx := 0, 0
+		for lndx < len(l.Children) && rndx < len(r.Children) {
+			if v := sortHelper(l.Children[lndx], r.Children[rndx]); v != 0 {
+				return v
+			}
+			lndx++
+			rndx++
+		}
 	}
 	return 2
 }
 
 func sortHelper(l, r *Task) int {
-	if v := sortNil(l, r); v != 2 {
+	if v := sortNil(l, r); v != 3 {
+		if v == 2 {
+			return 0
+		}
 		return v
-	} else if v = sortCategory(l, r); v != 2 {
+	} else if v = sortProgressCategory(l, r); v != 2 {
 		return v
 	} else if v = sortPriority(l, r); v != 2 {
 		return v
@@ -129,6 +241,18 @@ func sortHelper(l, r *Task) int {
 	} else if v = sortHints(l, r); v != 2 {
 		return v
 	} else if v = sortText(l, r); v != 2 {
+		return v
+	} else if v = sortDatetime(l, r); v != 2 {
+		return v
+	} else if v = sortDuration(l.Time.Every, r.Time.Every); v != 2 {
+		return v
+	} else if v = sortID(l.EID, r.EID); v != 2 {
+		return v
+	} else if v = sortID(l.PID, r.PID); v != 2 {
+		return v
+	} else if v = sortId(l.ID, r.ID); v != 2 {
+		return v
+	} else if v = sortChildren(l, r); v != 2 {
 		return v
 	}
 	return 0
