@@ -29,15 +29,27 @@ func (rt *rToken) getColor() string {
 	return "print.color-default"
 }
 
+type rInfo struct {
+	maxLen       int
+	idLen        int
+	countLen     int
+	doneCountLen int
+}
+
+func (ri *rInfo) set(alt *rInfo) {
+	ri.maxLen = max(ri.maxLen, alt.maxLen)
+	ri.idLen = max(ri.idLen, alt.idLen)
+	ri.countLen = max(ri.countLen, alt.countLen)
+	ri.doneCountLen = max(ri.doneCountLen, alt.doneCountLen)
+}
+
 // Used to carry intermediary info for a task
 type rTask struct {
-	task         *Task
-	tokens       []*rToken
-	id           int
-	idColor      string
-	idLen        int
-	countLen     int // progress count
-	doneCountLen int // progress doneCount
+	task    *Task
+	tokens  []*rToken
+	id      int
+	idColor string
+	rInfo
 }
 
 func (r *rTask) stringify(toColor bool, maxWidth int) string {
@@ -68,7 +80,7 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 	}
 	var fold func(string) string
 	fold = func(text string) string {
-		if maxWidth == -1 {
+		if maxWidth == -1 { // for total length purposes
 			return text
 		}
 		n := len(text)
@@ -134,24 +146,4 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 		writeSpace()
 	}
 	return strings.ReplaceAll(strings.TrimRightFunc(md.out.String(), unicode.IsSpace), " \n", "\n")
-}
-
-// Used to carry intermediary info for a task List
-type rList struct {
-	tasks        []*rTask // -> return value
-	path         string
-	maxLen       int
-	idLen        int
-	countLen     int             // progress count
-	doneCountLen int             // progress doneCount
-	idList       map[string]bool // a set of available ids // -> return value
-}
-
-// Used to carry intermediary info for a printing session
-type rPrint struct {
-	lists        map[string]*rList
-	maxLen       int
-	idLen        int
-	countLen     int // progress count
-	doneCountLen int // progress doneCount
 }

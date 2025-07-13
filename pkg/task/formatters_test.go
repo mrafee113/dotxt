@@ -220,7 +220,7 @@ func TestFormatPriorities(t *testing.T) {
 		hueVal, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
 		hues = append(hues, hueVal)
 		task, _ := ParseTask(utils.MkPtr(ndx), taskLine)
-		tasks = append(tasks, task.Render(nil))
+		tasks = append(tasks, task.Render())
 	}
 	path, _ := parseFilepath("testPrio")
 	Lists.Set(path, func() []*Task {
@@ -252,8 +252,7 @@ func TestFormatProgress(t *testing.T) {
 
 func TestFormatListHeader(t *testing.T) {
 	assert := assert.New(t)
-	l := rList{path: "/todosFile", maxLen: 30}
-	h := formatListHeader(&l)
+	h := formatListHeader("/todosFile", 30)
 	assert.Equal("> todosFile | ————————————————\n", h)
 }
 
@@ -275,7 +274,7 @@ func TestColorIds(t *testing.T) {
 
 func TestFormatCategoryHeader(t *testing.T) {
 	assert := assert.New(t)
-	l := rList{idLen: 2, countLen: 2, doneCountLen: 2, maxLen: 30}
+	l := rInfo{idLen: 2, countLen: 2, doneCountLen: 2, maxLen: 30}
 	out := formatCategoryHeader("some", &l)
 	assert.Equal("                     some ————\n", out)
 	out = formatCategoryHeader("", &l)
@@ -287,11 +286,10 @@ func TestRender(t *testing.T) {
 	id := 1
 
 	t.Run("normal", func(t *testing.T) {
-		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1w $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
-		rtask := task.Render(&l)
-		assert.Equal(1, l.idLen)
-		assert.Equal(103, l.maxLen)
+		rtask := task.Render()
+		assert.Equal(1, rtask.rInfo.idLen)
+		assert.Equal(103, rtask.rInfo.maxLen)
 		assert.Equal(task, rtask.task, "task")
 		assert.Equal(id, rtask.id, "id")
 		assert.Equal("print.color-index", rtask.idColor, "idColor")
@@ -329,7 +327,7 @@ func TestRender(t *testing.T) {
 			line += "\"t8 \\\"t8 \\\\\\'t8 't8 \\\\\\`t8 `t8\" "
 			line += "\"t9 \\\"t9 \\\\\\'t9 't9 \\\\\\`t9 `t9 ```\""
 			task, _ := ParseTask(utils.MkPtr(2), line)
-			rtask := task.Render(&l)
+			rtask := task.Render()
 			assert.Equal(`"t1 t1"`, rtask.tokens[0].raw)
 			assert.Equal("print.quotes.double", rtask.tokens[0].color)
 			assert.Equal(`'t2 "t2" t2'`, rtask.tokens[1].raw)
@@ -351,11 +349,10 @@ func TestRender(t *testing.T) {
 		})
 	})
 	t.Run("after due", func(t *testing.T) {
-		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
-		rtask := task.Render(&l)
+		rtask := task.Render()
 		assert.Equal("$due=-4d", rtask.tokens[5].raw)
 		assert.Equal("print.color-burnt", rtask.tokens[5].color)
 		for _, tk := range rtask.tokens {
@@ -363,11 +360,10 @@ func TestRender(t *testing.T) {
 		}
 	})
 	t.Run("after due before end", func(t *testing.T) {
-		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $end=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
-		rtask := task.Render(&l)
+		rtask := task.Render()
 		assert.Equal("text", rtask.tokens[10].raw)
 		assert.Equal("print.color-running-event-text", rtask.tokens[10].color)
 		assert.Equal("$end=1w5d", rtask.tokens[6].raw)
@@ -376,11 +372,10 @@ func TestRender(t *testing.T) {
 		assert.Equal("print.color-burnt", rtask.tokens[5].color)
 	})
 	t.Run("after due before dead", func(t *testing.T) {
-		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 		dt := rightNow.Add(-4 * 24 * 60 * 60 * time.Second)
 		task.updateDate("due", &dt)
-		rtask := task.Render(&l)
+		rtask := task.Render()
 		assert.Equal("$dead=1w5d", rtask.tokens[6].raw)
 		assert.Equal("print.color-imminent-deadline", rtask.tokens[6].color)
 		assert.Equal("$due=-4d", rtask.tokens[5].raw)
@@ -400,27 +395,23 @@ func TestRenderList(t *testing.T) {
 	id3 := 210
 	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500/cat")
 
-	sm := rPrint{lists: make(map[string]*rList)}
 	Lists.Append(path, task1)
 	Lists.Append(path, task2)
 	Lists.Append(path, task3)
-	err := RenderList(&sm, path)
+	rtasks, rinfo, err := RenderList(path)
 	assert.NoError(err)
-	t.Run("nil metadata", func(t *testing.T) {
-		assert.Error(RenderList(nil, path))
-	})
 	t.Run("id color", func(t *testing.T) {
-		assert.Equal("#64B464", sm.lists[path].tasks[0].tokens[8].color)
-		assert.Equal("#B48C64", sm.lists[path].tasks[0].tokens[9].color)
+		assert.Equal("#64B464", rtasks[0].tokens[8].color)
+		assert.Equal("#B48C64", rtasks[0].tokens[9].color)
 	})
 	t.Run("priority color", func(t *testing.T) {
-		assert.Equal("#52E0E0", sm.lists[path].tasks[0].tokens[1].color)
+		assert.Equal("#52E0E0", rtasks[0].tokens[1].color)
 	})
 	t.Run("lengths", func(t *testing.T) {
-		assert.Equal(105, sm.maxLen)
-		assert.Equal(3, sm.idLen)
-		assert.Equal(3, sm.countLen)
-		assert.Equal(4, sm.doneCountLen)
+		assert.Equal(105, rinfo.maxLen)
+		assert.Equal(3, rinfo.idLen)
+		assert.Equal(3, rinfo.countLen)
+		assert.Equal(4, rinfo.doneCountLen)
 	})
 	t.Run("id collapse filter", func(t *testing.T) {
 		path, _ := parseFilepath("idC")
@@ -436,8 +427,7 @@ func TestRenderList(t *testing.T) {
 		AddTaskFromStr("$P=6", path)
 		AddTaskFromStr("$id=7", path)
 		cleanupRelations(path)
-		sm := rPrint{lists: make(map[string]*rList)}
-		err := RenderList(&sm, path)
+		rtasks, _, err := RenderList(path)
 		assert.NoError(err)
 		root := func(node *Task) *Task {
 			for node.Parent != nil {
@@ -445,7 +435,7 @@ func TestRenderList(t *testing.T) {
 			}
 			return node
 		}
-		for _, task := range sm.lists[path].tasks {
+		for _, task := range rtasks {
 			if task.task.Norm() != "$-id=1" {
 				assert.NotEqual("$-id=1", root(task.task).Norm())
 			}
@@ -456,7 +446,6 @@ func TestRenderList(t *testing.T) {
 func TestStringify(t *testing.T) {
 	assert := assert.New(t)
 	id1 := 12
-	path, _ := parseFilepath("file")
 	testLength := func(out string) bool {
 		exceeds := false
 		for _, each := range strings.Split(out, "\n") {
@@ -468,8 +457,7 @@ func TestStringify(t *testing.T) {
 	}
 	helper := func(line string) string {
 		task, _ := ParseTask(&id1, line)
-		l := rList{path: path, idList: make(map[string]bool)}
-		rtask := task.Render(&l)
+		rtask := task.Render()
 		rtask.idLen = 2
 		rtask.doneCountLen = 2
 		rtask.countLen = 2
@@ -527,8 +515,7 @@ func TestStringify(t *testing.T) {
 		Lists.Sort(path)
 		helper := func(ndx int) string {
 			task := Lists[path].Tasks[ndx]
-			l := rList{path: path, idList: make(map[string]bool)}
-			rtask := task.Render(&l)
+			rtask := task.Render()
 			rtask.idLen = 2
 			str := rtask.stringify(false, 50)
 			assert.False(testLength(str))
@@ -561,17 +548,15 @@ func TestStringify(t *testing.T) {
 		AddTaskFromStr("$P=second 3", path)
 		cleanupRelations(path)
 
-		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
-
 		task := Lists[path].Tasks[0]
-		rtask := task.Render(&l)
+		rtask := task.Render()
 		rtask.idLen = 2
 		str := rtask.stringify(false, 50)
 		assert.False(testLength(str))
 		assert.Equal("00 + (testing) heyto $due=1w $-id=first $P=dead", str)
 
 		task = Lists[path].Tasks[2]
-		rtask = task.Render(&l)
+		rtask = task.Render()
 		rtask.idLen = 2
 		str = rtask.stringify(false, 50)
 		assert.False(testLength(str))
@@ -582,9 +567,8 @@ func TestStringify(t *testing.T) {
 		Lists.Empty(path)
 		AddTaskFromStr("(6) #Literature #classics +ugliness @y:1831 #rate:4.02/8k/211k @auth:Victor-Hugo The Hunchback of Notre-Dame $p=page/165/510/books $c=2025-05-17T17-06-25", path)
 		cleanupRelations(path)
-		l := rList{path: "/tmp/file", idList: make(map[string]bool)}
 		task := Lists[path].Tasks[0]
-		rtask := task.Render(&l)
+		rtask := task.Render()
 		rtask.idLen = 2
 		rtask.countLen = 3
 		rtask.doneCountLen = 3

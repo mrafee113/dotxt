@@ -2,7 +2,6 @@ package task
 
 import (
 	"dotxt/config"
-	"dotxt/pkg/terrors"
 	"dotxt/pkg/utils"
 	"fmt"
 	"maps"
@@ -307,12 +306,12 @@ func formatProgress(p *Progress, countLen, doneCountLen int) []rToken {
 	}
 }
 
-func formatListHeader(list *rList) string {
+func formatListHeader(path string, maxLen int) string {
 	var out strings.Builder
 	out.WriteString("> ")
-	out.WriteString(filepath.Base(list.path))
+	out.WriteString(filepath.Base(path))
 	out.WriteString(" | ")
-	out.WriteString(strings.Repeat("—", list.maxLen-out.Len()))
+	out.WriteString(strings.Repeat("—", maxLen-out.Len()))
 	out.WriteRune('\n')
 	return colorize("print.color-header", out.String())
 }
@@ -365,23 +364,20 @@ func formatID(tk Token) string {
 	return fmt.Sprintf("$%s%s=%s", idCollapse, tk.Key, *tk.Value.(*string))
 }
 
-func formatCategoryHeader(category string, list *rList) string {
+func formatCategoryHeader(category string, info *rInfo) string {
 	var out strings.Builder
-	out.WriteString(strings.Repeat(" ", list.idLen+1+
-		list.countLen+1+list.doneCountLen+len("(100%) ")+
+	out.WriteString(strings.Repeat(" ", info.idLen+1+
+		info.countLen+1+info.doneCountLen+len("(100%) ")+
 		viper.GetInt("print.progress.bartext-len")+1+
 		-len(category)-1,
 	))
 	out.WriteString(fmt.Sprintf("%s ", category))
-	out.WriteString(strings.Repeat("—", list.maxLen-out.Len()))
+	out.WriteString(strings.Repeat("—", info.maxLen-out.Len()))
 	out.WriteRune('\n')
 	return colorize("print.progress.header", out.String())
 }
 
-func (t *Task) Render(listMetadata *rList) *rTask {
-	if listMetadata == nil {
-		listMetadata = &rList{idList: make(map[string]bool)}
-	}
+func (t *Task) Render() *rTask {
 	out := rTask{task: t, id: *t.ID, idColor: "print.color-index"}
 	addAsRegular := func(token *Token) {
 		out.tokens = append(out.tokens, &rToken{token: token, raw: token.String(t), color: "print.color-default"})
@@ -403,8 +399,8 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 
 	if t.Prog != nil {
 		out.tokens = append(out.tokens, &rToken{token: specialTokenMap["p"]})
-		listMetadata.countLen = max(listMetadata.countLen, len(strconv.Itoa(t.Prog.Count)))
-		listMetadata.doneCountLen = max(listMetadata.doneCountLen, len(strconv.Itoa(t.Prog.DoneCount)))
+		out.countLen = len(strconv.Itoa(t.Prog.Count))
+		out.doneCountLen = len(strconv.Itoa(t.Prog.DoneCount))
 	}
 	if t.Priority != nil && *t.Priority != "" {
 		out.tokens = append(out.tokens, &rToken{
@@ -493,7 +489,6 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 				raw:   formatID(*tk),
 				color: "print.color-default",
 			})
-			listMetadata.idList[*tk.Value.(*string)] = true
 		case TokenHint:
 			var color string
 			switch tk.Key {
@@ -581,8 +576,8 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			addAsRegular(tk)
 		}
 	})
-	listMetadata.maxLen = max(listMetadata.maxLen, len(out.stringify(false, -1)))
-	listMetadata.idLen = max(listMetadata.idLen, len(strconv.Itoa(*t.ID)))
+	out.maxLen = len(out.stringify(false, -1))
+	out.idLen = len(strconv.Itoa(*t.ID))
 	if dominantColor != "" || defaultColor != "" {
 		for _, rtk := range out.tokens {
 			rtk.dominantColor = dominantColor
@@ -594,44 +589,47 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 	return &out
 }
 
-func RenderList(sessionMetadata *rPrint, path string) error {
-	if sessionMetadata == nil {
-		return fmt.Errorf("%w: session metadata must not be nil", terrors.ErrValue)
-	}
+func RenderList(path string) ([]*rTask, *rInfo, error) {
 	path, err := prepFileTaskFromPath(path)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
+	var out []*rTask
 	Lists.Sort(path)
-	listMetadata := rList{path: path, idList: make(map[string]bool)}
-	sessionMetadata.lists[path] = &listMetadata
+	idList := make(map[string]bool)
+	listInfo := rInfo{}
 	for _, task := range Lists[path].Tasks {
 		if task.IsParentCollapsed() {
 			continue
 		}
-		rtask := task.Render(&listMetadata)
-		listMetadata.tasks = append(listMetadata.tasks, rtask)
+		rtask := task.Render()
+		out = append(out, rtask)
+		if rtask.task != nil {
+			if rtask.task.EID != nil {
+				idList[*rtask.task.EID] = true
+			}
+			if rtask.task.PID != nil {
+				idList[*rtask.task.PID] = true
+			}
+		}
+		listInfo.set(&rtask.rInfo)
 	}
-	idColors := colorizeIds(listMetadata.idList)
-	for _, task := range listMetadata.tasks {
-		for _, tk := range task.tokens {
+	idColors := colorizeIds(idList)
+	for _, rtask := range out {
+		for _, tk := range rtask.tokens {
 			if tk.token.Type == TokenID {
 				tk.color = idColors[*tk.token.Value.(*string)]
 				if tk.dominantColor == "" &&
-					((tk.token.Key == "id" && len(task.task.Children) == 0) ||
-						(tk.token.Key == "P" && task.task.Parent == nil)) {
+					((tk.token.Key == "id" && len(rtask.task.Children) == 0) ||
+						(tk.token.Key == "P" && rtask.task.Parent == nil)) {
 					tk.dominantColor = "print.color-dead-relations"
 				}
 			}
 		}
 	}
-	formatPriorities(listMetadata.tasks)
-	sessionMetadata.maxLen = max(sessionMetadata.maxLen, listMetadata.maxLen)
-	sessionMetadata.idLen = max(sessionMetadata.idLen, listMetadata.idLen)
-	sessionMetadata.countLen = max(sessionMetadata.countLen, listMetadata.countLen)
-	sessionMetadata.doneCountLen = max(sessionMetadata.doneCountLen, listMetadata.doneCountLen)
-	return nil
+	formatPriorities(out)
+	return out, &listInfo, nil
 }
 
 func PrintLists(paths []string, maxLen, minlen int) error {
@@ -642,35 +640,28 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 			return err
 		}
 	}
-	sessionMetadata := rPrint{lists: make(map[string]*rList)}
+	rtasks := make(map[string][]*rTask)
+	sessionInfo := rInfo{}
 	for _, path := range paths {
-		err := RenderList(&sessionMetadata, path)
+		var listInfo *rInfo
+		rtasks[path], listInfo, err = RenderList(path)
 		if err != nil {
 			return err
 		}
+		sessionInfo.set(listInfo)
 	}
 
-	sessionMetadata.maxLen = min(sessionMetadata.maxLen, maxLen)
-	sessionMetadata.maxLen = max(sessionMetadata.maxLen, minlen)
-	for _, path := range paths {
-		list := sessionMetadata.lists[path]
-		list.maxLen = sessionMetadata.maxLen
-		list.idLen = sessionMetadata.idLen
-		list.countLen = sessionMetadata.countLen
-		list.doneCountLen = sessionMetadata.doneCountLen
-		for _, task := range list.tasks {
-			task.idLen = list.idLen
-			task.countLen = list.countLen
-			task.doneCountLen = list.doneCountLen
+	sessionInfo.maxLen = max(min(sessionInfo.maxLen, maxLen), minlen)
+	for _, path := range paths { // propogate downwards
+		for _, rtask := range rtasks[path] {
+			rtask.rInfo.set(&sessionInfo)
 		}
 	}
 	var out strings.Builder
 	for _, path := range paths {
-		list := sessionMetadata.lists[path]
-
 		emptyCatThere := false
 		categories := make(map[string]bool)
-		for _, task := range list.tasks {
+		for _, task := range rtasks[path] {
 			if task.task.Prog != nil {
 				if task.task.Prog.Category == "" {
 					emptyCatThere = true
@@ -682,22 +673,22 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 		var lastCat string
 		firstNonCat := true
 
-		out.WriteString(formatListHeader(list))
-		for _, task := range list.tasks {
+		out.WriteString(formatListHeader(path, sessionInfo.maxLen))
+		for _, task := range rtasks[path] {
 			if useCatHeader && task.task.Prog != nil && task.task.Prog.Category != lastCat {
 				cat := task.task.Prog.Category
 				if cat == "" {
 					cat = "*"
 				}
-				out.WriteString(formatCategoryHeader(cat, list))
+				out.WriteString(formatCategoryHeader(cat, &sessionInfo))
 				lastCat = task.task.Prog.Category
 			}
 			if useCatHeader && task.task.Prog == nil && firstNonCat {
 				firstNonCat = false
-				out.WriteString(formatCategoryHeader("", list))
+				out.WriteString(formatCategoryHeader("", &sessionInfo))
 			}
 
-			out.WriteString(task.stringify(true, sessionMetadata.maxLen))
+			out.WriteString(task.stringify(true, sessionInfo.maxLen))
 			out.WriteRune('\n')
 		}
 		out.WriteRune('\n')
@@ -719,7 +710,3 @@ func PrintTask(id int, path string) error {
 	fmt.Println(task.Raw())
 	return nil
 }
-
-// TODO: rewrite the configuration part with pure functions...
-//  don't create cfg objects and pass it down. create the cfg objects at the bottom, and pass it up.
-// TODO: and maybe replace these current variety of cfg objects with a big one and change return values to compensate if possible
