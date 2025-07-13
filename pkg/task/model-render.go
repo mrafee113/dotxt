@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -18,9 +19,19 @@ type rToken struct {
 	dominantColor string
 }
 
+func (rt *rToken) getColor() string {
+	if rt.dominantColor != "" {
+		return rt.dominantColor
+	}
+	if rt.color != "" {
+		return rt.color
+	}
+	return "print.color-default"
+}
+
 // Used to carry intermediary info for a task
 type rTask struct {
-	tsk          *Task
+	task         *Task
 	tokens       []*rToken
 	id           int
 	idColor      string
@@ -29,125 +40,111 @@ type rTask struct {
 	doneCountLen int // progress doneCount
 }
 
-func (r *rTask) stringify(color bool, maxWidth int) string {
-	var out strings.Builder
-	idPrefix := ""
-	newLinePrefix := strings.Repeat(" ", r.idLen+1)
-	newLineLen := r.idLen + 1
-	depth := r.tsk.Depth() * (r.idLen + 1)
-	progLen := r.countLen + 1 + r.doneCountLen + 6 + 1 +
-		viper.GetInt("print.progress.bartext-len") + 1
-	if depth > 0 {
-		depthSpace := strings.Repeat(" ", depth)
-		idPrefix += depthSpace
-		newLinePrefix += depthSpace
-		newLineLen += depth
+func (r *rTask) stringify(toColor bool, maxWidth int) string {
+	var idPrefix string
+	// metadata
+	md := struct {
+		length        int
+		out           strings.Builder
+		newLinePrefix string
+		newLineLen    int
+	}{
+		newLinePrefix: strings.Repeat(" ", r.idLen+1),
+		newLineLen:    r.idLen + 1,
 	}
-	if r.tsk.Prog != nil {
-		newLinePrefix += strings.Repeat(" ", progLen)
-		newLineLen += progLen
+	{
+		if depth := r.task.Depth() * (r.idLen + 1); depth > 0 {
+			depthSpace := strings.Repeat(" ", depth)
+			md.newLinePrefix += depthSpace
+			md.newLineLen += depth
+			idPrefix += depthSpace
+		}
+		if r.task.Prog != nil {
+			progLen := r.countLen + 1 + r.doneCountLen + 6 + 1 +
+				viper.GetInt("print.progress.bartext-len") + 1
+			md.newLinePrefix += strings.Repeat(" ", progLen)
+			md.newLineLen += progLen
+		}
 	}
-	var length int
 	var fold func(string) string
-	fold = func(str string) string {
+	fold = func(text string) string {
 		if maxWidth == -1 {
-			return str
+			return text
 		}
-		n := len(str)
-		if n+length <= maxWidth { // fits
-			length += n
-			return str
+		n := len(text)
+		if n+md.length <= maxWidth { // fits
+			md.length += n
+			return text
 		}
-		if length >= maxWidth-1 { // current line has no space whatsoever
-			length = newLineLen
-			if str == " " {
-				return "\n" + newLinePrefix
+		if md.length >= maxWidth-1 { // current line has no space whatsoever
+			md.length = md.newLineLen
+			if text == " " {
+				return "\n" + md.newLinePrefix
 			}
-			return "\n" + newLinePrefix + fold(str)
+			return "\n" + md.newLinePrefix + fold(text)
 		}
 		if n > maxWidth || r.idLen+1+n > maxWidth { // string is so long it has to be split
-			oldLen := length
-			length = newLineLen
-			return str[:maxWidth-oldLen-1] + "\\\n" +
-				newLinePrefix + fold(str[maxWidth-oldLen-1:])
+			oldLen := md.length
+			md.length = md.newLineLen
+			return text[:maxWidth-oldLen-1] + "\\\n" +
+				md.newLinePrefix + fold(text[maxWidth-oldLen-1:])
 		}
 		// str is long enough to not fit current line and not long enough to be splitted
-		length = newLineLen + n
-		return "\n" + newLinePrefix + str
+		md.length = md.newLineLen + n
+		return "\n" + md.newLinePrefix + text
+	}
+	write := func(color, text string) {
+		out := fold(text)
+		if toColor {
+			out = colorize(color, out)
+		}
+		md.out.WriteString(out)
+	}
+	writeSpace := func() {
+		md.out.WriteString(fold(" "))
 	}
 
-	idTxt := fmt.Sprintf("%s%0*d", idPrefix, r.idLen, r.id)
-	if color {
-		out.WriteString(colorize(r.idColor, fold(idTxt)))
-	} else {
-		out.WriteString(fold(idTxt))
-	}
-	out.WriteString(fold(" "))
+	write(r.idColor, fmt.Sprintf("%s%0*d", idPrefix, r.idLen, r.id))
+	writeSpace()
 
-	if r.tsk.IsCollapsed() {
-		count := func() int {
-			cnt := 0
-			var dfs func(node *Task)
-			dfs = func(node *Task) {
-				cnt++
-				for _, child := range node.Children {
-					dfs(child)
-				}
-			}
-			for _, node := range r.tsk.Children {
-				dfs(node)
-			}
-			return cnt
-		}()
-		var val string
+	if r.task.IsCollapsed() {
+		count, stack := 0, slices.Clone(r.task.Children)
+		for len(stack) > 0 {
+			stack = append(stack[1:], stack[0].Children...)
+			count++
+		}
+		val := "+"
 		if count > 0 {
-			val = fmt.Sprintf("+|%d", count)
-		} else {
-			val = "+"
+			val += fmt.Sprintf("|%d", count)
 		}
-		if color {
-			out.WriteString(colorize(viper.GetString("print.color-collapsed"), fold(val)))
-		} else {
-			out.WriteString(fold(val))
-		}
-		out.WriteString(fold(" "))
+		write("print.color-collapsed", val)
+		writeSpace()
 	}
 
 	for _, tk := range r.tokens {
-		if tk.color == "" {
-			tk.color = "print.color-default"
-		}
 		if tk.token != nil && tk.token.Type == TokenProgress {
 			parts := formatProgress(tk.token.Value.(*Progress), r.countLen, r.doneCountLen)
 			for _, pt := range parts {
-				if color {
-					out.WriteString(colorizeToken(fold(pt.raw), pt.color, pt.dominantColor))
-				} else {
-					out.WriteString(fold(pt.raw))
-				}
+				write(pt.getColor(), pt.raw)
 			}
-			out.WriteString(fold(" "))
+			writeSpace()
 			continue
 		}
-		if color {
-			out.WriteString(colorizeToken(fold(tk.raw), tk.color, tk.dominantColor))
-		} else {
-			out.WriteString(fold(tk.raw))
-		}
-		out.WriteString(fold(" "))
+		write(tk.getColor(), tk.raw)
+		writeSpace()
 	}
-	return strings.TrimRightFunc(out.String(), unicode.IsSpace)
+	return strings.ReplaceAll(strings.TrimRightFunc(md.out.String(), unicode.IsSpace), " \n", "\n")
 }
 
 // Used to carry intermediary info for a task List
 type rList struct {
-	tasks        []*rTask
+	tasks        []*rTask // -> return value
 	path         string
 	maxLen       int
 	idLen        int
 	countLen     int             // progress count
 	doneCountLen int             // progress doneCount
-	idList       map[string]bool // a set of available ids
+	idList       map[string]bool // a set of available ids // -> return value
 }
 
 // Used to carry intermediary info for a printing session

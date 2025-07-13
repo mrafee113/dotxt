@@ -329,7 +329,7 @@ func (t *Task) IsCollapsed() bool {
 	return tk != nil && strings.HasPrefix(tk.raw, "$-id")
 }
 
-func (t *Task) ParentCollapsed() bool {
+func (t *Task) IsParentCollapsed() bool {
 	node := t.Parent
 	for node != nil {
 		if node.IsCollapsed() {

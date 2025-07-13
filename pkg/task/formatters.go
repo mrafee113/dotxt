@@ -137,8 +137,8 @@ func formatPriorities(tasks []*rTask) {
 	taskToRTask := func() map[*Task]*rTask {
 		out := make(map[*Task]*rTask)
 		for _, t := range tasks {
-			if t.tsk != nil {
-				out[t.tsk] = t
+			if t.task != nil {
+				out[t.task] = t
 			}
 		}
 		return out
@@ -155,7 +155,7 @@ func formatPriorities(tasks []*rTask) {
 
 	sortByPriority := func(tasks []*rTask) []*rTask {
 		slices.SortFunc(tasks, func(l, r *rTask) int {
-			if r := sortPriority(l.tsk, r.tsk); r != 2 {
+			if r := sortPriority(l.task, r.task); r != 2 {
 				return r
 			}
 			return 0
@@ -166,7 +166,7 @@ func formatPriorities(tasks []*rTask) {
 	filterPriority := func(rts []*rTask) []*rTask {
 		var out []*rTask
 		for _, rt := range rts {
-			if rt.tsk.Priority != nil && *rt.tsk.Priority != "" {
+			if rt.task.Priority != nil && *rt.task.Priority != "" {
 				out = append(out, rt)
 			}
 		}
@@ -179,7 +179,7 @@ func formatPriorities(tasks []*rTask) {
 		n := len(tasks)
 		maxDepth := 0
 		for _, t := range tasks {
-			maxDepth = max(maxDepth, len(*t.tsk.Priority))
+			maxDepth = max(maxDepth, len(*t.task.Priority))
 		}
 		if n == 0 || depth > maxDepth || int(endHue-startHue) < n {
 			return
@@ -188,7 +188,7 @@ func formatPriorities(tasks []*rTask) {
 		groups := make(map[string][]*rTask)
 		prefixes := []string{}
 		for _, rt := range tasks {
-			prio := *rt.tsk.Priority
+			prio := *rt.task.Priority
 			prefix := prio
 			if len(prio) > depth {
 				prefix = prio[:depth+1]
@@ -214,7 +214,7 @@ func formatPriorities(tasks []*rTask) {
 				return count
 			}
 			for _, rt := range groups[prefix] {
-				weights[i] += 1 + countTasks(rt.tsk.Children)
+				weights[i] += 1 + countTasks(rt.task.Children)
 			}
 		}
 
@@ -227,7 +227,7 @@ func formatPriorities(tasks []*rTask) {
 		for i, prefix := range prefixes {
 			group := groups[prefix]
 			slices.SortFunc(group, func(a, b *rTask) int {
-				return strings.Compare(*a.tsk.Priority, *b.tsk.Priority)
+				return strings.Compare(*a.task.Priority, *b.task.Priority)
 			})
 
 			ratio := float64(weights[i]) / float64(totalWeight)
@@ -235,12 +235,12 @@ func formatPriorities(tasks []*rTask) {
 			ng := len(group)
 
 			for ndx, rt := range group {
-				if len(*rt.tsk.Priority) <= depth {
+				if len(*rt.task.Priority) <= depth {
 					h := currentHue + (float64(ndx)+0.5)/float64(ng)*(nextHue-currentHue)
 					assignColor(rt, utils.HslToHex(h, colorSaturation, colorLightness))
 				}
 				children := []*rTask{}
-				for _, child := range rt.tsk.Children {
+				for _, child := range rt.task.Children {
 					if crt, ok := taskToRTask[child]; ok {
 						children = append(children, crt)
 					}
@@ -255,7 +255,7 @@ func formatPriorities(tasks []*rTask) {
 
 	roots := []*rTask{}
 	for _, rt := range tasks {
-		if rt.tsk != nil && rt.tsk.Parent == nil {
+		if rt.task != nil && rt.task.Parent == nil {
 			roots = append(roots, rt)
 		}
 	}
@@ -338,13 +338,6 @@ func colorize(color, text string) string {
 	return text
 }
 
-func colorizeToken(raw, color, dominantColor string) string {
-	if dominantColor != "" {
-		return colorize(dominantColor, raw)
-	}
-	return colorize(color, raw)
-}
-
 func colorizeIds(ids map[string]bool) map[string]string {
 	out := make(map[string]string)
 	if len(ids) == 0 {
@@ -389,9 +382,9 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 	if listMetadata == nil {
 		listMetadata = &rList{idList: make(map[string]bool)}
 	}
-	out := rTask{tsk: t, id: *t.ID, idColor: "print.color-index"}
+	out := rTask{task: t, id: *t.ID, idColor: "print.color-index"}
 	addAsRegular := func(token *Token) {
-		out.tokens = append(out.tokens, &rToken{token: token, raw: token.String(t)})
+		out.tokens = append(out.tokens, &rToken{token: token, raw: token.String(t), color: "print.color-default"})
 	}
 	specialTokenMap := func() map[string]*Token {
 		out := make(map[string]*Token)
@@ -417,6 +410,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 		out.tokens = append(out.tokens, &rToken{
 			token: specialTokenMap["priority"],
 			raw:   fmt.Sprintf("(%s)", *t.Priority),
+			color: "print.color-default",
 		})
 	}
 
@@ -449,7 +443,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 		case TokenText:
 			if tk.Key != "quote" {
 				out.tokens = append(out.tokens, &rToken{
-					token: tk, raw: tk.String(t),
+					token: tk, raw: tk.String(t), color: "print.color-default",
 				})
 			} else {
 				val := tk.String(t)
@@ -497,7 +491,7 @@ func (t *Task) Render(listMetadata *rList) *rTask {
 			out.tokens = append(out.tokens, &rToken{
 				token: tk,
 				raw:   formatID(*tk),
-				color: "",
+				color: "print.color-default",
 			})
 			listMetadata.idList[*tk.Value.(*string)] = true
 		case TokenHint:
@@ -613,7 +607,7 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 	listMetadata := rList{path: path, idList: make(map[string]bool)}
 	sessionMetadata.lists[path] = &listMetadata
 	for _, task := range Lists[path].Tasks {
-		if task.ParentCollapsed() {
+		if task.IsParentCollapsed() {
 			continue
 		}
 		rtask := task.Render(&listMetadata)
@@ -625,8 +619,8 @@ func RenderList(sessionMetadata *rPrint, path string) error {
 			if tk.token.Type == TokenID {
 				tk.color = idColors[*tk.token.Value.(*string)]
 				if tk.dominantColor == "" &&
-					((tk.token.Key == "id" && len(task.tsk.Children) == 0) ||
-						(tk.token.Key == "P" && task.tsk.Parent == nil)) {
+					((tk.token.Key == "id" && len(task.task.Children) == 0) ||
+						(tk.token.Key == "P" && task.task.Parent == nil)) {
 					tk.dominantColor = "print.color-dead-relations"
 				}
 			}
@@ -677,11 +671,11 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 		emptyCatThere := false
 		categories := make(map[string]bool)
 		for _, task := range list.tasks {
-			if task.tsk.Prog != nil {
-				if task.tsk.Prog.Category == "" {
+			if task.task.Prog != nil {
+				if task.task.Prog.Category == "" {
 					emptyCatThere = true
 				}
-				categories[task.tsk.Prog.Category] = true
+				categories[task.task.Prog.Category] = true
 			}
 		}
 		useCatHeader := !((len(categories) == 1 && emptyCatThere) || len(categories) == 0)
@@ -690,15 +684,15 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 
 		out.WriteString(formatListHeader(list))
 		for _, task := range list.tasks {
-			if useCatHeader && task.tsk.Prog != nil && task.tsk.Prog.Category != lastCat {
-				cat := task.tsk.Prog.Category
+			if useCatHeader && task.task.Prog != nil && task.task.Prog.Category != lastCat {
+				cat := task.task.Prog.Category
 				if cat == "" {
 					cat = "*"
 				}
 				out.WriteString(formatCategoryHeader(cat, list))
-				lastCat = task.tsk.Prog.Category
+				lastCat = task.task.Prog.Category
 			}
-			if useCatHeader && task.tsk.Prog == nil && firstNonCat {
+			if useCatHeader && task.task.Prog == nil && firstNonCat {
 				firstNonCat = false
 				out.WriteString(formatCategoryHeader("", list))
 			}
@@ -725,3 +719,7 @@ func PrintTask(id int, path string) error {
 	fmt.Println(task.Raw())
 	return nil
 }
+
+// TODO: rewrite the configuration part with pure functions...
+//  don't create cfg objects and pass it down. create the cfg objects at the bottom, and pass it up.
+// TODO: and maybe replace these current variety of cfg objects with a big one and change return values to compensate if possible

@@ -2,7 +2,6 @@ package task
 
 import (
 	"bytes"
-	"dotxt/config"
 	"dotxt/pkg/utils"
 	"fmt"
 	"math"
@@ -227,7 +226,7 @@ func TestFormatPriorities(t *testing.T) {
 	Lists.Set(path, func() []*Task {
 		var out []*Task
 		for _, t := range tasks {
-			out = append(out, t.tsk)
+			out = append(out, t.task)
 		}
 		return out
 	}())
@@ -265,25 +264,6 @@ func TestResolvColor(t *testing.T) {
 	assert.Equal(viper.GetString("print.progress.count"), resolvColor("print.progress.count"))
 }
 
-func TestColorizeToken(t *testing.T) {
-	assert := assert.New(t)
-	prevColor := config.Color
-	config.Color = true
-
-	t.Run("dominant", func(t *testing.T) {
-		color := colorizeToken("text", "print.progress.doneCount", "print.progress.count")
-		assert.Contains(color, "text")
-		assert.Contains(color, viper.GetString("print.progress.count"))
-	})
-	t.Run("normal", func(t *testing.T) {
-		color := colorizeToken("text", "print.progress.doneCount", "")
-		assert.Contains(color, "text")
-		assert.Contains(color, viper.GetString("print.progress.doneCount"))
-	})
-
-	config.Color = prevColor
-}
-
 func TestColorIds(t *testing.T) {
 	assert := assert.New(t)
 	out := colorizeIds(map[string]bool{"1": true, "2": true, "3": true})
@@ -312,11 +292,10 @@ func TestRender(t *testing.T) {
 		rtask := task.Render(&l)
 		assert.Equal(1, l.idLen)
 		assert.Equal(103, l.maxLen)
-		assert.Equal(task, rtask.tsk, "task")
+		assert.Equal(task, rtask.task, "task")
 		assert.Equal(id, rtask.id, "id")
 		assert.Equal("print.color-index", rtask.idColor, "idColor")
 		assert.Equal("$p=unit/2/15/cat", rtask.tokens[0].token.raw)
-		assert.Equal("print.color-default", rtask.tokens[0].color)
 		assert.Equal("(A)", rtask.tokens[1].raw)
 		assert.Equal("print.color-default", rtask.tokens[1].color)
 		assert.Equal("+prj", rtask.tokens[2].raw)
@@ -467,8 +446,8 @@ func TestRenderList(t *testing.T) {
 			return node
 		}
 		for _, task := range sm.lists[path].tasks {
-			if task.tsk.Norm() != "$-id=1" {
-				assert.NotEqual("$-id=1", root(task.tsk).Norm())
+			if task.task.Norm() != "$-id=1" {
+				assert.NotEqual("$-id=1", root(task.task).Norm())
 			}
 		}
 	})
@@ -497,7 +476,7 @@ func TestStringify(t *testing.T) {
 		return rtask.stringify(false, 50)
 	}
 	out := helper("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/12/15/cat text $r=-3d $every=1m")
-	assert.Equal("12 12/15( 80%) =======>   (unit) (A) +prj #tag @at\n                          $due=1d $dead=1w $r=22' \n                          $id=3 $P=2 text $r=-3d \n                          $every=1m", out)
+	assert.Equal("12 12/15( 80%) =======>   (unit) (A) +prj #tag @at\n                          $due=1d $dead=1w $r=22'\n                          $id=3 $P=2 text $r=-3d\n                          $every=1m", out)
 	assert.Equal("12 ", out[:3], "id")
 	assert.Equal("12/15( 80%) =======>   (unit) ", out[3:33], "progress")
 	assert.False(testLength(out))
@@ -519,10 +498,10 @@ func TestStringify(t *testing.T) {
 		// string so long it has to be split
 		// str is long enough
 		out = helper("one two three four five six seven eight nine ten eleven ============================================================= twelve thirteen fourteen sixteen seventeen eighteen nineteen twenty twenty-one")
-		assert.Equal("12 one two three four five six seven eight nine \n   ten eleven ===================================\\\n   ========================== twelve thirteen \n   fourteen sixteen seventeen eighteen nineteen \n   twenty twenty-one", out)
-		assert.Contains(out, "nine \n   ten")
-		assert.Contains(out, "thirteen \n   fourteen")
-		assert.Contains(out, "nineteen \n   twenty")
+		assert.Equal("12 one two three four five six seven eight nine\n   ten eleven ===================================\\\n   ========================== twelve thirteen\n   fourteen sixteen seventeen eighteen nineteen\n   twenty twenty-one", out)
+		assert.Contains(out, "nine\n   ten")
+		assert.Contains(out, "thirteen\n   fourteen")
+		assert.Contains(out, "nineteen\n   twenty")
 		assert.Contains(out, "===================================\\\n   ==========================")
 		assert.False(testLength(out))
 	})
@@ -561,12 +540,12 @@ func TestStringify(t *testing.T) {
 		assert.Equal("   03 3 $id=3 $P=1", helper(3))
 		assert.Equal("      04 4 $id=4 $P=3", helper(4))
 		assert.Equal("12 12 ===========================================\\\n   ==============================================\\\n   ====================================", helper(5))
-		assert.Equal("13 13 one two three four five six seven eight nine\n   ten eleven ===================================\\\n   ========================== twelve thirteen \n   fourteen sixteen seventeen eighteen nineteen \n   twenty twenty-one", helper(6))
+		assert.Equal("13 13 one two three four five six seven eight nine\n   ten eleven ===================================\\\n   ========================== twelve thirteen\n   fourteen sixteen seventeen eighteen nineteen\n   twenty twenty-one", helper(6))
 		assert.Equal("14 14 ===========================================\\\n   ==================", helper(7))
 		assert.Equal("05 5 $id=5", helper(8))
 		assert.Equal("   06 6 $id=6 $P=5", helper(9))
 		assert.Equal("      07 7 $id=7 $P=6", helper(10))
-		assert.Equal("         10 10 $P=7 one two three four five six \n            seven eight nine ten eleven =========\\\n            =====================================\\\n            =============== twelve thirteen \n            fourteen sixteen seventeen eighteen \n            nineteen twenty twenty-one", helper(11))
+		assert.Equal("         10 10 $P=7 one two three four five six\n            seven eight nine ten eleven =========\\\n            =====================================\\\n            =============== twelve thirteen\n            fourteen sixteen seventeen eighteen\n            nineteen twenty twenty-one", helper(11))
 		assert.Equal("         11 11 $P=7 =============================\\\n            ================================", helper(12))
 		assert.Equal("         09 9 $P=7 ==============================\\\n            =====================================\\\n            =====================================\\\n            =====================", helper(13))
 		assert.Equal("08 8 no id", helper(14))
@@ -664,20 +643,20 @@ func TestPrintLists(t *testing.T) {
 
 		assert.Equal(50, utf8.RuneCountInString(out[2]))
 		assert.Equal(50, utf8.RuneCountInString(out[3]))
-		assert.Equal(48, utf8.RuneCountInString(out[4]))
+		assert.Equal(47, utf8.RuneCountInString(out[4]))
 
 		assert.Equal(39, utf8.RuneCountInString(out[6]))
 		assert.Equal(50, utf8.RuneCountInString(out[7]))
-		assert.Equal(37, utf8.RuneCountInString(out[8]))
+		assert.Equal(36, utf8.RuneCountInString(out[8]))
 
 		assert.Equal(68, utf8.RuneCountInString(out[9])) // category header
-		assert.Equal(30, len(out[10]))
+		assert.Equal(29, len(out[10]))
 	})
 	t.Run("category headers", func(t *testing.T) {
 		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
 		assert.Equal(50, utf8.RuneCountInString(out[1]))
-		assert.Equal(42, utf8.RuneCountInString(out[5]))
+		assert.Equal(41, utf8.RuneCountInString(out[5]))
 		assert.Equal(68, utf8.RuneCountInString(out[9]))
 	})
 }
