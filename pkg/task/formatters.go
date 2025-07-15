@@ -143,6 +143,44 @@ func formatPriorities(tasks []*rTask) {
 		return out
 	}()
 
+	weightMemo := make(map[*Task]int)
+	var countWeight func([]*Task) int
+	countWeight = func(tasks []*Task) int {
+		count := 0
+		prios := make(map[string]bool)
+		for _, t := range tasks {
+			if w, ok := weightMemo[t]; ok {
+				count += w
+				continue
+			}
+			tcnt := 0
+			if t.Priority != nil && *t.Priority != "" {
+				if _, ok := prios[*t.Priority]; !ok {
+					prios[*t.Priority] = true
+					tcnt = 1
+				}
+			}
+			tcnt += countWeight(t.Children)
+			weightMemo[t] = tcnt
+			count += tcnt
+		}
+		return count
+	}
+
+	subtreeDepth := make(map[*Task]int)
+	var computeDepth func(*Task) int
+	computeDepth = func(t *Task) int {
+		if d, ok := subtreeDepth[t]; ok {
+			return d
+		}
+		maximum := 0
+		for _, c := range t.Children {
+			maximum = max(maximum, computeDepth(c))
+		}
+		subtreeDepth[t] = maximum + 1
+		return subtreeDepth[t]
+	}
+
 	assignColor := func(task *rTask, color string) {
 		for _, tk := range task.tokens {
 			if tk.token != nil && tk.token.Type == TokenPriority {
@@ -157,35 +195,47 @@ func formatPriorities(tasks []*rTask) {
 			if r := sortPriority(l.task, r.task); r != 2 {
 				return r
 			}
-			return 0
+			return sortHelper(l.task, r.task)
 		})
 		return tasks
 	}
 
-	filterPriority := func(rts []*rTask) []*rTask {
-		var out []*rTask
-		for _, rt := range rts {
-			if rt.task.Priority != nil && *rt.task.Priority != "" {
-				out = append(out, rt)
-			}
-		}
-		return out
-	}
-
 	var assignHue func(tasks []*rTask, startHue, endHue float64, depth int)
 	assignHue = func(tasks []*rTask, startHue, endHue float64, depth int) {
-		tasks = filterPriority(tasks)
-		n := len(tasks)
+		if len(tasks) == 0 {
+			return
+		}
+
+		var prioed []*rTask
+		// horizontal call part 1
+		for _, rt := range tasks {
+			if rt.task != nil && rt.task.Priority == nil {
+				children := []*rTask{}
+				for _, child := range rt.task.Children {
+					if crt, ok := taskToRTask[child]; ok {
+						children = append(children, crt)
+					}
+				}
+				assignHue(sortByPriority(children), startHue, endHue, 0)
+			} else if rt.task != nil && rt.task.Priority != nil && *rt.task.Priority != "" {
+				prioed = append(prioed, rt)
+			}
+		}
+		tasks = prioed
+
+		if len(tasks) == 0 {
+			return
+		}
 		maxDepth := 0
 		for _, t := range tasks {
 			maxDepth = max(maxDepth, len(*t.task.Priority))
 		}
-		if n == 0 || depth > maxDepth || int(endHue-startHue) < n {
+		if depth > maxDepth {
 			return
 		}
 
-		groups := make(map[string][]*rTask)
 		prefixes := []string{}
+		groups := make(map[string][]*rTask)
 		for _, rt := range tasks {
 			prio := *rt.task.Priority
 			prefix := prio
@@ -200,55 +250,62 @@ func formatPriorities(tasks []*rTask) {
 		sort.Strings(prefixes)
 
 		weights := make([]int, len(prefixes))
-		for i, prefix := range prefixes {
-			var countTasks func([]*Task) int
-			countTasks = func(ts []*Task) int {
-				count := 0
-				for _, t := range ts {
-					if t.Priority != nil && *t.Priority != "" {
-						count++
-					}
-					count += countTasks(t.Children)
-				}
-				return count
-			}
-			for _, rt := range groups[prefix] {
-				weights[i] += 1 + countTasks(rt.task.Children)
-			}
-		}
-
 		totalWeight := 0
-		for _, w := range weights {
-			totalWeight += w
+		for i, prefix := range prefixes {
+			weights[i] += countWeight(func() []*Task {
+				out := make([]*Task, len(groups[prefix]))
+				for ndx, rt := range groups[prefix] {
+					out[ndx] = rt.task
+				}
+				return out
+			}())
+			totalWeight += weights[i]
 		}
 
-		currentHue := startHue
+		span := endHue - startHue
+		currentPrefixHue := startHue
 		for i, prefix := range prefixes {
 			group := groups[prefix]
-			slices.SortFunc(group, func(a, b *rTask) int {
-				return strings.Compare(*a.task.Priority, *b.task.Priority)
-			})
 
 			ratio := float64(weights[i]) / float64(totalWeight)
-			nextHue := currentHue + (endHue-startHue)*ratio
-			ng := len(group)
+			nextPrefixHue := currentPrefixHue + ratio*span
+			currentSpan := nextPrefixHue - currentPrefixHue
+			currentHue := currentPrefixHue
 
-			for ndx, rt := range group {
-				if len(*rt.task.Priority) <= depth {
-					h := currentHue + (float64(ndx)+0.5)/float64(ng)*(nextHue-currentHue)
-					assignColor(rt, utils.HslToHex(h, colorSaturation, colorLightness))
+			leavesWeight := make(map[string]int)
+			leavesByPrio := make(map[string][]*rTask)
+			var branch []*rTask
+			branchWeight := 0
+			for _, rt := range group {
+				if len(*rt.task.Priority) <= depth+1 || len(group) == 1 { // if there are leaves, all of them are always behind branches!
+					leavesByPrio[*rt.task.Priority] = append(leavesByPrio[*rt.task.Priority], rt)
+					leavesWeight[*rt.task.Priority] += weightMemo[rt.task]
+				} else {
+					branch = append(branch, rt)
+					branchWeight += weightMemo[rt.task]
 				}
-				children := []*rTask{}
-				for _, child := range rt.task.Children {
-					if crt, ok := taskToRTask[child]; ok {
-						children = append(children, crt)
-					}
-				}
-				assignHue(children, currentHue, nextHue, 0)
 			}
 
-			assignHue(group, currentHue, nextHue, depth+1)
-			currentHue = nextHue
+			for prio, samePrioLeafGroup := range leavesByPrio {
+				nextHue := currentHue + float64(leavesWeight[prio])/float64(weights[i])*currentSpan
+				midHue := (currentHue + nextHue) / 2
+				for _, rt := range samePrioLeafGroup {
+					assignColor(rt, utils.HslToHex(midHue, colorSaturation, colorLightness))
+					// horizontal call part 2
+					var children []*rTask
+					for _, child := range rt.task.Children {
+						if crt, ok := taskToRTask[child]; ok {
+							children = append(children, crt)
+						}
+					}
+					assignHue(sortByPriority(children), currentHue, nextHue, 0)
+				}
+				currentHue = nextHue
+			}
+
+			// vertical call
+			assignHue(branch, currentHue, nextPrefixHue, depth+1)
+			currentPrefixHue = nextPrefixHue
 		}
 	}
 
@@ -257,6 +314,10 @@ func formatPriorities(tasks []*rTask) {
 		if rt.task != nil && rt.task.Parent == nil {
 			roots = append(roots, rt)
 		}
+	}
+
+	for _, rt := range roots {
+		_ = countWeight([]*Task{rt.task})
 	}
 
 	assignHue(sortByPriority(roots), colorStartHue, colorEndHue, 0)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"dotxt/pkg/utils"
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"strconv"
@@ -169,73 +170,112 @@ func TestFormatAbsoluteDatetime(t *testing.T) {
 func TestFormatPriorities(t *testing.T) {
 	assert := assert.New(t)
 	input := `
-	(A) $id=a                                  // 99
-	(AA) $P=a                                  // 72
-	(AAB) $P=a                                 // 88
-	(AAC) $P=a                                 // 103
-	(AB) $id=ab                                // 203
-	(ABA) $P=ab                                // 154
-	(ABB) $P=ab                                // 166
-	(ABC) $P=ab                                // 179
-	(ABCD) $P=ab                               // 191
-	(ABCDE) $P=ab                              // 203
-	(ABCDEA) $P=ab                             // 215
-	(A)                                        // 76
-	(AA)                                       // 115
-	(AAB)                                      // 134
-	(AAC)                                      // 143
-	(AB)                                       // 166
-	(ABA)                                      // 226
-	(ABB)                                      // 235
-	(ABC)                                      // 245
-	(ABCD)                                     // 254
-	(ABCDE)                                    // 263
-	(ABCDEA)                                   // 272
-	(XYZ)                                      // 300
-	(XYZA)                                     // 309
-	(ZYX)                                      // 319
-	(LongPriorityStringThatExceedsDepthLimit)  // 281
-	(Short)                                    // 291
-	(1)                                        // 32
-	(12)                                       // 41
-	(123)                                      // 51
-	(1A)                                       // 60
-	(-)                                        // 5
-	(--)                                       // 14
-	(---)                                      // 23
-	(🔥)                                       // 346
-	(🔥A)                                      // 355
-	(特殊)                                     // 328
-	(長い)                                     // 337
-	(AAAAAAAAAAAAAAAAAAAAAAAAAAAAA)            // 125`
+(A) $id=a                                  // 64
+	(AA) $P=a                                  // 50
+	(AAB) $P=a                                 // 60
+	(AAC) $P=a                                 // 69
+	(AB) $id=ab                                // 135
+	(ABA) $P=ab                                // 114
+	(ABB) $P=ab                                // 122
+	(ABC) $P=ab                                // 131
+	(ABCD) $P=ab                               // 139
+	(ABCDE) $P=ab                              // 148
+	(ABCDEA) $P=ab                             // 156
+	(x) $P=a 1								   // 79
+	(x) $P=a 2								   // 79
+	(x) $P=a 3								   // 79
+	(x) $P=a 4								   // 79
+	(x) $P=a 5								   // 79
+	(x) $P=a 6								   // 79
+	(A)                                        // 64
+	(AA)                                       // 87
+	(AAB)                                      // 100
+	(AAC)                                      // 106
+	(AB)                                       // 135
+	(ABA)                                      // 164
+	(ABB)                                      // 170
+	(ABC)                                      // 177
+	(ABCD)                                     // 183
+	(ABCDE)                                    // 190
+	(ABCDEA)                                   // 196
+	(t) 1									   // 264
+	(t) 2									   // 264
+	(t) 3 $id=t3							   // 264
+	(t1) 3.1 $P=t3 							   // 240
+	(t2) 3.2 $P=t3 							   // 256
+	(t3) 3.3 $P=t3 $id=t33					   // 280
+	(t31) 3.3.1 $P=t33  					   // 280
+	(t) 4									   // 264
+	(t) 5									   // 264
+	(t) 6									   // 264
+	(x) 1									   // 328
+	(x) 2									   // 328
+	(x) 3 $id=x3							   // 328
+	(x1) 3.1 $P=x3 							   // 304
+	(x2) 3.2 $P=x3 							   // 320
+	(x3) 3.3 $P=x3 $id=x33					   // 344
+	(x31) 3.3.1 $P=x33  					   // 344
+	(x) 4									   // 328
+	(x) 5									   // 328
+	(x) 6									   // 328
+	(XYZ)                                      // 215
+	(XYZA)                                     // 222
+	(ZYX)                                      // 228
+	(LongPriorityStringThatExceedsDepthLimit)  // 202
+	(Short)                                    // 209
+	(1)                                        // 22
+	(12)                                       // 29
+	(123)                                      // 35
+	(1A)                                       // 42
+	(-)                                        // 3
+	(--)                                       // 10
+	(---)                                      // 16
+	(AAAAAAAAAAAAAAAAAAAAAAAAAAAAA)            // 93
+	$id=no-prio-parent						   // 0
+	(prio-child) $P=no-prio-parent			   // 90
+	(weird) $P=no-prio-parent			       // 270`
 	lines := strings.Split(strings.TrimSpace(input), "\n")
-	var tasks []*rTask
-	var hues []int
+	hues := make(map[*Task]int)
+	lineMap := make(map[*Task]string)
+	path, _ := parseFilepath("testPrio")
+	Lists.Empty(path)
 	for ndx, line := range lines {
 		if strings.TrimSpace(line)[0] == '/' {
 			continue
 		}
 		parts := strings.SplitN(strings.TrimSpace(line), "//", 2)
 		taskLine := strings.TrimSpace(parts[0])
-		hueVal, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
-		hues = append(hues, hueVal)
 		task, _ := ParseTask(utils.MkPtr(ndx), taskLine)
-		tasks = append(tasks, task.Render())
+		Lists.Append(path, task)
+		hueVal, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+		hues[task] = hueVal
+		lineMap[task] = line
 	}
-	path, _ := parseFilepath("testPrio")
-	Lists.Set(path, func() []*Task {
-		var out []*Task
-		for _, t := range tasks {
-			out = append(out, t.task)
+	cleanupRelations(path)
+	rtasks := func() map[*Task]*rTask {
+		out := make(map[*Task]*rTask)
+		for _, t := range Lists[path].Tasks {
+			out[t] = t.Render()
 		}
 		return out
-	}())
-	cleanupRelations(path)
-	formatPriorities(tasks)
-	for ndx := range len(tasks) {
-		h, _, _ := utils.HexToHSL(tasks[ndx].tokens[0].color)
+	}()
+	var rts []*rTask
+	for rt := range maps.Values(rtasks) {
+		rts = append(rts, rt)
+	}
+	formatPriorities(rts)
+	for _, t := range Lists[path].Tasks {
+		// line := lineMap[t] // uncomment these line to reprint the number for ease of modification
+		// line = line[:strings.Index(line, "//")+2] + " "
+		if t.Priority == nil {
+			// fmt.Println(line + "0")
+			continue
+		}
+		rt := rtasks[t]
+		h, _, _ := utils.HexToHSL(rt.tokens[0].color)
 		h = math.Round(h)
-		assert.Equalf(float64(hues[ndx]), h, "=%s :color=%s", lines[ndx], tasks[ndx].tokens[0].color)
+		// fmt.Println(line + strconv.Itoa(int(h)))
+		assert.Equalf(float64(hues[t]), h, "=%s :color=%s", lineMap[t], rt.tokens[0].color)
 	}
 }
 
