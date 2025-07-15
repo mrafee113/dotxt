@@ -499,8 +499,9 @@ func (t *Task) Render() *rTask {
 			return
 		case TokenText:
 			if tk.Key != "quote" {
+				replacer := strings.NewReplacer("\\'", "'", "\\\"", "\"", "\\`", "`")
 				out.tokens = append(out.tokens, &rToken{
-					token: tk, raw: tk.String(t), color: "print.color-default",
+					token: tk, raw: replacer.Replace(tk.String(t)), color: "print.color-default",
 				})
 			} else {
 				val := tk.String(t)

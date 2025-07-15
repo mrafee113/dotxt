@@ -387,6 +387,13 @@ func TestRender(t *testing.T) {
 			assert.Equal("```t9 \"t9 \\\\\\'t9 't9 \\\\\\`t9 `t9 \\`\\`\\````", rtask.tokens[8].raw)
 			assert.Equal("print.quotes.double", rtask.tokens[8].color)
 		})
+		t.Run("escaped quote out of quote", func(t *testing.T) {
+			task, _ := ParseTask(utils.MkPtr(3), "1\\\" 2\\' 3\\`")
+			rtask := task.Render()
+			assert.Equal("1\"", rtask.tokens[0].raw)
+			assert.Equal("2'", rtask.tokens[1].raw)
+			assert.Equal("3`", rtask.tokens[2].raw)
+		})
 	})
 	t.Run("after due", func(t *testing.T) {
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
