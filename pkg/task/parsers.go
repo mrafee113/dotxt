@@ -333,29 +333,21 @@ func unparseRelativeDatetime(dt, rel time.Time) string {
 	return unparseDuration(dt.Sub(rel))
 }
 
-// TODO: refactor: rewrite from task perspective and use unparse...(key string) and also unparseNew...(key string, newVal time.Time)
-func (tk *Token) unparseRelativeDatetime(t *Temporal, val *time.Time) (string, error) {
-	curDtTxt := strings.TrimPrefix(tk.raw, fmt.Sprintf("$%s=", tk.Key))
-	fallback, _, err := getTemporalFallback(tk.Key, curDtTxt)
-	if err != nil {
-		return "", err
-	}
+func (tk *Token) unparseRelativeDatetime(val *time.Time) string {
+	tkDt := tk.Value.(*TokenDateValue)
 	if val == nil {
-		val = tk.Value.(*time.Time)
+		val = tkDt.Value
 	}
-	rel, err := t.getField(fallback)
-	if err != nil {
-		return "", err
+	relVal := tkDt.RelVal
+	if relVal == nil {
+		relVal = &rightNow
 	}
-	newDtTxt := unparseRelativeDatetime(*val, *rel)
-	if ndx := strings.IndexRune(curDtTxt, ':'); ndx > 0 {
-		_, ok := temporalFallback[curDtTxt[:ndx]]
-		if ok {
-			newDtTxt = fmt.Sprintf("%s:%s", fallback, newDtTxt)
-		}
+	newDtTxt := unparseRelativeDatetime(*val, *relVal)
+	if strings.ContainsRune(tk.raw, ':') {
+		newDtTxt = fmt.Sprintf("%s:%s", tkDt.RelKey, newDtTxt)
 	}
 	newDtTxt = fmt.Sprintf("$%s=%s", tk.Key, newDtTxt)
-	return newDtTxt, nil
+	return newDtTxt
 }
 
 func getTemporalFallback(field, dt string) (string, string, error) {
@@ -377,16 +369,16 @@ func getTemporalFallback(field, dt string) (string, string, error) {
 	return fallback, dt, nil
 }
 
-func parseTmpRelativeDatetime(field, dt string) (*temporalNode, error) {
+func parseTmpRelativeDatetime(field, dt string) (string, *time.Duration, error) {
 	fallback, dt, err := getTemporalFallback(field, dt)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	duration, err := parseDuration(dt)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed parsing tmp relative datetime: %w", terrors.ErrParse, err)
+		return "", nil, fmt.Errorf("%w: failed parsing tmp relative datetime: %w", terrors.ErrParse, err)
 	}
-	return &temporalNode{Field: field, Ref: fallback, Offset: duration}, nil
+	return fallback, duration, nil
 }
 
 func parseProgress(token string) (*Progress, error) {
@@ -464,48 +456,79 @@ func parsePriority(line string) (int, int, error) {
 	}
 }
 
+/*
+ai says to look out for these:
+  - The for len(resolved)-1 < dtCount loop can hang
+  - If changed is false you never break or update len(resolved), so the loop never exits.
+  - You also decrement dtCount inside the !changed block, but only for the ones you explicitly revert—what about other unresolved nodes?
+  - Magic “3” iteration depth
+  - That will only chase at most 3 hops down the fallback chain. If you ever extend temporalFallback (e.g. add more levels), you’d have to bump that constant.
+  - Dual key-remapping for reminders
+  - You temporarily rename "r" to "r<idx>" in the first pass, then map everything using nodes[key] loops over the hard-coded slice append([]string{"c", "due", …}, rKeys…). If someone writes two reminders back-to-back but with the same raw text (e.g. duplicate tokens), the index hack could mismatch.
+*/
 func resolveDates(tokens []*Token) []error {
-	tokenKeyToNdx := make(map[string]int)
-	nodes := make(map[string]*temporalNode)
-	resolved := make(map[string]time.Time)
-	resolved["rn"] = rightNow
-	var totalDateCount int
-	var reminderKeys []string
-	for ndx, token := range tokens {
-		if token.Type != TokenDate {
+	var errs []error
+	var dtCount int
+	var reminders []*Token
+	var rKeys []string
+	nodes := make(map[string]*Token)
+	resolved := make(map[string]*TokenDateValue)
+	resolved["rn"] = &TokenDateValue{Value: &rightNow}
+	for ndx, tk := range tokens {
+		if tk.Type != TokenDate {
 			continue
 		}
-		if token.Key == "r" {
-			token.Key = fmt.Sprintf("r%d", ndx)
+		if tk.Key == "r" {
+			tk.Key = fmt.Sprintf("r%d", ndx)
+			reminders = append(reminders, tk)
+			rKeys = append(rKeys, tk.Key)
 		}
-		totalDateCount++
-		tokenKeyToNdx[token.Key] = ndx
-		switch v := token.Value.(type) {
-		case *time.Time:
-			resolved[token.Key] = *v
-		case *temporalNode:
-			if v.Field == "r" {
-				v.Field = fmt.Sprintf("r%d", ndx)
-				reminderKeys = append(reminderKeys, v.Field)
-			}
-			nodes[token.Key] = v
+
+		tdv := tk.Value.(*TokenDateValue)
+		if tdv.Value != nil { // validate absolute
+			dtCount++
+			resolved[tk.Key] = tdv
+			continue
 		}
+
+		if tdv.Offset == nil || tdv.RelKey == "" {
+			dateToTextToken(tk)
+			continue
+		}
+		k := tk.Key
+		if strings.HasPrefix(k, "r") {
+			k = "r"
+		}
+		if allowedRels, exists := allowedTemporalRelations[k]; !exists {
+			dateToTextToken(tk)
+			continue
+		} else if !slices.Contains(allowedRels, tdv.RelKey) {
+			dateToTextToken(tk)
+			continue
+		}
+
+		// validate relative
+		dtCount++
+		nodes[tk.Key] = tk
 	}
-	for len(resolved)-1 < totalDateCount {
+	for len(resolved)-1 < dtCount { // ?
 		changed := false
 		// this order is based on temporalFallback and please review this if you change that
-		for _, key := range append([]string{"c", "due", "end", "dead"}, reminderKeys...) {
-			n, ok := nodes[key]
-			if !ok {
+		for _, key := range append([]string{"c", "due", "end", "dead"}, rKeys...) {
+			tk, ok := nodes[key]
+			if !ok { // validate relative
 				continue
 			}
-			if _, ok := resolved[n.Field]; ok {
+			if _, ok := resolved[key]; ok { // validate unresolved
 				continue
 			}
-			ref := n.Ref
-			for range 3 {
+			tdv := tk.Value.(*TokenDateValue)
+			ref := tdv.RelKey
+			for range 3 { // 3 is the max depth from temporalFallback's current state
 				if base, ok := resolved[ref]; ok {
-					resolved[n.Field] = base.Add(*n.Offset)
+					tdv.RelVal = base.Value
+					tdv.Value = utils.MkPtr(tdv.RelVal.Add(*tdv.Offset))
+					resolved[key] = tdv
 					changed = true
 				} else {
 					tmp, ok := temporalFallback[ref]
@@ -517,22 +540,20 @@ func resolveDates(tokens []*Token) []error {
 			}
 		}
 		if !changed {
-			return []error{fmt.Errorf("%w: dependency of date fields are not resolvable", terrors.ErrValue)}
+			errs = append(errs, fmt.Errorf("%w: dependency of date fields are not resolvable", terrors.ErrValue))
+			for key, tk := range nodes {
+				if tdv, ok := resolved[key]; ok && tdv.Value != nil && (tdv.RelKey == "" || tdv.RelVal != nil) {
+					continue
+				} else {
+					errs = append(errs, fmt.Errorf("%w: somehow the date '%s' was not resolved", terrors.ErrNotFound, key))
+					dateToTextToken(tk)
+					dtCount--
+				}
+			}
 		}
 	}
-	var errs []error
-	for key, ndx := range tokenKeyToNdx {
-		tVal, ok := resolved[key]
-		if ok {
-			tokens[ndx].Value = &tVal
-		} else {
-			errs = append(errs, fmt.Errorf("%w: somehow the date '%s' was not resolved", terrors.ErrNotFound, key))
-		}
-	}
-	for _, tk := range tokens {
-		if tk.Type == TokenDate && strings.HasPrefix(tk.Key, "r") {
-			tk.Key = "r"
-		}
+	for _, tk := range reminders {
+		tk.Key = "r"
 	}
 	return errs
 }
@@ -704,10 +725,11 @@ func parseTokens(line string) ([]*Token, []error) {
 					Key: k, Value: utils.MkPtr(value),
 				})
 			case "c", "due", "end", "dead", "r":
-				var dt any
-				dt, err := parseAbsoluteDatetime(value)
+				var err error
+				var tkValue TokenDateValue
+				tkValue.Value, err = parseAbsoluteDatetime(value)
 				if err != nil {
-					dt, err = parseTmpRelativeDatetime(key, value)
+					tkValue.RelKey, tkValue.Offset, err = parseTmpRelativeDatetime(key, value)
 					if err != nil {
 						handleTokenText(tokenStr, fmt.Errorf("%w: $%s", err, key))
 						continue
@@ -715,7 +737,7 @@ func parseTokens(line string) ([]*Token, []error) {
 				}
 				tokens = append(tokens, &Token{
 					Type: TokenDate, raw: tokenStr,
-					Key: key, Value: dt,
+					Key: key, Value: &tkValue,
 				})
 			case "every":
 				duration, err := parseDuration(value)
@@ -785,20 +807,20 @@ func ParseTask(id *int, line string) (*Task, error) {
 		case TokenDate:
 			switch token.Key {
 			case "c":
-				val := token.Value.(*time.Time)
-				if val.After(rightNow) {
+				val := token.Value.(*TokenDateValue)
+				if val.Value.After(rightNow) {
 					dateToTextToken(tokens[ndx])
 					continue
 				}
-				task.Time.CreationDate = val
+				task.Time.CreationDate = val.Value
 			case "due":
-				task.Time.DueDate = token.Value.(*time.Time)
+				task.Time.DueDate = token.Value.(*TokenDateValue).Value
 			case "r":
-				task.Time.Reminders = append(task.Time.Reminders, token.Value.(*time.Time))
+				task.Time.Reminders = append(task.Time.Reminders, token.Value.(*TokenDateValue).Value)
 			case "end":
-				task.Time.EndDate = token.Value.(*time.Time)
+				task.Time.EndDate = token.Value.(*TokenDateValue).Value
 			case "dead":
-				task.Time.Deadline = token.Value.(*time.Time)
+				task.Time.Deadline = token.Value.(*TokenDateValue).Value
 			}
 		case TokenDuration:
 			task.Time.Every = token.Value.(*time.Duration)
@@ -808,10 +830,12 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 	task.Tokens = tokens
 	if task.Time.CreationDate == nil {
-		task.Time.CreationDate = &rightNow
+		task.Time.CreationDate = utils.MkPtr(rightNow)
 		task.Tokens = append(task.Tokens, &Token{
 			Type: TokenDate, raw: fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow)),
-			Key: "c", Value: &rightNow,
+			Key: "c", Value: &TokenDateValue{
+				Value: task.Time.CreationDate,
+			},
 		})
 	}
 	if task.Time.DueDate == nil && task.Time.Every != nil {
@@ -819,7 +843,10 @@ func ParseTask(id *int, line string) (*Task, error) {
 		task.Time.DueDate = &val
 		task.Tokens = append(task.Tokens, &Token{
 			Type: TokenDate, raw: fmt.Sprintf("$due=%s", unparseRelativeDatetime(val, *task.Time.CreationDate)),
-			Key: "due", Value: &val,
+			Key: "due", Value: &TokenDateValue{
+				Value: &val, RelKey: "due", RelVal: task.Time.CreationDate,
+				Offset: utils.MkPtr(*task.Time.Every),
+			},
 		})
 	}
 	if task.Time.DueDate != nil && !task.Time.DueDate.After(*task.Time.CreationDate) {
@@ -870,7 +897,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 			tk, _ := task.Tokens.Find(func(tk *Token) bool {
 				return tk.Type == TokenDate &&
 					strings.HasPrefix(tk.Key, "r") &&
-					*tk.Value.(*time.Time) == *task.Time.Reminders[ndx]
+					*tk.Value.(*TokenDateValue).Value == *task.Time.Reminders[ndx]
 			})
 			if tk != nil {
 				task.Time.Reminders = slices.Delete(task.Time.Reminders, ndx, ndx+1)

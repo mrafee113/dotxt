@@ -19,7 +19,7 @@ func TestUpdate(t *testing.T) {
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
 			assert.True(strings.HasPrefix(tk.raw, "$"+key+"="))
-			assert.Equal(*value, *tk.Value.(*time.Time))
+			assert.Equal(*value, *tk.Value.(*TokenDateValue).Value)
 		}
 	}
 	t.Run("non-temporal vars", func(t *testing.T) {
@@ -37,7 +37,7 @@ func TestUpdate(t *testing.T) {
 				assert.Equal(90, tk.Value.(*Progress).Count)
 			} else if tk.Type == TokenDate && tk.Key == "c" {
 				assert.True(strings.HasPrefix(tk.raw, "$c="))
-				assert.Equal(*dt, *tk.Value.(*time.Time))
+				assert.Equal(*dt, *tk.Value.(*TokenDateValue).Value)
 			}
 		})
 	})
@@ -89,7 +89,7 @@ func TestUpdate(t *testing.T) {
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
 			assert.True(strings.HasPrefix(tk.raw, "$r="))
-			assert.Equal(*dt, *tk.Value.(*time.Time))
+			assert.Equal(*dt, *tk.Value.(*TokenDateValue).Value)
 		}
 	})
 	t.Run("retain ID", func(t *testing.T) {
@@ -129,7 +129,7 @@ func TestUpdateDate(t *testing.T) {
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if assert.NotNil(tk) {
 			assert.Equal("$due=1w", tk.raw)
-			assert.Equal(dt, *tk.Value.(*time.Time))
+			assert.Equal(dt, *tk.Value.(*TokenDateValue).Value)
 		}
 	})
 	t.Run("relative with var", func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestUpdateDate(t *testing.T) {
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "dead"))
 		if assert.NotNil(tk) {
 			assert.Equal("$dead=c:3m", tk.raw)
-			assert.Equal(dt, *tk.Value.(*time.Time))
+			assert.Equal(dt, *tk.Value.(*TokenDateValue).Value)
 		}
 	})
 	t.Run("absolute", func(t *testing.T) {
@@ -155,7 +155,7 @@ func TestUpdateDate(t *testing.T) {
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if assert.NotNil(tk) {
 			assert.Equal("$due=2025-07-05T05-05", tk.raw)
-			assert.Equal(*dt, *tk.Value.(*time.Time))
+			assert.Equal(*dt, *tk.Value.(*TokenDateValue).Value)
 		}
 	})
 }
@@ -165,11 +165,11 @@ func TestTokenValueTypes(t *testing.T) {
 	task, _ := ParseTask(utils.MkPtr(2), "(prio) $c=2025-05-05T05-05 $due=1w $dead=1w +prj #tag @at $id=1 $P=2 $every=1m $p=unit/10/100/cat")
 	_, ok := task.Tokens[0].Value.(*string)
 	assert.True(ok, "priority")
-	_, ok = task.Tokens[1].Value.(*time.Time)
+	_, ok = task.Tokens[1].Value.(*TokenDateValue)
 	assert.True(ok, "c date")
-	_, ok = task.Tokens[2].Value.(*time.Time)
+	_, ok = task.Tokens[2].Value.(*TokenDateValue)
 	assert.True(ok, "duedate")
-	_, ok = task.Tokens[3].Value.(*time.Time)
+	_, ok = task.Tokens[3].Value.(*TokenDateValue)
 	assert.True(ok, "deadline")
 	_, ok = task.Tokens[4].Value.(*string)
 	assert.True(ok, "+hint")
@@ -244,7 +244,7 @@ func TestString(t *testing.T) {
 	assert := assert.New(t)
 	task, _ := ParseTask(nil, "(A) +prj #tag @at $due=1w $dead=1w $r=-2h $-id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 	helper := func(ndx int) string {
-		return task.Tokens[ndx].String(task)
+		return task.Tokens[ndx].String()
 	}
 	assert.Equal("(A)", helper(0))
 	assert.Equal("+prj", helper(1))
@@ -282,7 +282,7 @@ func TestTokens(t *testing.T) {
 			if tk.Type == TokenDate && tk.Key == "c" {
 				return
 			}
-			assert.Contains(values, tk.String(task))
+			assert.Contains(values, tk.String())
 		})
 	})
 	t.Run("find", func(t *testing.T) {
@@ -308,7 +308,7 @@ func TestTokens(t *testing.T) {
 		task.Tokens.Filter(TkByType(TokenDate)).Filter(func(tk *Token) bool {
 			return tk.Key != "c"
 		}).ForEach(func(tk *Token) {
-			key := tk.String(task)
+			key := tk.String()
 			_, ok := valuesKeys[key]
 			if assert.True(ok) {
 				assert.Equal(TokenDate, tk.Type)

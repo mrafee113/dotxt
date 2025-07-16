@@ -215,7 +215,7 @@ func TestSortTask(t *testing.T) {
 			"$due=1w $dead=1w", "$due=1w $dead=2w",
 			"$due=1w $end=1w", "$due=1w $end=2w",
 			"$due=2d", "$due=4d",
-			"$c=2024-jan", "$c=2024-feb",
+			"$c=2024-feb", "$c=2024-mar",
 			"$r=20d $r=1w $r=1h", "$r=1w $r=1h", "$r=10d $r=1h", "$r=1h $r=2d",
 		}, 5) {
 			prep(lineSet)
@@ -225,12 +225,12 @@ func TestSortTask(t *testing.T) {
 			assert.Equal("$due=1w $end=2w", arr[3].Norm())
 			assert.Equal("$due=2d", arr[4].Norm())
 			assert.Equal("$due=4d", arr[5].Norm())
-			assert.Equal("$c=2024-jan", arr[6].Raw())
-			assert.Equal("$c=2024-feb", arr[7].Raw())
+			assert.Equal("$c=2024-02", arr[6].Raw())
+			assert.Equal("$c=2024-03", arr[7].Raw())
 			assert.Equal("$r=1h $r=2d", arr[8].Norm())
-			assert.Equal("$r=20d $r=1w $r=1h", arr[9].Norm())
+			assert.Equal("$r=2w6d $r=1w $r=1h", arr[9].Norm())
 			assert.Equal("$r=1w $r=1h", arr[10].Norm())
-			assert.Equal("$r=10d $r=1h", arr[11].Norm())
+			assert.Equal("$r=1w3d $r=1h", arr[11].Norm())
 		}
 	})
 	t.Run("every", func(t *testing.T) {

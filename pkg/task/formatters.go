@@ -441,7 +441,7 @@ func formatCategoryHeader(category string, info *rInfo) string {
 func (t *Task) Render() *rTask {
 	out := rTask{task: t, id: *t.ID, idColor: "print.color-index"}
 	addAsRegular := func(token *Token) {
-		out.tokens = append(out.tokens, &rToken{token: token, raw: token.String(t), color: "print.color-default"})
+		out.tokens = append(out.tokens, &rToken{token: token, raw: token.String(), color: "print.color-default"})
 	}
 	specialTokenMap := func() map[string]*Token {
 		out := make(map[string]*Token)
@@ -501,10 +501,10 @@ func (t *Task) Render() *rTask {
 			if tk.Key != "quote" {
 				replacer := strings.NewReplacer("\\'", "'", "\\\"", "\"", "\\`", "`")
 				out.tokens = append(out.tokens, &rToken{
-					token: tk, raw: replacer.Replace(tk.String(t)), color: "print.color-default",
+					token: tk, raw: replacer.Replace(tk.String()), color: "print.color-default",
 				})
 			} else {
-				val := tk.String(t)
+				val := tk.String()
 				quote := val[0]
 				val = val[1 : len(val)-1]
 				var color string
@@ -563,7 +563,7 @@ func (t *Task) Render() *rTask {
 			}
 			out.tokens = append(out.tokens, &rToken{
 				token: tk,
-				raw:   tk.String(t), color: color,
+				raw:   tk.String(), color: color,
 			})
 		case TokenDate:
 			if slices.Contains([]string{"due", "end", "dead"}, tk.Key) {

@@ -79,7 +79,7 @@ func TestParseTask(t *testing.T) {
 		task, _ := ParseTask(nil, "testing")
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "c"))
 		if assert.NotNil(tk) {
-			assert.Exactly(&rightNow, tk.Value.(*time.Time), "'c'")
+			assert.Exactly(&rightNow, tk.Value.(*TokenDateValue).Value, "'c'")
 		}
 	})
 
@@ -260,7 +260,7 @@ func TestParseTask(t *testing.T) {
 		dt = rightNow.Add(38898367 * time.Second)
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if assert.NotNil(tk) {
-			assert.Exactly(dt, *tk.Value.(*time.Time))
+			assert.Exactly(dt, *tk.Value.(*TokenDateValue).Value)
 		}
 		assert.Exactly(dt, *task.Time.DueDate)
 	})
@@ -270,7 +270,7 @@ func TestParseTask(t *testing.T) {
 		dt = rightNow.Add(365*day + 2*30*day + 3*7*day + 4*day + 5*60*60*time.Second + 6*60*time.Second + 7*time.Second)
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if assert.NotNil(tk) {
-			assert.Exactly(dt, *tk.Value.(*time.Time))
+			assert.Exactly(dt, *tk.Value.(*TokenDateValue).Value)
 		}
 		assert.Exactly(dt, *task.Time.DueDate)
 	})
@@ -321,7 +321,7 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$c=1y")
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "c"))
 		if assert.NotNil(tk) {
-			assert.Exactly(rightNow, *tk.Value.(*time.Time))
+			assert.Exactly(rightNow, *tk.Value.(*TokenDateValue).Value)
 		}
 		tk, _ = task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
@@ -414,7 +414,7 @@ func TestParseTask(t *testing.T) {
 			assert.Equal(due, *task.Time.DueDate)
 		}
 		if assert.NotNil(tk) {
-			assert.Equal("$due=1y", tk.String(task))
+			assert.Equal("$due=1y", tk.String())
 		}
 	})
 
@@ -968,17 +968,18 @@ func TestResolveDates(t *testing.T) {
 				}
 				switch key {
 				case "c", "due", "end", "dead", "r":
-					var dt any
-					dt, err := parseAbsoluteDatetime(value)
+					var tkValue TokenDateValue
+					var err error
+					tkValue.Value, err = parseAbsoluteDatetime(value)
 					if err != nil {
-						dt, err = parseTmpRelativeDatetime(key, value)
+						tkValue.RelKey, tkValue.Offset, err = parseTmpRelativeDatetime(key, value)
 						if err != nil {
 							continue
 						}
 					}
 					tokens = append(tokens, &Token{
 						Type: TokenDate, raw: token,
-						Key: key, Value: dt,
+						Key: key, Value: &tkValue,
 					})
 				}
 			}
@@ -986,15 +987,174 @@ func TestResolveDates(t *testing.T) {
 		return tokens, resolveDates(tokens)
 	}
 	t.Run("normal", func(t *testing.T) {
-		tokens, errs := helper("$c=2025-05-05T05-05 $due=1w $dead=2w $r=-5h $r=+5M")
+		tokens, errs := helper("$c=2025-05-05T05-05 $due=1w $dead=2w $end=3w $r=-5h $r=+5M")
 		require.Empty(t, errs)
+		dt, _ := parseAbsoluteDatetime("2025-05-05T05-05")
+		tkM := make(map[string]*Token)
+		for _, tk := range tokens {
+			tkM[tk.Key] = tk
+		}
 		for _, tk := range tokens {
 			assert.Equal(TokenDate, tk.Type)
-			_, ok := tk.Value.(*time.Time)
+			tdv, ok := tk.Value.(*TokenDateValue)
 			assert.True(ok)
+			switch tk.Key {
+			case "c":
+				assert.Equal(*dt, *tdv.Value)
+			case "due":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(dt.Add(1*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "c") {
+					assert.Equal(*tdv.RelVal, *tkM["c"].Value.(*TokenDateValue).Value)
+				}
+			case "dead":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(2*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "due") {
+					assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
+				}
+			case "end":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(3*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "due") {
+					assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
+				}
+			case "r":
+				if tk.raw == "$r=-5h" {
+					if assert.NotNil(tdv.Value) {
+						assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(-5*60*60*time.Second), *tdv.Value)
+					}
+					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "due") {
+						assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
+					}
+				} else if tk.raw == "$r=+5M" {
+					if assert.NotNil(tdv.Value) {
+						assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(5*60*time.Second), *tdv.Value)
+					}
+					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "due") {
+						assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
+					}
+				} else {
+					t.Error("reminder(s) is/are missing")
+				}
+			}
 		}
 	})
-	// TODO: figure out where it could go wrong through logging
+	t.Run("normal with custom relations", func(t *testing.T) {
+		tokens, errs := helper("$c=2025-05-05T05-05 $due=rn:1w $dead=c:2w $end=rn:3w $r=c:-5h $r=due:+5M")
+		require.Empty(t, errs)
+		tkM := make(map[string]*Token)
+		for _, tk := range tokens {
+			tkM[tk.Key] = tk
+		}
+		for _, tk := range tokens {
+			assert.Equal(TokenDate, tk.Type)
+			tdv, ok := tk.Value.(*TokenDateValue)
+			assert.True(ok)
+			switch tk.Key {
+			case "c":
+				assert.Equal(*tkM["c"].Value.(*TokenDateValue).Value, *tdv.Value)
+			case "due":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(rightNow.Add(1*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "rn") {
+					assert.Equal(*tdv.RelVal, rightNow)
+				}
+			case "dead":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(tkM["c"].Value.(*TokenDateValue).Value.Add(2*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "c") {
+					assert.Equal(*tdv.RelVal, *tkM["c"].Value.(*TokenDateValue).Value)
+				}
+			case "end":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(rightNow.Add(3*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "rn") {
+					assert.Equal(*tdv.RelVal, rightNow)
+				}
+			case "r":
+				if tk.raw == "$r=c:-5h" {
+					if assert.NotNil(tdv.Value) {
+						assert.Equal(tkM["c"].Value.(*TokenDateValue).Value.Add(-5*60*60*time.Second), *tdv.Value)
+					}
+					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "c") {
+						assert.Equal(*tdv.RelVal, *tkM["c"].Value.(*TokenDateValue).Value)
+					}
+				} else if tk.raw == "$r=due:+5M" {
+					if assert.NotNil(tdv.Value) {
+						assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(5*60*time.Second), *tdv.Value)
+					}
+					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "due") {
+						assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
+					}
+				} else {
+					t.Error("reminder(s) is/are missing raw=", tk.raw)
+				}
+			}
+		}
+	})
+	t.Run("normal with custom relations and shuffled tokens", func(t *testing.T) {
+		tokens, errs := helper("$due=rn:1w $r=due:+5M $end=rn:3w $r=c:-5h $c=2025-05-05T05-05 $dead=c:2w")
+		require.Empty(t, errs)
+		tkM := make(map[string]*Token)
+		for _, tk := range tokens {
+			tkM[tk.Key] = tk
+		}
+		for _, tk := range tokens {
+			assert.Equal(TokenDate, tk.Type)
+			tdv, ok := tk.Value.(*TokenDateValue)
+			assert.True(ok)
+			switch tk.Key {
+			case "c":
+				assert.Equal(*tkM["c"].Value.(*TokenDateValue).Value, *tdv.Value)
+			case "due":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(rightNow.Add(1*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "rn") {
+					assert.Equal(*tdv.RelVal, rightNow)
+				}
+			case "dead":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(tkM["c"].Value.(*TokenDateValue).Value.Add(2*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "c") {
+					assert.Equal(*tdv.RelVal, *tkM["c"].Value.(*TokenDateValue).Value)
+				}
+			case "end":
+				if assert.NotNil(tdv.Value) {
+					assert.Equal(rightNow.Add(3*7*24*60*60*time.Second), *tdv.Value)
+				}
+				if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "rn") {
+					assert.Equal(*tdv.RelVal, rightNow)
+				}
+			case "r":
+				if tk.raw == "$r=c:-5h" {
+					if assert.NotNil(tdv.Value) {
+						assert.Equal(tkM["c"].Value.(*TokenDateValue).Value.Add(-5*60*60*time.Second), *tdv.Value)
+					}
+					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "c") {
+						assert.Equal(*tdv.RelVal, *tkM["c"].Value.(*TokenDateValue).Value)
+					}
+				} else if tk.raw == "$r=due:+5M" {
+					if assert.NotNil(tdv.Value) {
+						assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(5*60*time.Second), *tdv.Value)
+					}
+					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "due") {
+						assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
+					}
+				} else {
+					t.Error("reminder(s) is/are missing raw=", tk.raw)
+				}
+			}
+		}
+	})
 }
 
 func TestParseTasks(t *testing.T) {
@@ -1200,16 +1360,14 @@ func TestParseUnparseCoherency(t *testing.T) {
 				task, _ := ParseTask(nil, each)
 				tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "dead"))
 				if assert.NotNil(tk) {
-					out, err := tk.unparseRelativeDatetime(task.Time, nil)
-					assert.NoError(err)
+					out := tk.unparseRelativeDatetime(nil)
 					assert.Equal(strings.Split(each, " ")[1], out)
 				}
 			}
 			task, _ := ParseTask(nil, "$due=c:1y")
 			tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 			if assert.NotNil(tk) {
-				out, err := tk.unparseRelativeDatetime(task.Time, nil)
-				assert.NoError(err)
+				out := tk.unparseRelativeDatetime(nil)
 				assert.Equal("$due=c:1y", out)
 			}
 		})
@@ -1217,8 +1375,7 @@ func TestParseUnparseCoherency(t *testing.T) {
 			task, _ := ParseTask(nil, "$due="+strconv.Itoa(rightNow.Year()+1)+"-dec-25")
 			tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 			if assert.NotNil(tk) {
-				out, err := tk.unparseRelativeDatetime(task.Time, nil)
-				assert.NoError(err)
+				out := tk.unparseRelativeDatetime(nil)
 				tVal, _ := time.ParseInLocation("2006-Jan-02", strconv.Itoa(rightNow.Year()+1)+"-dec-25", time.Local)
 				assert.Equal("$due="+unparseRelativeDatetime(tVal, rightNow), out)
 			}
@@ -1236,26 +1393,22 @@ func TestTokenUnparseRelativeDatetime(t *testing.T) {
 	t.Run("normal relative", func(t *testing.T) {
 		task, _ := ParseTask(nil, "$due=1m")
 		tk := findToken(task, "due")
-		out, err := tk.unparseRelativeDatetime(task.Time, nil)
-		assert.NoError(err)
+		out := tk.unparseRelativeDatetime(nil)
 		assert.Equal("$due=1m", out)
 		t.Run("update", func(t *testing.T) {
 			tVal := rightNow.Add(6 * 30 * 24 * 60 * 60 * time.Second)
-			out, err = tk.unparseRelativeDatetime(task.Time, &tVal)
-			assert.NoError(err)
+			out = tk.unparseRelativeDatetime(&tVal)
 			assert.Equal("$due=6m", out)
 		})
 	})
 	t.Run("custom field relative", func(t *testing.T) {
 		task, _ := ParseTask(nil, "$due=1m $dead=c:1y")
 		tk := findToken(task, "dead")
-		out, err := tk.unparseRelativeDatetime(task.Time, nil)
-		assert.NoError(err)
+		out := tk.unparseRelativeDatetime(nil)
 		assert.Equal("$dead=c:1y", out)
 		t.Run("update", func(t *testing.T) {
 			tVal := rightNow.Add(6 * 30 * 24 * 60 * 60 * time.Second)
-			out, err = tk.unparseRelativeDatetime(task.Time, &tVal)
-			assert.NoError(err)
+			out = tk.unparseRelativeDatetime(&tVal)
 			assert.Equal("$dead=c:6m", out)
 		})
 	})
@@ -1263,13 +1416,11 @@ func TestTokenUnparseRelativeDatetime(t *testing.T) {
 		year := rightNow.Format("2006")
 		task, _ := ParseTask(nil, fmt.Sprintf("$due=%s-12-26", year))
 		tk := findToken(task, "due")
-		out, err := tk.unparseRelativeDatetime(task.Time, nil)
-		assert.NoError(err)
-		assert.Equal("$due="+unparseRelativeDatetime(*tk.Value.(*time.Time), rightNow), out)
+		out := tk.unparseRelativeDatetime(nil)
+		assert.Equal("$due="+unparseRelativeDatetime(*tk.Value.(*TokenDateValue).Value, rightNow), out)
 		t.Run("update", func(t *testing.T) {
 			tVal := rightNow.Add(6 * 30 * 24 * 60 * 60 * time.Second)
-			out, err = tk.unparseRelativeDatetime(task.Time, &tVal)
-			assert.NoError(err)
+			out = tk.unparseRelativeDatetime(&tVal)
 			assert.Equal("$due=6m", out)
 		})
 	})

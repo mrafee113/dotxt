@@ -113,6 +113,13 @@ const (
 	TokenProgress
 )
 
+type TokenDateValue struct {
+	Value  *time.Time
+	RelKey string
+	RelVal *time.Time
+	Offset *time.Duration
+}
+
 type Token struct {
 	Type  TokenType
 	raw   string // an attempt to carry extra token metadata from the original text
@@ -173,8 +180,7 @@ func (tks *Tokens) Filter(cond TkCond) *Tokens {
 	return &out
 }
 
-// TODO: TODO TODO TODO:! REALLY IMPORTANT::: try to find a way to remove the necessity of using (task *Task). this is just wrong!
-func (tk *Token) String(task *Task) string {
+func (tk *Token) String() string {
 	switch tk.Type {
 	case TokenText:
 		return *tk.Value.(*string)
@@ -193,18 +199,11 @@ func (tk *Token) String(task *Task) string {
 	case TokenDuration:
 		return "$" + tk.Key + "=" + unparseDuration(*tk.Value.(*time.Duration))
 	case TokenDate:
-		_, err := parseAbsoluteDatetime(tk.raw)
-		if err == nil {
-			return unparseAbsoluteDatetime(*tk.Value.(*time.Time))
+		val := tk.Value.(*TokenDateValue)
+		if val.RelKey == "" {
+			return fmt.Sprintf("$%s=%s", tk.Key, unparseAbsoluteDatetime(*val.Value))
 		}
-		_, err = parseTmpRelativeDatetime(tk.Key, tk.raw)
-		if err == nil {
-			out, err := tk.unparseRelativeDatetime(task.Time, nil)
-			if err == nil {
-				return out
-			}
-		}
-		return tk.raw
+		return tk.unparseRelativeDatetime(nil)
 	case TokenProgress:
 		p, err := unparseProgress(*tk.Value.(*Progress))
 		if err == nil {
@@ -284,13 +283,14 @@ var temporalFallback = map[string]string{
 	"end": "due", "dead": "due", "r": "due",
 }
 
-// The temporary contrainer to hold parsed duration until offset
-// datetime is resolved during parsing relative datetime
-type temporalNode struct {
-	Field    string
-	Ref      string
-	Offset   *time.Duration
-	Absolute *time.Time
+// which RelKeys each Key is allowed to reference
+var allowedTemporalRelations = map[string][]string{
+	"rn":   {"rn"},
+	"c":    {"rn"},
+	"due":  {"c", "rn"},
+	"end":  {"due", "c", "rn"},
+	"dead": {"due", "c", "rn"},
+	"r":    {"due", "c", "rn"},
 }
 
 type Task struct {
@@ -346,12 +346,12 @@ func (t *Task) update(new *Task) error {
 		newCreationDtToken, _ := new.Tokens.Find(TkByTypeKey(TokenDate, "c"))
 		if newCreationDtToken != nil {
 			newCreationDtToken.raw = curCreationDtToken.raw
-			newCreationDtToken.Value = curCreationDtToken.Value.(*time.Time)
+			newCreationDtToken.Value = curCreationDtToken.Value.(*TokenDateValue)
 		} else {
 			new.Tokens = append(new.Tokens, &Token{
 				Type: TokenDate, Key: "c",
 				raw:   curCreationDtToken.raw,
-				Value: curCreationDtToken.Value.(*time.Time),
+				Value: curCreationDtToken.Value.(*TokenDateValue),
 			})
 		}
 	}
@@ -378,26 +378,19 @@ func (t *Task) updateFromText(new string) error {
 }
 
 func (t *Task) updateDate(field string, newDt *time.Time) error {
-	var curDtTxt, newDtTxt string
 	token, _ := t.Tokens.Find(TkByTypeKey(TokenDate, field))
 	if token == nil {
 		return fmt.Errorf("%w: token date for field '%s' not found", terrors.ErrNotFound, field)
 	}
-
-	curDtTxt = strings.TrimPrefix(token.raw, fmt.Sprintf("$%s=", field))
-	_, isAbsDt := parseAbsoluteDatetime(curDtTxt)
-	if isAbsDt == nil {
-		newDtTxt = unparseAbsoluteDatetime(*newDt)
-		newDtTxt = fmt.Sprintf("$%s=%s", field, newDtTxt)
+	var newDtTxt string
+	tkDt := token.Value.(*TokenDateValue)
+	if tkDt.RelKey == "" {
+		newDtTxt = fmt.Sprintf("$%s=%s", field, unparseAbsoluteDatetime(*newDt))
 	} else {
-		var err error
-		newDtTxt, err = token.unparseRelativeDatetime(t.Time, newDt)
-		if err != nil {
-			return err
-		}
+		newDtTxt = token.unparseRelativeDatetime(newDt)
 	}
 	token.raw = newDtTxt
-	token.Value = newDt
+	tkDt.Value = newDt
 	t.Time.setField(field, newDt)
 	return nil
 }
@@ -410,7 +403,7 @@ func (t *Task) Norm() string {
 	t.Tokens.Filter(func(tk *Token) bool {
 		return !(tk.Type == TokenDate && tk.Key == "c")
 	}).ForEach(func(tk *Token) {
-		out = append(out, tk.String(t))
+		out = append(out, tk.String())
 	})
 	return strings.Join(out, " ")
 }
@@ -421,7 +414,7 @@ func (t *Task) Norm() string {
 func (t *Task) NormRegular() string { // Text
 	var out []string
 	t.Tokens.Filter(TkByType(TokenText)).ForEach(func(tk *Token) {
-		out = append(out, tk.String(t))
+		out = append(out, tk.String())
 	})
 	return strings.Join(out, " ")
 }
@@ -430,7 +423,7 @@ func (t *Task) NormRegular() string { // Text
 func (t *Task) Raw() string {
 	var out []string
 	t.Tokens.ForEach(func(tk *Token) {
-		out = append(out, tk.String(t))
+		out = append(out, tk.String())
 	})
 	return strings.Join(out, " ")
 }
