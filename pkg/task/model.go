@@ -304,7 +304,7 @@ type Task struct {
 	Parent   *Task
 
 	Time *Temporal
-	Prog *Progress // TODO: TEST the effect of this in stringify when combined with children in
+	Prog *Progress
 }
 
 func (t *Task) String() string {
@@ -322,6 +322,14 @@ func (t *Task) Depth() int {
 		count++
 	}
 	return count
+}
+
+func (t *Task) Root() *Task {
+	node := t
+	for node.Parent != nil {
+		node = node.Parent
+	}
+	return node
 }
 
 func (t *Task) IsCollapsed() bool {

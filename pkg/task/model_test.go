@@ -4,6 +4,7 @@ import (
 	"dotxt/pkg/terrors"
 	"dotxt/pkg/utils"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -321,4 +322,33 @@ func TestTokens(t *testing.T) {
 			assert.Equal("3", *tk.Value.(*string))
 		})
 	})
+}
+
+func TestRoot(t *testing.T) {
+	assert := assert.New(t)
+	path, _ := parseFilepath("test")
+	Lists.Empty(path)
+	AddTaskFromStr("$-id=1", path)
+	AddTaskFromStr("$id=2 $P=1", path)
+	AddTaskFromStr("$id=3 $P=2", path)
+	AddTaskFromStr("$P=3", path)
+	AddTaskFromStr("$id=4 $P=2", path)
+	AddTaskFromStr("$P=4", path)
+	AddTaskFromStr("$id=5", path)
+	AddTaskFromStr("$id=6 $P=5", path)
+	AddTaskFromStr("$P=6", path)
+	AddTaskFromStr("$id=7", path)
+	for _, task := range Lists[path].Tasks {
+		if task.PID != nil {
+			continue
+		}
+		assert.Equal(task.Norm(), task.Root().Norm())
+		stack := slices.Clone(task.Children)
+		for len(stack) > 0 {
+			node := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			assert.Equal(task.Norm(), node.Root().Norm())
+			stack = append(stack, slices.Clone(node.Children)...)
+		}
+	}
 }

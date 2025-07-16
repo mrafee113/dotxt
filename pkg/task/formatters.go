@@ -723,12 +723,14 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 	for _, path := range paths {
 		emptyCatThere := false
 		categories := make(map[string]bool)
-		for _, task := range rtasks[path] {
-			if task.task.Prog != nil {
-				if task.task.Prog.Category == "" {
-					emptyCatThere = true
+		for _, rtask := range rtasks[path] {
+			if rtask.task.Prog != nil {
+				if root := rtask.task.Root(); root == rtask.task { // only take root tasks into account
+					if rtask.task.Prog.Category == "" {
+						emptyCatThere = true
+					}
+					categories[rtask.task.Prog.Category] = true
 				}
-				categories[task.task.Prog.Category] = true
 			}
 		}
 		useCatHeader := !((len(categories) == 1 && emptyCatThere) || len(categories) == 0)
@@ -736,21 +738,25 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 		firstNonCat := true
 
 		out.WriteString(formatListHeader(path, sessionInfo.maxLen))
-		for _, task := range rtasks[path] {
-			if useCatHeader && task.task.Prog != nil && task.task.Prog.Category != lastCat {
-				cat := task.task.Prog.Category
-				if cat == "" {
-					cat = "*"
+		for _, rtask := range rtasks[path] {
+			if useCatHeader && rtask.task.Prog != nil && rtask.task.Prog.Category != lastCat {
+				if root := rtask.task.Root(); root == rtask.task { // not a nested progress
+					cat := rtask.task.Prog.Category
+					if cat == "" {
+						cat = "*"
+					}
+					out.WriteString(formatCategoryHeader(cat, &sessionInfo))
+					lastCat = rtask.task.Prog.Category
 				}
-				out.WriteString(formatCategoryHeader(cat, &sessionInfo))
-				lastCat = task.task.Prog.Category
 			}
-			if useCatHeader && task.task.Prog == nil && firstNonCat {
-				firstNonCat = false
-				out.WriteString(formatCategoryHeader("", &sessionInfo))
+			if useCatHeader && rtask.task.Prog == nil && firstNonCat {
+				if root := rtask.task.Root(); root == rtask.task { // not a nested progress
+					firstNonCat = false
+					out.WriteString(formatCategoryHeader("", &sessionInfo))
+				}
 			}
 
-			out.WriteString(task.stringify(true, sessionInfo.maxLen))
+			out.WriteString(rtask.stringify(true, sessionInfo.maxLen))
 			out.WriteRune('\n')
 		}
 		out.WriteRune('\n')

@@ -3,6 +3,7 @@ package task
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -135,7 +136,12 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 
 	for _, tk := range r.tokens {
 		if tk.token != nil && tk.token.Type == TokenProgress {
-			parts := formatProgress(tk.token.Value.(*Progress), r.countLen, r.doneCountLen)
+			cl, dcl := r.countLen, r.doneCountLen
+			prog := tk.token.Value.(*Progress)
+			if r.task.PID != nil {
+				cl, dcl = len(strconv.Itoa(prog.Count)), len(strconv.Itoa(prog.DoneCount))
+			}
+			parts := formatProgress(prog, cl, dcl)
 			for _, pt := range parts {
 				write(pt.getColor(), pt.raw)
 			}

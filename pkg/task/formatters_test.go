@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/spf13/viper"
@@ -622,6 +623,26 @@ func TestStringify(t *testing.T) {
 		str := rtask.stringify(false, 50)
 		assert.False(testLength(str))
 	})
+	t.Run("nested progress", func(t *testing.T) {
+		path, _ := parseFilepath("test")
+		Lists.Empty(path)
+		AddTaskFromStr("test 0 $id=0", path)
+		AddTaskFromStr("test 1 $P=0 $p=unit/1/3", path)
+		AddTaskFromStr("(testing) heyto $due=1w $P=1 $-id=second", path)
+		AddTaskFromStr("$P=second 1", path)
+		AddTaskFromStr("$P=second 2", path)
+		AddTaskFromStr("$P=second 3", path)
+		cleanupRelations(path)
+
+		task := Lists[path].Tasks[1]
+		rtask := task.Render()
+		rtask.idLen = 2
+		rtask.countLen = 5
+		rtask.doneCountLen = 6
+		str := rtask.stringify(false, 50)
+		assert.False(testLength(str))
+		assert.Equal("   01 1/3( 33%) ==>        (unit) test 1 $P=0", str)
+	})
 }
 
 func TestPrintLists(t *testing.T) {
@@ -673,7 +694,7 @@ func TestPrintLists(t *testing.T) {
 		assert.Equal(50, utf8.RuneCountInString(out[1])) // category header
 
 		assert.Equal(50, utf8.RuneCountInString(out[2]))
-		assert.Equal(50, utf8.RuneCountInString(out[3]))
+		assert.Equal(46, utf8.RuneCountInString(out[3]))
 		assert.Equal(47, utf8.RuneCountInString(out[4]))
 
 		assert.Equal(39, utf8.RuneCountInString(out[6]))
@@ -689,6 +710,50 @@ func TestPrintLists(t *testing.T) {
 		assert.Equal(50, utf8.RuneCountInString(out[1]))
 		assert.Equal(41, utf8.RuneCountInString(out[5]))
 		assert.Equal(68, utf8.RuneCountInString(out[9]))
+	})
+	t.Run("nested progress and category headers", func(t *testing.T) {
+		Lists.Empty(path)
+		AddTaskFromStr("0 $id=0 $p=unit/2/5", path)
+		AddTaskFromStr("1 $P=0", path)
+		AddTaskFromStr("2 $P=0 $p=unit/3/7", path)
+		AddTaskFromStr("3 $P=0 $p=unit/4/8/b", path)
+		AddTaskFromStr("4", path)
+		AddTaskFromStr("5 $id=5 $p=unit/3/10/c", path)
+		AddTaskFromStr("6 $P=5 $id=6 $p=unit/4/8/c", path)
+		AddTaskFromStr("7 $P=5 $id=7 $p=unit/4/10/d", path)
+		AddTaskFromStr("8 $P=7 $p=unit/5/15/z", path)
+		AddTaskFromStr("9 $P=6", path)
+		AddTaskFromStr("a $id=a $p=unit/5/20/a", path)
+		AddTaskFromStr("b $P=b", path)
+		AddTaskFromStr("c $P=a $p=unit/5/100/b", path)
+		AddTaskFromStr("d $P=a $p=unit/70/100/a", path)
+		AddTaskFromStr("e $P=a $p=unit/80/150", path)
+
+		out := capture(60, 50)
+		tc := `> printLists | ———————————————————————————————————
+                         a ———————————————————————
+10  5/ 20( 25%) =>         (unit) a $id=a
+   13 70/100( 70%) ======>    (unit) d $P=a
+   12 5/100(  5%)            (unit) c $P=a
+   14 80/150( 53%) ====>      (unit) e $P=a
+                         c ———————————————————————
+05  3/ 10( 30%) ==>        (unit) 5 $id=5
+   06 4/8( 50%) ====>      (unit) 6 $P=5 $id=6
+      09 9 $P=6
+   07 4/10( 40%) ===>       (unit) 7 $P=5 $id=7
+      08 5/15( 33%) ==>        (unit) 8 $P=7
+                         * ———————————————————————
+00  2/  5( 40%) ===>       (unit) 0 $id=0
+   03 4/8( 50%) ====>      (unit) 3 $P=0
+   02 3/7( 42%) ===>       (unit) 2 $P=0
+   01 1 $P=0
+                           ———————————————————————
+04 4
+11 b $P=b`
+		for ndx, line := range strings.Split(tc, "\n") {
+			line = strings.TrimRightFunc(line, unicode.IsSpace)
+			assert.Equal(line, out[ndx])
+		}
 	})
 }
 
