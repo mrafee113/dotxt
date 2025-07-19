@@ -11,6 +11,9 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"unicode/utf8"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 /* file structure
@@ -35,10 +38,11 @@ func todosDir() string {
 }
 
 func parseFilepath(path string) (string, error) {
+	path = norm.NFC.String(path)
 	if strings.TrimSpace(path) == "" {
 		return filepath.Join(todosDir(), "todo"), nil
 	}
-	if path[len(path)-1] == '/' {
+	if path[utf8.RuneCountInString(path)-1] == '/' {
 		return "", fmt.Errorf("%w: path cannot end in a / '%s'", terrors.ErrParse, path)
 	}
 	if filepath.IsAbs(path) {
@@ -55,6 +59,7 @@ func parseFilepath(path string) (string, error) {
 }
 
 func parseDirpath(path string) (string, error) {
+	path = norm.NFC.String(path)
 	if strings.TrimSpace(path) == "" {
 		return filepath.Join(todosDir(), "todo"), nil
 	}
@@ -104,7 +109,7 @@ func mkDirs(path string) error {
 			return err
 		}
 		postPath := strings.TrimPrefix(path, todosDir())
-		if len(postPath) > 0 {
+		if utf8.RuneCountInString(postPath) > 0 {
 			err = mkdir(path, true)
 			if err != nil {
 				return err

@@ -4,6 +4,7 @@ import (
 	"dotxt/pkg/terrors"
 	"fmt"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/spf13/viper"
 )
@@ -129,8 +130,9 @@ func validateColor(key string) error {
 		return err
 	}
 	color := viper.GetString(key)
-	if len(color) != 7 {
-		return fmt.Errorf("%w: %w: length of hex color must be '7' and not '%d'", terrors.ErrConf, terrors.ErrValue, len(color))
+	colorLen := utf8.RuneCountInString(color)
+	if colorLen != 7 {
+		return fmt.Errorf("%w: %w: length of hex color must be '7' and not '%d'", terrors.ErrConf, terrors.ErrValue, colorLen)
 	}
 	if color[0] != '#' {
 		return fmt.Errorf("%w: %w: hex color must start with '#' and not '%c'", terrors.ErrConf, terrors.ErrValue, color[0])

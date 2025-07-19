@@ -241,7 +241,7 @@ func TestFormatPriorities(t *testing.T) {
 	path, _ := parseFilepath("testPrio")
 	Lists.Empty(path)
 	for ndx, line := range lines {
-		if strings.TrimSpace(line)[0] == '/' {
+		if utils.RuneAt(strings.TrimSpace(line), 0) == '/' {
 			continue
 		}
 		parts := strings.SplitN(strings.TrimSpace(line), "//", 2)
@@ -497,7 +497,7 @@ func TestStringify(t *testing.T) {
 	testLength := func(out string) bool {
 		exceeds := false
 		for _, each := range strings.Split(out, "\n") {
-			if len(each) > 50 {
+			if utf8.RuneCountInString(each) > 50 {
 				exceeds = true
 			}
 		}
@@ -713,7 +713,7 @@ func TestPrintLists(t *testing.T) {
 		assert.Equal(36, utf8.RuneCountInString(out[8]))
 
 		assert.Equal(68, utf8.RuneCountInString(out[9])) // category header
-		assert.Equal(29, len(out[10]))
+		assert.Equal(29, utf8.RuneCountInString(out[10]))
 	})
 	t.Run("category headers", func(t *testing.T) {
 		Lists.Empty(path, task1, task2, task3)

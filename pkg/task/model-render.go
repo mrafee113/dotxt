@@ -1,11 +1,13 @@
 package task
 
 import (
+	"dotxt/pkg/utils"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/spf13/viper"
 )
@@ -84,7 +86,7 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 		if maxWidth == -1 { // for total length purposes
 			return text
 		}
-		n := len(text)
+		n := utf8.RuneCountInString(text)
 		if n+md.length <= maxWidth { // fits
 			md.length += n
 			return text
@@ -99,8 +101,9 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 		if n > maxWidth || r.idLen+1+n > maxWidth { // string is so long it has to be split
 			oldLen := md.length
 			md.length = md.newLineLen
-			return text[:maxWidth-oldLen-1] + "\\\n" +
-				md.newLinePrefix + fold(text[maxWidth-oldLen-1:])
+			return utils.RuneSlice(text, 0, maxWidth-oldLen-1) + "\\\n" +
+				md.newLinePrefix +
+				fold(utils.RuneSlice(text, maxWidth-oldLen-1, utf8.RuneCountInString(text)))
 		}
 		// str is long enough to not fit current line and not long enough to be splitted
 		md.length = md.newLineLen + n
@@ -148,7 +151,7 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 			cl, dcl := r.countLen, r.doneCountLen
 			prog := tk.token.Value.(*Progress)
 			if r.task.PID != nil {
-				cl, dcl = len(strconv.Itoa(prog.Count)), len(strconv.Itoa(prog.DoneCount))
+				cl, dcl = utf8.RuneCountInString(strconv.Itoa(prog.Count)), utf8.RuneCountInString(strconv.Itoa(prog.DoneCount))
 			}
 			parts := formatProgress(prog, cl, dcl)
 			for _, pt := range parts {
