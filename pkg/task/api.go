@@ -157,10 +157,10 @@ func PrependToTask(id int, text, path string) error {
 	var newText string
 	if task.Priority != nil && *task.Priority != "" {
 		var out []string
-		task.Tokens.Filter(func(tk *Token) bool {
-			return tk.Type != TokenPriority
-		}).ForEach(func(tk *Token) {
-			out = append(out, tk.String())
+		task.Tokens.ForEach(func(tk *Token) {
+			if tk.Type != TokenPriority {
+				out = append(out, tk.String())
+			}
 		})
 		curText := strings.Join(out, " ")
 		newText = fmt.Sprintf("(%s) %s %s", *task.Priority, text, curText)

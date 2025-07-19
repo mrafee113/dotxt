@@ -445,15 +445,11 @@ func (t *Task) Render() *rTask {
 	}
 	specialTokenMap := func() map[string]*Token {
 		out := make(map[string]*Token)
-		t.Tokens.Filter(func(tk *Token) bool {
+		t.Tokens.ForEach(func(tk *Token) {
 			switch tk.Type {
 			case TokenDate, TokenID, TokenDuration, TokenPriority, TokenProgress:
-				return true
-			default:
-				return false
+				out[tk.Key] = tk
 			}
-		}).ForEach(func(tk *Token) {
-			out[tk.Key] = tk
 		})
 		return out
 	}()

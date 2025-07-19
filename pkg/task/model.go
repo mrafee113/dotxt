@@ -177,6 +177,9 @@ func (tks *Tokens) FindFrom(cond TkCond, index int) (*Token, int) {
 	return nil, -1
 }
 
+// if used to chain together commands,
+// do note that this will make the whole thing run
+// in at least 2 passes.
 func (tks *Tokens) Filter(cond TkCond) *Tokens {
 	var out Tokens
 	for _, tk := range *tks {
