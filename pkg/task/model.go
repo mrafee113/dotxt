@@ -131,6 +131,7 @@ type Tokens []*Token
 
 type TkCond func(*Token) bool
 type TkFunc func(*Token)
+type TkFuncIndex func(*Token, int)
 
 func TkByType(tipe TokenType) TkCond {
 	return func(tk *Token) bool {
@@ -147,6 +148,12 @@ func TkByTypeKey(tipe TokenType, key string) TkCond {
 func (tks *Tokens) ForEach(fn TkFunc) {
 	for _, tk := range *tks {
 		fn(tk)
+	}
+}
+
+func (tks *Tokens) ForEachIndex(fn TkFuncIndex) {
+	for ndx, tk := range *tks {
+		fn(tk, ndx)
 	}
 }
 
@@ -403,37 +410,55 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 	return nil
 }
 
+// this function is to be used in function that are turning the tokens of a task into a string
+func preprocessTaskStrings(t *Task, index int, out *strings.Builder) {
+	if index > 0 {
+		prev := t.Tokens[index-1].Type == TokenText && t.Tokens[index-1].Key == ";"
+		cur := t.Tokens[index].Type == TokenText && t.Tokens[index].Key == ";"
+		if !prev && !cur {
+			out.WriteRune(' ')
+		}
+	}
+}
+
 // A reduced form of the raw string that represents tasks
 // more rigidly used for comparison
 // :: everything besides $c
 func (t *Task) Norm() string {
-	var out []string
+	var out strings.Builder
+	// this must be filtered first so that preprocess doesn't have problem with indexing
 	t.Tokens.Filter(func(tk *Token) bool {
 		return !(tk.Type == TokenDate && tk.Key == "c")
-	}).ForEach(func(tk *Token) {
-		out = append(out, tk.String())
+	}).ForEachIndex(func(tk *Token, i int) {
+		preprocessTaskStrings(t, i, &out)
+		out.WriteString(tk.String())
 	})
-	return strings.Join(out, " ")
+	return out.String()
 }
 
 // A reduced form of the raw string that represents tasks
 // more rigidly via only regular texts used for comparison
 // :: only non-special text
 func (t *Task) NormRegular() string { // Text
-	var out []string
-	t.Tokens.Filter(TkByType(TokenText)).ForEach(func(tk *Token) {
-		out = append(out, tk.String())
+	var out strings.Builder
+	// this must be filtered first so that preprocess doesn't have problem with indexing
+	t.Tokens.Filter(func(tk *Token) bool {
+		return tk.Type == TokenText
+	}).ForEachIndex(func(tk *Token, i int) {
+		preprocessTaskStrings(t, i, &out)
+		out.WriteString(tk.String())
 	})
-	return strings.Join(out, " ")
+	return out.String()
 }
 
 // the text of the task joined in from the tokens
 func (t *Task) Raw() string {
-	var out []string
-	t.Tokens.ForEach(func(tk *Token) {
-		out = append(out, tk.String())
+	var out strings.Builder
+	t.Tokens.ForEachIndex(func(tk *Token, i int) {
+		preprocessTaskStrings(t, i, &out)
+		out.WriteString(tk.String())
 	})
-	return strings.Join(out, " ")
+	return out.String()
 }
 
 func helper[T any](p T) string {

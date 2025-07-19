@@ -322,6 +322,54 @@ func TestTokens(t *testing.T) {
 			assert.Equal("3", *tk.Value.(*string))
 		})
 	})
+	t.Run("\\; Join Norm", func(t *testing.T) {
+		t.Run("semicolons", func(t *testing.T) {
+			tc := "   \\;  \\;;asd\\;   a\\;     \\;a\\;b \\; \\;c d\\;    b "
+			task, _ := ParseTask(nil, tc)
+			for _, tk := range task.Tokens {
+				if strings.Contains(tk.raw, "\\;") || strings.Contains(tk.raw, "  ") {
+					assert.Equal(TokenText, tk.Type)
+					assert.Equal(";", tk.Key)
+				}
+			}
+			assert.Equal(tc, task.NormRegular())
+		})
+		t.Run("spaces", func(t *testing.T) {
+			tc := ";asd  a   a    b  c d"
+			task, _ = ParseTask(nil, tc)
+			for _, tk := range task.Tokens {
+				if strings.Contains(tk.raw, "\\;") || strings.Contains(tk.raw, "  ") {
+					assert.Equal(TokenText, tk.Type)
+					assert.Equal(";", tk.Key)
+				}
+			}
+			assert.Equal(tc, task.NormRegular())
+		})
+		t.Run("space at beginning", func(t *testing.T) {
+			for _, tc := range []string{" a", "   a"} {
+				task, _ = ParseTask(nil, tc)
+				for _, tk := range task.Tokens {
+					if strings.Contains(tk.raw, "\\;") || strings.Contains(tk.raw, "  ") {
+						assert.Equal(TokenText, tk.Type)
+						assert.Equal(";", tk.Key)
+					}
+				}
+				assert.Equal(tc, task.NormRegular())
+			}
+		})
+		t.Run("space at end", func(t *testing.T) {
+			for _, tc := range []string{"a ", "a    "} {
+				task, _ = ParseTask(nil, tc)
+				for _, tk := range task.Tokens {
+					if strings.Contains(tk.raw, "\\;") || strings.Contains(tk.raw, "  ") {
+						assert.Equal(TokenText, tk.Type)
+						assert.Equal(";", tk.Key)
+					}
+				}
+				assert.Equal(tc, task.NormRegular())
+			}
+		})
+	})
 }
 
 func TestRoot(t *testing.T) {

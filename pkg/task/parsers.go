@@ -593,6 +593,9 @@ func tokenizeLine(line string) []string {
 	isQuote := func(q rune) bool {
 		return slices.Contains(quotes, q)
 	}
+	isSep := func(i int) bool {
+		return i+1 < n && rs[i] == '\\' && rs[i+1] == ';'
+	}
 
 	for i := 0; i < n; {
 		r := rs[i]
@@ -641,21 +644,31 @@ func tokenizeLine(line string) []string {
 			}
 		}
 
-		if r == ' ' {
-			j := i
-			for j < n && rs[j] == ' ' {
-				j++
-			}
-			count := j - i - 1 // excluding the first one as separator
+		if isSep(i) || r == ' ' {
 			flush()
-			if count > 0 {
-				tokens = append(tokens, strings.Repeat(" ", count))
+			j := i
+			for j < n {
+				if isSep(j) {
+					j += 2
+					continue
+				}
+				if rs[j] == ' ' {
+					j++
+					continue
+				}
+				break
+			}
+			count := j - i
+			if !((i > 0 && i < n-1) && count == 1 && r == ' ') { // skip one space between two tokens
+				tokens = append(tokens, string(rs[i:j]))
 			}
 			i = j
 			continue
 		}
 
 		if r == '\\' && i+1 < n && rs[i+1] == ';' {
+			flush()
+			cur.WriteString("\\;")
 			flush()
 			i += 2
 			continue
@@ -679,16 +692,44 @@ func parseTokens(line string) ([]*Token, []error) {
 		}
 		tokens = append(tokens, &Token{Type: TokenText, raw: tokenStr, Value: &tokenStr})
 	}
-	if i, j, err := parsePriority(line); err == nil {
-		p := line[i:j]
-		tokens = append(tokens, &Token{
-			Type: TokenPriority, Key: "priority",
-			Value: &p,
-			raw:   fmt.Sprintf("(%s)", p),
-		})
-		line = line[j+1:]
+	tokenStrings := tokenizeLine(line)
+	if len(tokenStrings) > 0 {
+		if i, j, err := parsePriority(tokenStrings[0]); err == nil {
+			p := tokenStrings[0][i:j]
+			tokens = append(tokens, &Token{
+				Type: TokenPriority, Key: "priority",
+				Value: &p,
+				raw:   fmt.Sprintf("(%s)", p),
+			})
+			tokenStrings = tokenStrings[1:]
+		}
 	}
-	for _, tokenStr := range tokenizeLine(line) {
+	for ndx, tokenStr := range tokenStrings {
+		if n := len(tokenStr); (tokenStr[0] == ' ' || (tokenStr[0] == '\\' && n >= 2 && tokenStr[1] == ';')) &&
+			func() bool { // ";" text token
+				spaces := 0
+				n := len(tokenStr)
+				for i := range n {
+					switch tokenStr[i] {
+					case ' ':
+						spaces++
+					case '\\':
+						if i+1 < n && tokenStr[i+1] == ';' {
+							return true
+						}
+						return false
+					default:
+						return false
+					}
+				}
+				return spaces >= 2 || (spaces >= 1 && (ndx == len(tokenStrings)-1 || ndx == 0))
+			}() {
+			tokens = append(tokens, &Token{
+				Type: TokenText, raw: tokenStr,
+				Key: ";", Value: utils.MkPtr(tokenStr),
+			})
+			continue
+		}
 		switch tokenStr[0] {
 		case '+', '@', '#':
 			if err := validateHint(tokenStr); err != nil {
