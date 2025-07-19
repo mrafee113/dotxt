@@ -134,7 +134,16 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 		writeSpace()
 	}
 
-	for _, tk := range r.tokens {
+	for ndx, tk := range r.tokens {
+		if ndx > 0 {
+			isPrevSemicolon := r.tokens[ndx-1].token.Type == TokenText &&
+				r.tokens[ndx-1].token.Key == ";"
+			isCurSemicolon := tk.token.Type == TokenText &&
+				tk.token.Key == ";"
+			if !isPrevSemicolon && !isCurSemicolon {
+				writeSpace()
+			}
+		}
 		if tk.token != nil && tk.token.Type == TokenProgress {
 			cl, dcl := r.countLen, r.doneCountLen
 			prog := tk.token.Value.(*Progress)
@@ -145,11 +154,9 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 			for _, pt := range parts {
 				write(pt.getColor(), pt.raw)
 			}
-			writeSpace()
 			continue
 		}
 		write(tk.getColor(), tk.raw)
-		writeSpace()
 	}
 	return strings.ReplaceAll(strings.TrimRightFunc(md.out.String(), unicode.IsSpace), " \n", "\n")
 }

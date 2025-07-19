@@ -498,12 +498,8 @@ func (t *Task) Render() *rTask {
 		case TokenPriority, TokenProgress:
 			return
 		case TokenText:
-			if tk.Key != "quote" {
-				replacer := strings.NewReplacer("\\'", "'", "\\\"", "\"", "\\`", "`")
-				out.tokens = append(out.tokens, &rToken{
-					token: tk, raw: replacer.Replace(tk.String()), color: "print.color-default",
-				})
-			} else {
+			switch tk.Key {
+			case "quote":
 				val := tk.String()
 				quote := val[0]
 				val = val[1 : len(val)-1]
@@ -543,8 +539,17 @@ func (t *Task) Render() *rTask {
 					token: tk, raw: val,
 					color: color,
 				})
+			case ";":
+				replacer := strings.NewReplacer("\\'", "'", "\\\"", "\"", "\\`", "`", "\\;", "")
+				out.tokens = append(out.tokens, &rToken{
+					token: tk, raw: replacer.Replace(tk.String()), color: "print.color-default",
+				})
+			default:
+				replacer := strings.NewReplacer("\\'", "'", "\\\"", "\"", "\\`", "`")
+				out.tokens = append(out.tokens, &rToken{
+					token: tk, raw: replacer.Replace(tk.String()), color: "print.color-default",
+				})
 			}
-
 		case TokenID:
 			out.tokens = append(out.tokens, &rToken{
 				token: tk,

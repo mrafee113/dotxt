@@ -643,6 +643,17 @@ func TestStringify(t *testing.T) {
 		assert.False(testLength(str))
 		assert.Equal("   01 1/3( 33%) ==>        (unit) test 1 $P=0", str)
 	})
+	t.Run("skipping terminations", func(t *testing.T) {
+		path, _ := parseFilepath("test")
+		Lists.Empty(path)
+		AddTaskFromStr(" this  #tag\\;.  a  b  c \\; d ", path)
+		task := Lists[path].Tasks[0]
+		rtask := task.Render()
+		rtask.idLen = 1
+		str := rtask.stringify(false, 50)
+		assert.False(testLength(str))
+		assert.Equal("0  this  #tag.  a  b  c  d", str)
+	})
 }
 
 func TestPrintLists(t *testing.T) {
