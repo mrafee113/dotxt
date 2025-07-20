@@ -967,6 +967,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	return task, nil
 }
 
+// TODO
 func ParseTasks(filepath string) ([]*Task, error) {
 	if !utils.FileExists(filepath) {
 		return []*Task{}, os.ErrNotExist

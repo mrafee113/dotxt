@@ -37,6 +37,10 @@ func todosDir() string {
 	return filepath.Join(config.ConfigPath(), "todos")
 }
 
+func etcDir() string {
+	return filepath.Join(todosDir(), "_etc")
+}
+
 func parseFilepath(path string) (string, error) {
 	path = norm.NFC.String(path)
 	if strings.TrimSpace(path) == "" {
@@ -330,7 +334,7 @@ func LoadFile(path string) error {
 	if !Lists.Exists(path) || !utils.FileExists(path) {
 		return os.ErrNotExist
 	}
-	fileTasks, err := ParseTasks(path)
+	fileTasks, err := ParseTasks(path) // TODO: support symlinks
 	if err != nil {
 		return err
 	}
@@ -361,6 +365,22 @@ func LoadOrCreateFile(path string) error {
 	return nil
 }
 
+// TODO: centralize the usages of filepath.Join... e.g. bakdir -> backupFile(path) (string, error)
+
+func BackupFile(path string) error {
+	path, err := parseFilepath(path)
+	if err != nil {
+		return err
+	}
+	bakPath := strings.TrimPrefix(path, todosDir()+"/")
+	bakPath = filepath.Join(etcDir(), bakPath+".bak")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(bakPath, data, 0644)
+}
+
 func StoreFile(path string) error {
 	path, err := parseFilepath(path)
 	if err != nil {
@@ -378,6 +398,10 @@ func StoreFile(path string) error {
 		return err
 	}
 	tpath, err := resolveSymlinkPath(path)
+	if err != nil {
+		return err
+	}
+	err = BackupFile(path)
 	if err != nil {
 		return err
 	}

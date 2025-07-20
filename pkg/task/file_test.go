@@ -439,3 +439,37 @@ func TestStoreFile(t *testing.T) {
 		assert.Equal(3, len(strings.Split(string(raw), "\n")))
 	})
 }
+
+func TestBackupFile(t *testing.T) {
+	assert := assert.New(t)
+	prevConfig := config.ConfigPath()
+	defer config.SelectConfigFile(prevConfig)
+	tmpDir, err := os.MkdirTemp(prevConfig, "")
+	require.Nil(t, err)
+	config.SelectConfigFile(tmpDir)
+	mkDirs("")
+	name := "bak"
+	path := filepath.Join(todosDir(), name)
+
+	t.Run("non-existing file", func(t *testing.T) {
+		err := BackupFile(path)
+		require.Error(t, err)
+		assert.ErrorIs(err, os.ErrNotExist)
+	})
+	t.Run("file backed up", func(t *testing.T) {
+		name := "bakFile"
+		path := filepath.Join(todosDir(), name)
+		err := os.WriteFile(path, []byte("1\n2\n3"), 0644)
+		require.NoError(t, err)
+		err = LoadFile(path)
+		require.NoError(t, err)
+		assert.Len(Lists[path].Tasks, 3)
+		err = BackupFile(path)
+		require.NoError(t, err)
+		bakPath := filepath.Join(etcDir(), strings.TrimPrefix(path, todosDir()+"/")+".bak")
+		require.FileExists(t, bakPath)
+		data, err := os.ReadFile(bakPath)
+		require.NoError(t, err)
+		assert.Equal("1\n2\n3", string(data))
+	})
+}
