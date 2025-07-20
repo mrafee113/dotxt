@@ -510,3 +510,12 @@ func ToggleCollapsed(id int, path string) error {
 	}
 	return nil
 }
+
+func SortList(path string) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	Lists.Sort(path)
+	return nil
+}

@@ -19,7 +19,7 @@ func init() {
 		deduplicateCmd, deprioritizeCmd,
 		prioritizeCmd, doneCmd,
 		revertCmd, moveCmd, migrateCmd,
-		lsNCmd)
+		lsNCmd, sortCmd)
 	setAddCmdFlags()
 	setDelCmdFlags()
 	setAppendCmdFlags()
@@ -32,6 +32,7 @@ func init() {
 	setDoneCmdFlags()
 	setMigrateCmdFlags()
 	setlsNCmdFlags()
+	setSortCmdFlags()
 }
 
 func loadFuncStoreFile(path string, f func() error) error {
@@ -480,4 +481,39 @@ var lsNCmd = &cobra.Command{
 
 func setlsNCmdFlags() {
 	lsNCmd.Flags().String("list", "", "designate the target todolist")
+}
+
+var sortCmd = &cobra.Command{
+	Use:   "sort <todolist=todo>...",
+	Short: "sort the tasks of the list in-place",
+	Long: `sort <todolist=todo>...
+  sort the tasks of the list in-place`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		all, err := cmd.Flags().GetBool("all")
+		if err != nil {
+			return err
+		}
+		if len(args) < 1 {
+			all = true
+		}
+		if all {
+			var err error
+			args, err = task.LsFiles()
+			if err != nil {
+				return err
+			}
+		}
+		for _, path := range args {
+			if err := loadFuncStoreFile(path, func() error {
+				return task.SortList(path)
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	},
+}
+
+func setSortCmdFlags() {
+	sortCmd.Flags().Bool("all", false, "sort all tasks")
 }

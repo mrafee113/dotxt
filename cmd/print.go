@@ -44,16 +44,11 @@ var printCmd = &cobra.Command{
 			all = true
 		}
 		if all {
-			paths, err := task.LsFiles()
+			var err error
+			args, err = task.LsFiles()
 			if err != nil {
 				return err
 			}
-			for _, path := range paths {
-				if err := task.LoadFile(path); err != nil {
-					return err
-				}
-			}
-			return task.PrintLists(paths, maxlen, minlen)
 		}
 		for _, arg := range args {
 			if err := task.LoadFile(arg); err != nil {

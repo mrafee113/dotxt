@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -625,4 +626,55 @@ func TestToggleCollapsed(t *testing.T) {
 	err = ToggleCollapsed(1, path)
 	assert.NoError(err)
 	assert.True(Lists[path].Tasks[1].IsCollapsed())
+}
+
+func TestSortList(t *testing.T) {
+	assert := assert.New(t)
+	path, _ := parseFilepath("sortList")
+	Lists.Empty(path)
+	for _, line := range []string{ // from sort_test
+		"$p=unit/0/100/cat", "$p=unit/0/100",
+		"$p=unit/0/100/catA", "$p=unit/0/100/catB",
+		"$p=unit/0/300", "$p=unit/10/100",
+		"$p=unit/20/100", "$p=unit/200/1000",
+		"(A) s", "s",
+		"(B) s", "(C) s",
+		"+b +a", "s",
+		"+b +a +z", "+z +b +0",
+		"#a", "#ab", "#a #b #c",
+		"@a", "@ab", "@a @b @c",
+		"#a @a", "#a @b", "#b @a",
+		"@a #b", "@a #b", "@b #a",
+		"a +b", "+b",
+		"c", "d",
+		"a",
+		"b $id=1",
+		"z.1 $P=1",
+		"a.2 $P=1",
+		"c",
+		"$id=0", "$id=1", "$id=2",
+		"$P=0", "$P=1", "$P=2",
+		"$id=0", "$id=1", "$id=2",
+		"$P=0", "$P=1", "$P=2",
+		"$id=-1", "$id=4", "$id=5",
+		"$P=-2", "$P=-3", "$P=-4",
+		"$due=1w $dead=1w", "$due=1w $dead=2w",
+		"$due=1w $end=1w", "$due=1w $end=2w",
+		"$due=2d", "$due=4d",
+		"$c=2024-feb", "$c=2024-mar",
+		"$r=20d $r=1w $r=1h", "$r=1w $r=1h", "$r=10d $r=1h", "$r=1h $r=2d",
+		"$every=6m $due=3w", "$every=1y $due=3w",
+	} {
+		AddTaskFromStr(line, path)
+	}
+	err := StoreFile(path)
+	assert.NoError(err)
+	tasks := slices.Clone(Lists[path].Tasks)
+	Lists.Empty(path)
+	err = LoadFile(path)
+	assert.NoError(err)
+	assert.Equal(len(tasks), Lists.Len(path))
+	for ndx := range tasks {
+		assert.Equal(tasks[ndx].String(), Lists[path].Tasks[ndx].String())
+	}
 }
