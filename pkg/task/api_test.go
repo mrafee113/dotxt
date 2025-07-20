@@ -673,8 +673,16 @@ func TestSortList(t *testing.T) {
 	Lists.Empty(path)
 	err = LoadFile(path)
 	assert.NoError(err)
+	err = SortList(path)
+	assert.NoError(err)
+	err = StoreFile(path)
+	assert.NoError(err)
+	Lists.Empty(path)
+	err = LoadFile(path)
+	assert.NoError(err)
+	tasks = sortTasks(tasks)
 	assert.Equal(len(tasks), Lists.Len(path))
 	for ndx := range tasks {
-		assert.Equal(tasks[ndx].String(), Lists[path].Tasks[ndx].String())
+		assert.Equal(tasks[ndx].Raw(), Lists[path].Tasks[ndx].Raw())
 	}
 }
