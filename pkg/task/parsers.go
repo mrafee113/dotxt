@@ -366,7 +366,7 @@ func getTemporalFallback(field, dt string) (string, string, error) {
 		if !ok {
 			return "", "", fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, fallback)
 		}
-		dt = utils.RuneSlice(dt, ndx+1, utils.RuneCount(dt))
+		dt = utils.RuneSlice(dt, ndx+1)
 	}
 	return fallback, dt, nil
 }
@@ -740,10 +740,10 @@ func parseTokens(line string) ([]*Token, []error) {
 			tokens = append(tokens, &Token{
 				Type: TokenHint, raw: tokenStr,
 				Key:   utils.RuneSlice(tokenStr, 0, 1),
-				Value: utils.MkPtr(utils.RuneSlice(tokenStr, 1, utils.RuneCount(tokenStr))),
+				Value: utils.MkPtr(utils.RuneSlice(tokenStr, 1)),
 			})
 		case '$':
-			keyValue := strings.SplitN(utils.RuneSlice(tokenStr, 1, utils.RuneCount(tokenStr)), "=", 2)
+			keyValue := strings.SplitN(utils.RuneSlice(tokenStr, 1), "=", 2)
 			if len(keyValue) != 2 {
 				errs = append(errs, fmt.Errorf("%w: zero or multiple `=` were found: %s", terrors.ErrParse, tokenStr))
 				handleTokenText(tokenStr, nil)

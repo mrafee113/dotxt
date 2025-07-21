@@ -29,7 +29,7 @@ func NormalizePath(path string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		path = filepath.Join(homeDir, RuneSlice(path, 1, RuneCount(path)))
+		path = filepath.Join(homeDir, RuneSlice(path, 1))
 	}
 	return path, nil
 }

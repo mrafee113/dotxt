@@ -102,7 +102,7 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 			md.length = md.newLineLen
 			return utils.RuneSlice(text, 0, maxWidth-oldLen-1) + "\\\n" +
 				md.newLinePrefix +
-				fold(utils.RuneSlice(text, maxWidth-oldLen-1, utils.RuneCount(text)))
+				fold(utils.RuneSlice(text, maxWidth-oldLen-1))
 		}
 		// str is long enough to not fit current line and not long enough to be splitted
 		md.length = md.newLineLen + n

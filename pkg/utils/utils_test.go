@@ -95,4 +95,9 @@ func TestRuneSlice(t *testing.T) {
 		assert.Equal(norm.NFC.String("é世"), RuneSlice(tc, 1, 3))
 		assert.Equal(norm.NFC.String("😄é世"), RuneSlice(tc, 0, 3))
 	})
+	t.Run("default stop value", func(t *testing.T) {
+		tc := norm.NFC.String("😄é世")
+		assert.Equal(tc, RuneSlice(tc, 0))
+		assert.Equal("ab", RuneSlice("ab", 0))
+	})
 }

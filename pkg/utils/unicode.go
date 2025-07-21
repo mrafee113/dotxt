@@ -20,7 +20,21 @@ func RuneAt(s string, index int) rune {
 	}
 }
 
-func RuneSlice(s string, start int, stop int) string {
+// only one extra variable can be provided as stop, otherwise the function panics
+func RuneSlice(s string, start int, stops ...int) string {
+	if len(stops) > 1 {
+		panic("runtime error: extra unsupported values provided")
+	}
+	var stop int
+	if len(stops) == 1 {
+		stop = stops[0]
+	} else {
+		if start < 0 {
+			panic("runtime error: slice bounds out of range")
+		}
+		return string([]rune(s)[start:])
+	}
+
 	if start < 0 || stop < start {
 		panic("runtime error: slice bounds out of range")
 	}
