@@ -61,9 +61,15 @@ color-date-r             = '{{ index .Colors "jade-light" }}'
 color-every              = '{{ index .Colors "yellow-light" }}'
 color-dead-relations     = '{{ index .Colors "grey" }}'
 color-collapsed          = '{{ index .Colors "orange-light" }}'
-color-at                 = '{{ index .Colors "blue" }}'
-color-plus               = '{{ index .Colors "jade-light" }}'
-color-tag                = '{{ index .Colors "pink-light" }}'
+
+[print.hints]
+color-at          = '{{ index .Colors "blue" }}'
+color-plus        = '{{ index .Colors "jade-light" }}'
+color-tag         = '{{ index .Colors "pink-light" }}'
+color-exclamation = '{{ index .Colors "red-light" }}'
+color-question    = '{{ index .Colors "blue-light" }}'
+color-star        = '{{ index .Colors "yellow-light" }}'
+color-ampersand   = '{{ index .Colors "brown" }}'
 
 [print.quotes]
 double    = '{{ index .Colors "green-bright" }}'

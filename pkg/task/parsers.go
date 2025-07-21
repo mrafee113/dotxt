@@ -733,7 +733,7 @@ func parseTokens(line string) ([]*Token, []error) {
 			continue
 		}
 		switch utils.RuneAt(tokenStr, 0) {
-		case '+', '@', '#':
+		case '+', '@', '#', '!', '?', '*', '&':
 			if err := validateHint(tokenStr); err != nil {
 				handleTokenText(tokenStr, nil)
 				continue

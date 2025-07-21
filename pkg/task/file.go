@@ -375,6 +375,9 @@ func BackupFile(path string) error {
 	bakPath := strings.TrimPrefix(path, todosDir()+"/")
 	bakPath = filepath.Join(etcDir(), bakPath+".bak")
 	data, err := os.ReadFile(path)
+	if err != nil && os.IsNotExist(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

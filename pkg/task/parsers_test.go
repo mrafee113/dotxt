@@ -17,6 +17,9 @@ import (
 const dtFormat = "2006-01-02T15-04"
 
 func TestMain(m *testing.M) {
+	if err := os.RemoveAll("/tmp/dotxt-testing"); err != nil {
+		panic(err)
+	}
 	config.InitViper("/tmp/dotxt-testing")
 	if err := os.MkdirAll("/tmp/dotxt-testing", 0755); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -97,20 +100,20 @@ func TestParseTask(t *testing.T) {
 	})
 
 	t.Run("validate hints #1", func(t *testing.T) {
-		task, _ = ParseTask(nil, "# + @")
+		task, _ = ParseTask(nil, "# + @ ! ? * &")
 		_, ndx := task.Tokens.Find(TkByType(TokenHint))
 		assert.Equal(-1, ndx)
 		assert.Len(task.Hints, 0)
 	})
 	t.Run("validate hints #2", func(t *testing.T) {
-		task, _ = ParseTask(nil, "#hint +hint @hint")
+		task, _ = ParseTask(nil, "#hint +hint @hint !hint ?hint *hint &hint")
 		count = 0
 		task.Tokens.Filter(TkByType(TokenHint)).ForEach(func(tk *Token) {
 			count++
 			assert.Equal("hint", *tk.Value.(*string))
 		})
-		assert.Equal(3, count)
-		assert.Equal("#hint +hint @hint", task.Norm())
+		assert.Equal(7, count)
+		assert.Equal("#hint +hint @hint !hint ?hint *hint &hint", task.Norm())
 	})
 
 	t.Run("validate invalid key value: no key", func(t *testing.T) {

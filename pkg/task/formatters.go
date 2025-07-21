@@ -557,11 +557,19 @@ func (t *Task) Render() *rTask {
 			var color string
 			switch tk.Key {
 			case "@":
-				color = "print.color-at"
+				color = "print.hints.color-at"
 			case "#":
-				color = "print.color-tag"
+				color = "print.hints.color-tag"
 			case "+":
-				color = "print.color-plus"
+				color = "print.hints.color-plus"
+			case "!":
+				color = "print.hints.color-exclamation"
+			case "?":
+				color = "print.hints.color-question"
+			case "*":
+				color = "print.hints.color-star"
+			case "&":
+				color = "print.hints.color-ampersand"
 			}
 			out.tokens = append(out.tokens, &rToken{
 				token: tk,

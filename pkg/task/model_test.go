@@ -163,7 +163,7 @@ func TestUpdateDate(t *testing.T) {
 
 func TestTokenValueTypes(t *testing.T) {
 	assert := assert.New(t)
-	task, _ := ParseTask(utils.MkPtr(2), "(prio) $c=2025-05-05T05-05 $due=1w $dead=1w +prj #tag @at $id=1 $P=2 $every=1m $p=unit/10/100/cat")
+	task, _ := ParseTask(utils.MkPtr(2), "(prio) $c=2025-05-05T05-05 $due=1w $dead=1w +prj #tag @at !exclamation ?question *star &ampersand $id=1 $P=2 $every=1m $p=unit/10/100/cat")
 	_, ok := task.Tokens[0].Value.(*string)
 	assert.True(ok, "priority")
 	_, ok = task.Tokens[1].Value.(*TokenDateValue)
@@ -179,12 +179,20 @@ func TestTokenValueTypes(t *testing.T) {
 	_, ok = task.Tokens[6].Value.(*string)
 	assert.True(ok, "@hint")
 	_, ok = task.Tokens[7].Value.(*string)
-	assert.True(ok, "id")
+	assert.True(ok, "!hint")
 	_, ok = task.Tokens[8].Value.(*string)
+	assert.True(ok, "?hint")
+	_, ok = task.Tokens[9].Value.(*string)
+	assert.True(ok, "*hint")
+	_, ok = task.Tokens[10].Value.(*string)
+	assert.True(ok, "&hint")
+	_, ok = task.Tokens[11].Value.(*string)
+	assert.True(ok, "id")
+	_, ok = task.Tokens[12].Value.(*string)
 	assert.True(ok, "P")
-	_, ok = task.Tokens[9].Value.(*time.Duration)
+	_, ok = task.Tokens[13].Value.(*time.Duration)
 	assert.True(ok, "every")
-	_, ok = task.Tokens[10].Value.(*Progress)
+	_, ok = task.Tokens[14].Value.(*Progress)
 	assert.True(ok, "progress")
 }
 
@@ -243,7 +251,7 @@ func TestLists(t *testing.T) {
 
 func TestString(t *testing.T) {
 	assert := assert.New(t)
-	task, _ := ParseTask(nil, "(A) +prj #tag @at $due=1w $dead=1w $r=-2h $-id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
+	task, _ := ParseTask(nil, "(A) +prj #tag @at !exclamation ?question *star &ampersand $due=1w $dead=1w $r=-2h $-id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
 	helper := func(ndx int) string {
 		return task.Tokens[ndx].String()
 	}
@@ -251,15 +259,19 @@ func TestString(t *testing.T) {
 	assert.Equal("+prj", helper(1))
 	assert.Equal("#tag", helper(2))
 	assert.Equal("@at", helper(3))
-	assert.Equal("$due=1w", helper(4))
-	assert.Equal("$dead=1w", helper(5))
-	assert.Equal("$r=-2h", helper(6))
-	assert.Equal("$-id=3", helper(7))
-	assert.Equal("$P=2", helper(8))
-	assert.Equal("$p=unit/2/15/cat", helper(9))
-	assert.Equal("text", helper(10))
-	assert.Equal("$r=-3d", helper(11))
-	assert.Equal("$every=1m", helper(12))
+	assert.Equal("!exclamation", helper(4))
+	assert.Equal("?question", helper(5))
+	assert.Equal("*star", helper(6))
+	assert.Equal("&ampersand", helper(7))
+	assert.Equal("$due=1w", helper(8))
+	assert.Equal("$dead=1w", helper(9))
+	assert.Equal("$r=-2h", helper(10))
+	assert.Equal("$-id=3", helper(11))
+	assert.Equal("$P=2", helper(12))
+	assert.Equal("$p=unit/2/15/cat", helper(13))
+	assert.Equal("text", helper(14))
+	assert.Equal("$r=-3d", helper(15))
+	assert.Equal("$every=1m", helper(16))
 }
 
 func TestTokens(t *testing.T) {

@@ -453,8 +453,9 @@ func TestBackupFile(t *testing.T) {
 
 	t.Run("non-existing file", func(t *testing.T) {
 		err := BackupFile(path)
-		require.Error(t, err)
-		assert.ErrorIs(err, os.ErrNotExist)
+		require.NoError(t, err)
+		bakPath := filepath.Join(etcDir(), strings.TrimPrefix(path, todosDir()+"/")+".bak")
+		require.NoFileExists(t, bakPath)
 	})
 	t.Run("file backed up", func(t *testing.T) {
 		name := "bakFile"

@@ -30,10 +30,21 @@ func validateConfig() []error {
 				"color-running-event-text", "color-running-event",
 				"color-imminent-deadline", "color-date-due",
 				"color-date-dead", "color-date-r", "color-every",
-				"color-dead-relations", "color-collapsed", "color-at",
-				"color-plus", "color-tag",
+				"color-dead-relations", "color-collapsed",
 			} {
 				if err := validateColor("print." + key); err != nil {
+					errs = append(errs, err)
+				}
+			}
+		}
+		// print.hints.*
+		{
+			for _, key := range []string{
+				"color-at", "color-plus", "color-tag",
+				"color-exclamation", "color-question",
+				"color-star", "color-ampersand",
+			} {
+				if err := validateColor("print.hints." + key); err != nil {
 					errs = append(errs, err)
 				}
 			}

@@ -9,7 +9,7 @@ import (
 )
 
 func validateHint(token string) error {
-	if strings.IndexAny(token, "#@+") != 0 || utf8.RuneCountInString(strings.TrimSpace(token)) < 2 {
+	if strings.IndexAny(token, "#@+!?*&") != 0 || utf8.RuneCountInString(strings.TrimSpace(token)) < 2 {
 		return fmt.Errorf("%w: token '%s' is not a hint", terrors.ErrValue, token)
 	}
 	return nil
