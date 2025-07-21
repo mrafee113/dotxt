@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
 )
 
 func FileExists(path string) bool {
@@ -30,7 +29,7 @@ func NormalizePath(path string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		path = filepath.Join(homeDir, RuneSlice(path, 1, utf8.RuneCountInString(path)))
+		path = filepath.Join(homeDir, RuneSlice(path, 1, RuneCount(path)))
 	}
 	return path, nil
 }

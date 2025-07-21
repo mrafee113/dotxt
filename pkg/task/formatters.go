@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
@@ -229,7 +228,7 @@ func formatPriorities(tasks []*rTask) {
 		}
 		maxDepth := 0
 		for _, t := range tasks {
-			maxDepth = max(maxDepth, utf8.RuneCountInString(*t.task.Priority))
+			maxDepth = max(maxDepth, utils.RuneCount(*t.task.Priority))
 		}
 		if depth > maxDepth {
 			return
@@ -240,7 +239,7 @@ func formatPriorities(tasks []*rTask) {
 		for _, rt := range tasks {
 			prio := *rt.task.Priority
 			prefix := prio
-			if utf8.RuneCountInString(prio) > depth {
+			if utils.RuneCount(prio) > depth {
 				prefix = utils.RuneSlice(prio, 0, depth+1)
 			}
 			if _, exists := groups[prefix]; !exists {
@@ -278,7 +277,7 @@ func formatPriorities(tasks []*rTask) {
 			var branch []*rTask
 			branchWeight := 0
 			for _, rt := range group {
-				if utf8.RuneCountInString(*rt.task.Priority) <= depth+1 || len(group) == 1 { // if there are leaves, all of them are always behind branches!
+				if utils.RuneCount(*rt.task.Priority) <= depth+1 || len(group) == 1 { // if there are leaves, all of them are always behind branches!
 					leavesByPrio[*rt.task.Priority] = append(leavesByPrio[*rt.task.Priority], rt)
 					leavesWeight[*rt.task.Priority] += weightMemo[rt.task]
 				} else {
@@ -429,9 +428,9 @@ func formatID(tk Token) string {
 func formatCategoryHeader(category string, info *rInfo) string {
 	var out strings.Builder
 	out.WriteString(strings.Repeat(" ", info.idLen+1+
-		info.countLen+1+info.doneCountLen+utf8.RuneCountInString("(100%) ")+
+		info.countLen+1+info.doneCountLen+utils.RuneCount("(100%) ")+
 		viper.GetInt("print.progress.bartext-len")+1+
-		-utf8.RuneCountInString(category)-1,
+		-utils.RuneCount(category)-1,
 	))
 	out.WriteString(fmt.Sprintf("%s ", category))
 	out.WriteString(strings.Repeat("—", info.maxLen-out.Len()))
@@ -457,8 +456,8 @@ func (t *Task) Render() *rTask {
 
 	if t.Prog != nil {
 		out.tokens = append(out.tokens, &rToken{token: specialTokenMap["p"]})
-		out.countLen = utf8.RuneCountInString(strconv.Itoa(t.Prog.Count))
-		out.doneCountLen = utf8.RuneCountInString(strconv.Itoa(t.Prog.DoneCount))
+		out.countLen = utils.RuneCount(strconv.Itoa(t.Prog.Count))
+		out.doneCountLen = utils.RuneCount(strconv.Itoa(t.Prog.DoneCount))
 	}
 	if t.Priority != nil && *t.Priority != "" {
 		out.tokens = append(out.tokens, &rToken{
@@ -648,8 +647,8 @@ func (t *Task) Render() *rTask {
 			addAsRegular(tk)
 		}
 	})
-	out.maxLen = utf8.RuneCountInString(out.stringify(false, -1))
-	out.idLen = utf8.RuneCountInString(strconv.Itoa(*t.ID))
+	out.maxLen = utils.RuneCount(out.stringify(false, -1))
+	out.idLen = utils.RuneCount(strconv.Itoa(*t.ID))
 	if dominantColor != "" || defaultColor != "" {
 		for _, rtk := range out.tokens {
 			rtk.dominantColor = dominantColor

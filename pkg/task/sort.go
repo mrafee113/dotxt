@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 )
 
 // pay good attention to the values
@@ -21,7 +20,7 @@ func sortNil[T any](lv, rv *T) int {
 }
 
 func sortString(lv, rv string) int {
-	lvn, rvn := utf8.RuneCountInString(lv), utf8.RuneCountInString(rv)
+	lvn, rvn := utils.RuneCount(lv), utils.RuneCount(rv)
 	if lvn != 0 && rvn == 0 {
 		return -1
 	} else if lvn == 0 && rvn != 0 {
@@ -175,7 +174,7 @@ func sortHints(l, r *Task) int {
 		var out []string
 		var rest []string
 		for _, h := range hints {
-			if utf8.RuneCountInString(*h) > 0 && utils.RuneAt(*h, 0) == '+' {
+			if utils.RuneCount(*h) > 0 && utils.RuneAt(*h, 0) == '+' {
 				out = append(out, *h)
 			} else {
 				rest = append(rest, *h)

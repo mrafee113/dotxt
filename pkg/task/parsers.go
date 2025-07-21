@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
 )
@@ -359,7 +358,7 @@ func getTemporalFallback(field, dt string) (string, string, error) {
 		return "", "", fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, field)
 	}
 	if ndx := strings.IndexRune(dt, ':'); ndx != -1 {
-		if ndx == 0 || ndx == utf8.RuneCountInString(dt)-1 {
+		if ndx == 0 || ndx == utils.RuneCount(dt)-1 {
 			return "", "", fmt.Errorf("%w: invalid use of 'var:dt': '%s'", terrors.ErrParse, dt)
 		}
 		fallback = utils.RuneSlice(dt, 0, ndx)
@@ -367,7 +366,7 @@ func getTemporalFallback(field, dt string) (string, string, error) {
 		if !ok {
 			return "", "", fmt.Errorf("%w: %w: field '%s' not in temporalFallback map", terrors.ErrParse, terrors.ErrNotFound, fallback)
 		}
-		dt = utils.RuneSlice(dt, ndx+1, utf8.RuneCountInString(dt))
+		dt = utils.RuneSlice(dt, ndx+1, utils.RuneCount(dt))
 	}
 	return fallback, dt, nil
 }
@@ -440,14 +439,14 @@ func unparseProgress(progress Progress) (string, error) {
 }
 
 func parsePriority(line string) (int, int, error) {
-	if utf8.RuneCountInString(line) == 0 {
+	if utils.RuneCount(line) == 0 {
 		return -1, -1, terrors.ErrEmptyText
 	}
 	if utils.RuneAt(line, 0) != '(' {
 		return -1, -1, fmt.Errorf("%w: %w: (", terrors.ErrParse, terrors.ErrNotFound)
 	}
 	ndx := 1
-	n := utf8.RuneCountInString(line)
+	n := utils.RuneCount(line)
 	for ; ndx < n && utils.RuneAt(line, ndx) != ' '; ndx++ {
 	}
 	ndx--
@@ -707,7 +706,7 @@ func parseTokens(line string) ([]*Token, []error) {
 		}
 	}
 	for ndx, tokenStr := range tokenStrings {
-		if n := utf8.RuneCountInString(tokenStr); (utils.RuneAt(tokenStr, 0) == ' ' ||
+		if n := utils.RuneCount(tokenStr); (utils.RuneAt(tokenStr, 0) == ' ' ||
 			(utils.RuneAt(tokenStr, 0) == '\\' && n >= 2 && utils.RuneAt(tokenStr, 1) == ';')) &&
 			func() bool { // ";" text token
 				spaces := 0
@@ -741,10 +740,10 @@ func parseTokens(line string) ([]*Token, []error) {
 			tokens = append(tokens, &Token{
 				Type: TokenHint, raw: tokenStr,
 				Key:   utils.RuneSlice(tokenStr, 0, 1),
-				Value: utils.MkPtr(utils.RuneSlice(tokenStr, 1, utf8.RuneCountInString(tokenStr))),
+				Value: utils.MkPtr(utils.RuneSlice(tokenStr, 1, utils.RuneCount(tokenStr))),
 			})
 		case '$':
-			keyValue := strings.SplitN(utils.RuneSlice(tokenStr, 1, utf8.RuneCountInString(tokenStr)), "=", 2)
+			keyValue := strings.SplitN(utils.RuneSlice(tokenStr, 1, utils.RuneCount(tokenStr)), "=", 2)
 			if len(keyValue) != 2 {
 				errs = append(errs, fmt.Errorf("%w: zero or multiple `=` were found: %s", terrors.ErrParse, tokenStr))
 				handleTokenText(tokenStr, nil)
@@ -809,8 +808,8 @@ func parseTokens(line string) ([]*Token, []error) {
 				handleTokenText(tokenStr, nil)
 			}
 		case '\'', '"', '`':
-			if utf8.RuneCountInString(tokenStr) == 1 ||
-				!slices.Contains([]rune{'"', '\'', '`'}, utils.RuneAt(tokenStr, utf8.RuneCountInString(tokenStr)-1)) {
+			if utils.RuneCount(tokenStr) == 1 ||
+				!slices.Contains([]rune{'"', '\'', '`'}, utils.RuneAt(tokenStr, utils.RuneCount(tokenStr)-1)) {
 				handleTokenText(tokenStr, nil)
 				continue
 			}

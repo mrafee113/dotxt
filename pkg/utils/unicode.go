@@ -42,3 +42,7 @@ func RuneSlice(s string, start int, stop int) string {
 	}
 	return string(out)
 }
+
+func RuneCount(s string) int {
+	return utf8.RuneCountInString(s)
+}

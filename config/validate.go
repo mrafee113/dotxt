@@ -2,9 +2,9 @@ package config
 
 import (
 	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"fmt"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/spf13/viper"
 )
@@ -141,7 +141,7 @@ func validateColor(key string) error {
 		return err
 	}
 	color := viper.GetString(key)
-	colorLen := utf8.RuneCountInString(color)
+	colorLen := utils.RuneCount(color)
 	if colorLen != 7 {
 		return fmt.Errorf("%w: %w: length of hex color must be '7' and not '%d'", terrors.ErrConf, terrors.ErrValue, colorLen)
 	}

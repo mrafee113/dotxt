@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -515,7 +514,7 @@ func TestStringify(t *testing.T) {
 	testLength := func(out string) bool {
 		exceeds := false
 		for _, each := range strings.Split(out, "\n") {
-			if utf8.RuneCountInString(each) > 50 {
+			if utils.RuneCount(each) > 50 {
 				exceeds = true
 			}
 		}
@@ -705,40 +704,40 @@ func TestPrintLists(t *testing.T) {
 	t.Run("header len", func(t *testing.T) {
 		Lists.Empty(path, task2)
 		out := capture(80, 70)
-		assert.Equal(70, utf8.RuneCountInString(out[0]))
+		assert.Equal(70, utils.RuneCount(out[0]))
 		out = capture(90, 70)
-		assert.Equal(70, utf8.RuneCountInString(out[0]))
+		assert.Equal(70, utils.RuneCount(out[0]))
 		Lists.Empty(path, task1)
 		out = capture(90, 70)
-		assert.Equal(90, utf8.RuneCountInString(out[0]))
+		assert.Equal(90, utils.RuneCount(out[0]))
 		out = capture(160, 70)
-		assert.Equal(105, utf8.RuneCountInString(out[0]))
+		assert.Equal(105, utils.RuneCount(out[0]))
 		out = capture(130, 70)
-		assert.Equal(105, utf8.RuneCountInString(out[0]))
+		assert.Equal(105, utils.RuneCount(out[0]))
 	})
 	t.Run("line len", func(t *testing.T) {
 		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
-		assert.Equal(50, utf8.RuneCountInString(out[0])) // header
-		assert.Equal(50, utf8.RuneCountInString(out[1])) // category header
+		assert.Equal(50, utils.RuneCount(out[0])) // header
+		assert.Equal(50, utils.RuneCount(out[1])) // category header
 
-		assert.Equal(50, utf8.RuneCountInString(out[2]))
-		assert.Equal(46, utf8.RuneCountInString(out[3]))
-		assert.Equal(47, utf8.RuneCountInString(out[4]))
+		assert.Equal(50, utils.RuneCount(out[2]))
+		assert.Equal(46, utils.RuneCount(out[3]))
+		assert.Equal(47, utils.RuneCount(out[4]))
 
-		assert.Equal(39, utf8.RuneCountInString(out[6]))
-		assert.Equal(50, utf8.RuneCountInString(out[7]))
-		assert.Equal(36, utf8.RuneCountInString(out[8]))
+		assert.Equal(39, utils.RuneCount(out[6]))
+		assert.Equal(50, utils.RuneCount(out[7]))
+		assert.Equal(36, utils.RuneCount(out[8]))
 
-		assert.Equal(68, utf8.RuneCountInString(out[9])) // category header
-		assert.Equal(29, utf8.RuneCountInString(out[10]))
+		assert.Equal(68, utils.RuneCount(out[9])) // category header
+		assert.Equal(29, utils.RuneCount(out[10]))
 	})
 	t.Run("category headers", func(t *testing.T) {
 		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
-		assert.Equal(50, utf8.RuneCountInString(out[1]))
-		assert.Equal(41, utf8.RuneCountInString(out[5]))
-		assert.Equal(68, utf8.RuneCountInString(out[9]))
+		assert.Equal(50, utils.RuneCount(out[1]))
+		assert.Equal(41, utils.RuneCount(out[5]))
+		assert.Equal(68, utils.RuneCount(out[9]))
 	})
 	t.Run("nested progress and category headers", func(t *testing.T) {
 		Lists.Empty(path)

@@ -7,7 +7,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"unicode/utf8"
 )
 
 func cleanupIDs(path string) error {
@@ -242,7 +241,7 @@ func PrioritizeTask(id int, priority, path string) error {
 		return err
 	}
 
-	if prioLen := utf8.RuneCountInString(priority); prioLen > 2 && priority[0] == '(' && priority[prioLen-1] == ')' {
+	if prioLen := utils.RuneCount(priority); prioLen > 2 && priority[0] == '(' && priority[prioLen-1] == ')' {
 		priority = priority[1 : prioLen-1]
 	}
 	hadPriority := task.Priority != nil && *task.Priority != ""
