@@ -743,6 +743,22 @@ func parseTokens(line string) ([]*Token, []error) {
 				Value: utils.MkPtr(utils.RuneSlice(tokenStr, 1)),
 			})
 		case '$':
+			// $key
+			if utils.RuneCount(tokenStr) >= 2 && !strings.ContainsRune(tokenStr, '=') {
+				key := utils.RuneSlice(tokenStr, 1, utils.RuneCount(tokenStr))
+				switch key {
+				case "focus":
+					tokens = append(tokens, &Token{
+						Type: TokenFormat, Key: "focus",
+						raw: tokenStr,
+					})
+				default:
+					handleTokenText(tokenStr, nil)
+				}
+				continue
+			}
+
+			// $key=value
 			keyValue := strings.SplitN(utils.RuneSlice(tokenStr, 1), "=", 2)
 			if len(keyValue) != 2 {
 				errs = append(errs, fmt.Errorf("%w: zero or multiple `=` were found: %s", terrors.ErrParse, tokenStr))
@@ -842,7 +858,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	// to be as was given. they will be ordered using `ccc`.
 	line = norm.NFC.String(line)
 
-	task := &Task{ID: id, Time: utils.MkPtr(Temporal{})}
+	task := &Task{ID: id, Time: new(Temporal)}
 	tokens, warns := parseTokens(line)
 	for ndx := range tokens {
 		token := tokens[ndx]
@@ -881,6 +897,14 @@ func ParseTask(id *int, line string) (*Task, error) {
 			task.Time.Every = token.Value.(*time.Duration)
 		case TokenProgress:
 			task.Prog = token.Value.(*Progress)
+		case TokenFormat:
+			if task.Fmt == nil {
+				task.Fmt = new(Format)
+			}
+			switch token.Key {
+			case "focus":
+				task.Fmt.Focus = true
+			}
 		}
 	}
 	task.Tokens = tokens
@@ -960,13 +984,16 @@ func ParseTask(id *int, line string) (*Task, error) {
 			}
 		}
 	}
+	if task.EID != nil && task.PID != nil && *task.EID == *task.PID {
+		task.revertIDtoText("P")
+	}
 	for _, err := range warns {
 		logging.Logger.Debugf("task=\"%s\" warn=\"%s\"", task.String(), err)
 	}
 	return task, nil
 }
 
-// TODO
+// TODO: refactor this and file.go
 func ParseTasks(filepath string) ([]*Task, error) {
 	if !utils.FileExists(filepath) {
 		return []*Task{}, os.ErrNotExist

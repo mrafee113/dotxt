@@ -412,3 +412,58 @@ func TestRoot(t *testing.T) {
 		}
 	}
 }
+
+func TestRevertIDtoText(t *testing.T) {
+	assert := assert.New(t)
+	path, _ := parseFilepath("revertID")
+	prep := func() {
+		Lists.Empty(path)
+		AddTaskFromStr("0 $id=0", path)
+		AddTaskFromStr("0.1 $P=0", path)
+		AddTaskFromStr("0.2 $P=0", path)
+		AddTaskFromStr("1 $id=1 $P=tada", path)
+		AddTaskFromStr("2 $P=1", path)
+		AddTaskFromStr("empty", path)
+	}
+	get := func(ndx int) *Task {
+		return Lists[path].Tasks[ndx]
+	}
+	t.Run("reverts id", func(t *testing.T) {
+		prep()
+		get(0).revertIDtoText("id")
+		assert.Nil(get(0).EID)
+		assert.Empty(get(0).Children)
+		assert.NotNil(get(1).PID)
+		assert.Nil(get(1).Parent)
+		assert.NotNil(get(2).PID)
+		assert.Nil(get(2).Parent)
+	})
+	t.Run("non-existing has no effect", func(t *testing.T) {
+		prep()
+		assert.Nil(get(5).EID)
+		assert.Empty(get(5).Children)
+		assert.Nil(get(5).PID)
+		assert.Nil(get(5).Parent)
+		get(5).revertIDtoText("id")
+		get(5).revertIDtoText("P")
+		assert.Nil(get(5).EID)
+		assert.Empty(get(5).Children)
+		assert.Nil(get(5).PID)
+		assert.Nil(get(5).Parent)
+	})
+	t.Run("reverts P", func(t *testing.T) {
+		prep()
+		get(4).revertIDtoText("P")
+		assert.Nil(get(4).PID)
+		assert.Nil(get(4).Parent)
+		assert.NotContains(get(3).Children, get(4))
+	})
+	t.Run("panics for unknown key", func(t *testing.T) {
+		prep()
+		defer func() {
+			r := recover()
+			assert.NotNil(r, "panicked")
+		}()
+		get(0).revertIDtoText("something")
+	})
+}

@@ -62,7 +62,28 @@ func cleanupRelations(path string) error {
 	Lists[path].PIDs = make(map[*Task]string)
 	for _, task := range Lists[path].Tasks {
 		if task.EID != nil {
-			Lists[path].EIDs[*task.EID] = task
+			_, ok := Lists[path].EIDs[*task.EID]
+			if ok {
+				task.revertIDtoText("id")
+			} else {
+				Lists[path].EIDs[*task.EID] = task
+			}
+		}
+		{ // find loop
+			met := make(map[*Task]bool)
+			node := task
+			for node != nil && node.PID != nil {
+				_, ok := met[node]
+				if ok {
+					node.revertIDtoText("P")
+					break
+				}
+				met[node] = true
+				node, ok = Lists[path].EIDs[*node.PID]
+				if !ok {
+					node = nil
+				}
+			}
 		}
 		if task.PID != nil {
 			Lists[path].PIDs[task] = *task.PID

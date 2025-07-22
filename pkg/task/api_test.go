@@ -546,16 +546,16 @@ func TestCleanupRelations(t *testing.T) {
 	path, _ := parseFilepath("test")
 	Lists.Empty(path)
 	for ndx, line := range []string{
-		"0 repetetive $id=first",
-		"1 nested repetetive $id=fourth $P=first",
+		"0 id $id=first",
+		"1 nested $id=fourth $P=first",
 		"2 no id",
-		"3 id $-id=first",
+		"3 repetetive $-id=first",
 		"4 id $id=second",
 		"5 parent $P=first",
 		"6 parent $P=second",
 		"7 id+parent $id=third $P=second",
 		"8 nested first $P=third",
-		"9 nested second $id=fourth $P=third",
+		"9 nested second repetetive $id=fourth $P=third",
 		"10 nested nested $P=fourth",
 	} {
 		task, _ := ParseTask(utils.MkPtr(ndx), line)
@@ -565,51 +565,136 @@ func TestCleanupRelations(t *testing.T) {
 	get := func(ndx int) *Task {
 		return Lists[path].Tasks[ndx]
 	}
-	assert.Nil(get(3).Parent, "id=first")
-	if assert.NotEmpty(get(3).Children, "id=first") {
-		for _, child := range get(3).Children {
-			assert.Equal(get(3), child.Parent)
-			assert.Contains([]int{1, 5}, *child.ID)
+	t.Run("0 id $id=first", func(t *testing.T) {
+		assert.Nil(get(0).Parent)
+		if assert.NotEmpty(get(0).Children) {
+			for _, child := range get(0).Children {
+				assert.Equal(get(0), child.Parent)
+				assert.Contains([]int{1, 5}, *child.ID)
+			}
 		}
-	}
-	assert.Nil(get(4).Parent, "id=second")
-	if assert.NotEmpty(get(4).Children, "id=second") {
-		for _, child := range get(4).Children {
-			assert.Equal(get(4), child.Parent)
-			assert.Contains([]int{6, 7}, *child.ID)
+	})
+	t.Run("1 nested $id=fourth $P=first", func(t *testing.T) {
+		if assert.NotNil(get(1).Parent) {
+			assert.Equal(0, *get(1).Parent.ID)
 		}
-	}
-	if assert.NotNil(get(7).Parent, "id=third") {
-		assert.Equal(4, *get(7).Parent.ID)
-	}
-	if assert.NotEmpty(get(7).Children, "id=third") {
-		for _, child := range get(7).Children {
-			assert.Equal(get(7), child.Parent)
-			assert.Contains([]int{8, 9}, *child.ID)
+		if assert.NotEmpty(get(1).Children) {
+			for _, child := range get(1).Children {
+				assert.Equal(get(1), child.Parent)
+				assert.Contains([]int{10}, *child.ID)
+			}
 		}
-	}
-	if assert.NotNil(get(9).Parent, "id=fourth") {
-		assert.Equal(7, *get(9).Parent.ID)
-	}
-	if assert.NotEmpty(get(9).Children, "id=fourth") {
-		for _, child := range get(9).Children {
-			assert.Equal(get(9), child.Parent)
-			assert.Contains([]int{10}, *child.ID)
+	})
+	t.Run("2 no id", func(t *testing.T) {
+		assert.Nil(get(2).EID)
+		assert.Empty(get(2).Children)
+		assert.Nil(get(2).PID)
+		assert.Nil(get(2).Parent)
+	})
+	t.Run("3 repetetive $-id=first", func(t *testing.T) {
+		assert.Nil(get(3).EID)
+		assert.Empty(get(3).Children)
+	})
+	t.Run("4 id $id=second", func(t *testing.T) {
+		assert.Nil(get(4).Parent)
+		if assert.NotEmpty(get(4).Children) {
+			for _, child := range get(4).Children {
+				assert.Equal(get(4), child.Parent)
+				assert.Contains([]int{6, 7}, *child.ID)
+			}
 		}
-	}
-	assert.Equal(4, *get(6).Parent.ID, "pid=second")
-	assert.Equal(7, *get(8).Parent.ID, "pid=third")
-	assert.Equal(2, get(8).Depth())
-	assert.Equal(9, *get(10).Parent.ID, "pid=fourth")
-	assert.Equal(3, *get(1).Parent.ID, "pid=first")
-	assert.Equal(3, *get(5).Parent.ID, "pid=first")
-	assert.Equal(1, get(5).Depth())
+	})
+	t.Run("5 parent $P=first", func(t *testing.T) {
+		if assert.NotNil(get(5).Parent) {
+			assert.Equal(0, *get(5).Parent.ID)
+		}
+		assert.Equal(1, get(5).Depth())
+	})
+	t.Run("6 parent $P=second", func(t *testing.T) {
+		if assert.NotNil(get(6).Parent) {
+			assert.Equal(4, *get(6).Parent.ID)
+		}
+	})
+	t.Run("7 id+parent $id=third $P=second", func(t *testing.T) {
+		if assert.NotNil(get(7).Parent) {
+			assert.Equal(4, *get(7).Parent.ID)
+		}
+		assert.NotNil(get(7).EID)
+		if assert.NotEmpty(get(7).Children) {
+			for _, child := range get(7).Children {
+				assert.Equal(get(7), child.Parent)
+				assert.Contains([]int{8, 9}, *child.ID)
+			}
+		}
+	})
+	t.Run("8 nested first $P=third", func(t *testing.T) {
+		if assert.NotNil(get(8).Parent) {
+			assert.Equal(7, *get(8).Parent.ID, "pid=third")
+		}
+		assert.Equal(2, get(8).Depth())
+	})
+	t.Run("9 nested second repetetive $id=fourth $P=third", func(t *testing.T) {
+		assert.Nil(get(9).EID)
+		assert.Empty(get(9).Children)
+		assert.NotNil(get(9).PID)
+		if assert.NotNil(get(9).Parent) {
+			assert.Equal(7, *get(9).Parent.ID)
+		}
+	})
+	t.Run("10 nested nested $P=fourth", func(t *testing.T) {
+		if assert.NotNil(get(10).Parent) {
+			assert.Equal(1, *get(10).Parent.ID)
+		}
+	})
+	t.Run("looping", func(t *testing.T) {
+		Lists.Empty(path)
+		for ndx, line := range []string{
+			"0 $id=0 $P=0",
 
-	assert.Empty(get(0).Children)
-	assert.Empty(get(1).Children)
-	assert.Nil(get(2).Parent)
-	assert.Empty(get(2).Children)
-	assert.Equal(0, get(2).Depth())
+			"1 $id=1 $P=2",
+			"2 $id=2 $P=1",
+
+			"3 $id=3 $P=5",
+			"4 $id=4 $P=3",
+			"5 $id=5 $P=4",
+		} {
+			task, _ := ParseTask(utils.MkPtr(ndx), line)
+			Lists.Append(path, task)
+		}
+		cleanupRelations(path)
+		t.Run("self loop", func(t *testing.T) {
+			assert.Nil(get(0).PID)
+			assert.Nil(get(0).Parent)
+			assert.NotNil(get(0).EID)
+		})
+		t.Run("two-node loop", func(t *testing.T) {
+			{
+				assert.NotNil(get(1).PID)
+				assert.NotNil(get(1).Parent)
+				assert.Equal(get(1).Parent, get(2))
+			}
+			{
+				assert.Nil(get(2).PID)
+				assert.Nil(get(2).Parent)
+			}
+		})
+		t.Run("three-node loop", func(t *testing.T) {
+			{
+				assert.NotNil(get(3).PID)
+				assert.NotNil(get(3).Parent)
+				assert.Equal(get(3).Parent, get(5))
+			}
+			{
+				assert.NotNil(get(4).PID)
+				assert.NotNil(get(4).Parent)
+				assert.Equal(get(4).Parent, get(3))
+			}
+			{
+				assert.Nil(get(5).PID)
+				assert.Nil(get(5).Parent)
+			}
+		})
+	})
 }
 
 func TestToggleCollapsed(t *testing.T) {

@@ -51,6 +51,9 @@ type rTask struct {
 	tokens  []*rToken
 	id      int
 	idColor string
+	decor   bool
+	depth   int
+	focused bool
 	rInfo
 }
 
@@ -67,13 +70,13 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 		newLineLen:    r.idLen + 1,
 	}
 	{
-		if depth := r.task.Depth() * (r.idLen + 1); depth > 0 {
+		if depth := r.depth * (r.idLen + 1); depth > 0 {
 			depthSpace := strings.Repeat(" ", depth)
 			md.newLinePrefix += depthSpace
 			md.newLineLen += depth
 			idPrefix += depthSpace
 		}
-		if r.task.Prog != nil {
+		if r.task != nil && r.task.Prog != nil {
 			progLen := r.countLen + 1 + r.doneCountLen + 6 + 1 +
 				viper.GetInt("print.progress.bartext-len") + 1
 			md.newLinePrefix += strings.Repeat(" ", progLen)
@@ -119,10 +122,16 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 		md.out.WriteString(fold(" "))
 	}
 
-	write(r.idColor, fmt.Sprintf("%s%0*d", idPrefix, r.idLen, r.id))
-	writeSpace()
+	if !r.decor {
+		write(r.idColor, idPrefix)
+		write(r.idColor, fmt.Sprintf("%0*d", r.idLen, r.id))
+		writeSpace()
+	} else {
+		write("print.color-default", fmt.Sprintf("%s%s", idPrefix, strings.Repeat(" ", r.idLen)))
+		writeSpace()
+	}
 
-	if r.task.IsCollapsed() {
+	if r.task != nil && r.task.IsCollapsed() {
 		count, stack := 0, slices.Clone(r.task.Children)
 		for len(stack) > 0 {
 			stack = append(stack[1:], stack[0].Children...)
@@ -138,9 +147,9 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 
 	for ndx, tk := range r.tokens {
 		if ndx > 0 {
-			isPrevSemicolon := r.tokens[ndx-1].token.Type == TokenText &&
+			isPrevSemicolon := r.tokens[ndx-1].token != nil && r.tokens[ndx-1].token.Type == TokenText &&
 				r.tokens[ndx-1].token.Key == ";"
-			isCurSemicolon := tk.token.Type == TokenText &&
+			isCurSemicolon := tk.token != nil && tk.token.Type == TokenText &&
 				tk.token.Key == ";"
 			if !isPrevSemicolon && !isCurSemicolon {
 				writeSpace()

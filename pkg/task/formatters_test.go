@@ -506,6 +506,106 @@ func TestRenderList(t *testing.T) {
 			}
 		}
 	})
+	t.Run("focus", func(t *testing.T) {
+		path, _ := parseFilepath("focus")
+		Lists.Empty(path)
+		AddTaskFromStr("0 $id=1", path)
+		AddTaskFromStr("01 $P=1", path)
+		AddTaskFromStr("02 $P=1 $focus", path)
+		AddTaskFromStr("03 $P=1", path)
+		AddTaskFromStr("04 $P=1 $focus", path)
+		AddTaskFromStr("05 $P=1", path)
+		AddTaskFromStr("06 $id=2", path)
+		AddTaskFromStr("07 $P=2 $focus", path)
+		AddTaskFromStr("08 $id=3", path)
+		AddTaskFromStr("09 $P=3", path)
+		AddTaskFromStr("10 $P=3 $focus", path)
+		AddTaskFromStr("11 $id=4", path)
+		AddTaskFromStr("12 $P=4 $focus", path)
+		AddTaskFromStr("13 $P=4", path)
+		AddTaskFromStr("14 $id=5", path)
+		AddTaskFromStr("15 $P=5", path)
+		AddTaskFromStr("16 $P=5", path)
+		AddTaskFromStr("17 $P=5", path)
+		AddTaskFromStr("18", path)
+		AddTaskFromStr("19 $id=19 $focus", path)
+		AddTaskFromStr("20 $P=19 $id=20", path)
+		AddTaskFromStr("21 $P=20 $id=21", path)
+		AddTaskFromStr("22 $P=21 $id=22", path)
+		AddTaskFromStr("23 $P=22 $id=23", path)
+		AddTaskFromStr("24 $P=23", path)
+		AddTaskFromStr("25 $P=23", path)
+		AddTaskFromStr("26 $P=23", path)
+		AddTaskFromStr("27 $P=23", path)
+		AddTaskFromStr("28 $P=22", path)
+		AddTaskFromStr("29 $P=20", path)
+		AddTaskFromStr("30 $P=19", path)
+		AddTaskFromStr("31", path)
+		cleanupRelations(path)
+		Lists.Sort(path)
+		rtasks, listinfo, err := RenderList(path)
+		for _, rtask := range rtasks {
+			rtask.rInfo.set(listinfo)
+		}
+
+		assert.NoError(err)
+		assert.Equal("00 0 $id=1", rtasks[0].stringify(false, 50))
+		{
+			assert.Equal("      ... -1 ...", rtasks[1].stringify(false, 50))
+			assert.True(rtasks[1].decor)
+			assert.Contains(rtasks[1].stringify(false, 50), "1")
+		}
+		assert.Equal("   02 02 $P=1 $focus", rtasks[2].stringify(false, 50))
+		{
+			assert.Equal("      ... -1 ...", rtasks[3].stringify(false, 50))
+			assert.True(rtasks[3].decor)
+			assert.Contains(rtasks[3].stringify(false, 50), "1")
+		}
+		assert.Equal("   04 04 $P=1 $focus", rtasks[4].stringify(false, 50))
+		{
+			assert.Equal("      ... -1 ...", rtasks[5].stringify(false, 50))
+			assert.True(rtasks[5].decor)
+			assert.Contains(rtasks[5].stringify(false, 50), "1")
+		}
+		assert.Equal("06 06 $id=2", rtasks[6].stringify(false, 50))
+		assert.Equal("   07 07 $P=2 $focus", rtasks[7].stringify(false, 50))
+		assert.Equal("08 08 $id=3", rtasks[8].stringify(false, 50))
+		{
+			assert.Equal("      ... -1 ...", rtasks[9].stringify(false, 50))
+			assert.True(rtasks[9].decor)
+			assert.Contains(rtasks[9].stringify(false, 50), "1")
+		}
+		assert.Equal("   10 10 $P=3 $focus", rtasks[10].stringify(false, 50))
+		assert.Equal("11 11 $id=4", rtasks[11].stringify(false, 50))
+		assert.Equal("   12 12 $P=4 $focus", rtasks[12].stringify(false, 50))
+		{
+			assert.Equal("      ... -1 ...", rtasks[13].stringify(false, 50))
+			assert.True(rtasks[13].decor)
+			assert.Contains(rtasks[13].stringify(false, 50), "1")
+		}
+		{
+			assert.Equal("   ... -5 ...", rtasks[14].stringify(false, 50))
+			assert.True(rtasks[14].decor)
+			assert.Contains(rtasks[14].stringify(false, 50), "5")
+		}
+		assert.Equal("19 19 $id=19 $focus", rtasks[15].stringify(false, 50))
+		assert.Equal("   20 20 $P=19 $id=20", rtasks[16].stringify(false, 50))
+		assert.Equal("      21 21 $P=20 $id=21", rtasks[17].stringify(false, 50))
+		assert.Equal("         22 22 $P=21 $id=22", rtasks[18].stringify(false, 50))
+		assert.Equal("            23 23 $P=22 $id=23", rtasks[19].stringify(false, 50))
+		assert.Equal("               24 24 $P=23", rtasks[20].stringify(false, 50))
+		assert.Equal("               25 25 $P=23", rtasks[21].stringify(false, 50))
+		assert.Equal("               26 26 $P=23", rtasks[22].stringify(false, 50))
+		assert.Equal("               27 27 $P=23", rtasks[23].stringify(false, 50))
+		assert.Equal("            28 28 $P=22", rtasks[24].stringify(false, 50))
+		assert.Equal("      29 29 $P=20", rtasks[25].stringify(false, 50))
+		assert.Equal("   30 30 $P=19", rtasks[26].stringify(false, 50))
+		{
+			assert.Equal("   ... -1 ...", rtasks[27].stringify(false, 50))
+			assert.True(rtasks[27].decor)
+			assert.Contains(rtasks[27].stringify(false, 50), "1")
+		}
+	})
 }
 
 func TestStringify(t *testing.T) {
@@ -671,6 +771,20 @@ func TestStringify(t *testing.T) {
 		assert.False(testLength(str))
 		assert.Equal("0  this  #tag.  a  b  c  d", str)
 	})
+	t.Run("focus", func(t *testing.T) {
+		path, _ := parseFilepath("focus")
+		Lists.Empty(path)
+		AddTaskFromStr("1 $focus", path)
+		AddTaskFromStr("2", path)
+		AddTaskFromStr("3 $focus", path)
+		rtasks, _, err := RenderList(path)
+		assert.NoError(err)
+		assert.False(rtasks[0].decor)
+		assert.False(rtasks[2].decor)
+		assert.True(rtasks[1].decor)
+		assert.Equal(" ... -1 ...", rtasks[1].stringify(false, 50))
+		assert.Equal("print.color-hidden", rtasks[1].tokens[0].color)
+	})
 }
 
 func TestPrintLists(t *testing.T) {
@@ -778,6 +892,52 @@ func TestPrintLists(t *testing.T) {
                            ———————————————————————
 04 4
 11 b $P=b`
+		for ndx, line := range strings.Split(tc, "\n") {
+			line = strings.TrimRightFunc(line, unicode.IsSpace)
+			assert.Equal(line, out[ndx])
+		}
+	})
+	t.Run("focus", func(t *testing.T) {
+		Lists.Empty(path)
+		AddTaskFromStr("0 $id=1 $focus", path)
+		AddTaskFromStr("01 $P=1", path)
+		AddTaskFromStr("02 $P=1 $focus", path)
+		AddTaskFromStr("03 $P=1", path)
+		AddTaskFromStr("04 $P=1 $focus", path)
+		AddTaskFromStr("05 $P=1", path)
+		AddTaskFromStr("06 $id=2 $focus", path)
+		AddTaskFromStr("07 $P=2 $focus", path)
+		AddTaskFromStr("08 $id=3 $focus", path)
+		AddTaskFromStr("09 $P=3", path)
+		AddTaskFromStr("10 $P=3 $focus", path)
+		AddTaskFromStr("11 $id=4 $focus", path)
+		AddTaskFromStr("12 $P=4 $focus", path)
+		AddTaskFromStr("13 $P=4", path)
+		AddTaskFromStr("14 $id=5", path)
+		AddTaskFromStr("15 $P=5", path)
+		AddTaskFromStr("16 $P=5", path)
+		AddTaskFromStr("17 $P=5", path)
+		AddTaskFromStr("18", path)
+		AddTaskFromStr("19 $focus", path)
+
+		out := capture(60, 50)
+		tc := `> printLists | ———————————————————————————————————
+00 0 $id=1 $focus
+      ... -1 ...
+   02 02 $P=1 $focus
+      ... -1 ...
+   04 04 $P=1 $focus
+      ... -1 ...
+06 06 $id=2 $focus
+   07 07 $P=2 $focus
+08 08 $id=3 $focus
+      ... -1 ...
+   10 10 $P=3 $focus
+11 11 $id=4 $focus
+   12 12 $P=4 $focus
+      ... -1 ...
+   ... -5 ...
+19 19 $focus`
 		for ndx, line := range strings.Split(tc, "\n") {
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
 			assert.Equal(line, out[ndx])

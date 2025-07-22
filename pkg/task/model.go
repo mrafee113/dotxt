@@ -2,6 +2,7 @@ package task
 
 import (
 	"dotxt/pkg/terrors"
+	"dotxt/pkg/utils"
 	"fmt"
 	"reflect"
 	"slices"
@@ -111,6 +112,7 @@ const (
 	TokenDate
 	TokenDuration
 	TokenProgress
+	TokenFormat
 )
 
 type TokenDateValue struct {
@@ -220,6 +222,10 @@ func (tk *Token) String() string {
 			return "$p=" + p
 		}
 		return tk.raw
+	case TokenFormat:
+		if tk.Key == "focus" {
+			return "$focus"
+		}
 	}
 	return ""
 }
@@ -303,6 +309,10 @@ var allowedTemporalRelations = map[string][]string{
 	"r":    {"due", "c", "rn"},
 }
 
+type Format struct {
+	Focus bool
+}
+
 type Task struct {
 	Tokens   Tokens
 	ID       *int
@@ -315,6 +325,7 @@ type Task struct {
 
 	Time *Temporal
 	Prog *Progress
+	Fmt  *Format
 }
 
 func (t *Task) String() string {
@@ -356,6 +367,36 @@ func (t *Task) IsParentCollapsed() bool {
 		node = node.Parent
 	}
 	return false
+}
+
+func (t *Task) revertIDtoText(key string) {
+	switch key {
+	case "id":
+		t.EID = nil
+		for _, child := range t.Children {
+			child.Parent = nil
+		}
+		t.Children = slices.Delete(t.Children, 0, len(t.Children))
+	case "P":
+		t.PID = nil
+		if t.Parent != nil {
+			for ndx := range t.Parent.Children {
+				if t.Parent.Children[ndx] == t {
+					t.Parent.Children = slices.Delete(t.Parent.Children, ndx, ndx+1)
+					break
+				}
+			}
+		}
+		t.Parent = nil
+	default:
+		panic("key was supposed to be id or P but was '" + key + "'")
+	}
+	tk, _ := t.Tokens.Find(TkByTypeKey(TokenID, key))
+	if tk != nil {
+		tk.Type = TokenText
+		tk.Key = ""
+		tk.Value = utils.MkPtr(tk.raw)
+	}
 }
 
 func (t *Task) update(new *Task) error {

@@ -61,6 +61,8 @@ color-date-r             = '{{ index .Colors "jade-light" }}'
 color-every              = '{{ index .Colors "yellow-light" }}'
 color-dead-relations     = '{{ index .Colors "grey" }}'
 color-collapsed          = '{{ index .Colors "orange-light" }}'
+color-focus  			 = '{{ index .Colors "red-light" }}'
+color-hidden			 = '{{ index .Colors "grey-light" }}'
 
 [print.hints]
 color-at          = '{{ index .Colors "blue" }}'

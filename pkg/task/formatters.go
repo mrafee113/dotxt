@@ -439,7 +439,7 @@ func formatCategoryHeader(category string, info *rInfo) string {
 }
 
 func (t *Task) Render() *rTask {
-	out := rTask{task: t, id: *t.ID, idColor: "print.color-index"}
+	out := rTask{task: t, id: *t.ID, idColor: "print.color-index", decor: false, depth: t.Depth()}
 	addAsRegular := func(token *Token) {
 		out.tokens = append(out.tokens, &rToken{token: token, raw: token.String(), color: "print.color-default"})
 	}
@@ -643,6 +643,15 @@ func (t *Task) Render() *rTask {
 				raw:   fmt.Sprintf("$every=%s", formatDuration(t.Time.Every)),
 				color: "print.color-every",
 			})
+		case TokenFormat:
+			if tk.Key == "focus" {
+				out.focused = true
+				out.tokens = append(out.tokens, &rToken{
+					token: tk,
+					raw:   "$focus",
+					color: "print.color-focus",
+				})
+			}
 		default:
 			addAsRegular(tk)
 		}
@@ -666,30 +675,126 @@ func RenderList(path string) ([]*rTask, *rInfo, error) {
 		return nil, nil, err
 	}
 
-	var out []*rTask
+	// first pass: preprocessing
+	taskHasFocus := func(t *Task) bool {
+		return t.Fmt != nil && t.Fmt.Focus
+	}
+	taskHasDerivedFocus := func(rt *rTask) bool {
+		return rt.focused && !taskHasFocus(rt.task)
+	}
+
+	parentToChildren := make(map[*Task][]*Task)
+	parentToChildrenDepth := map[*Task]int{nil: 0}
+	parentToChildrenFocus := make(map[*Task]bool)
+	taskToRTask := make(map[*Task]*rTask)
 	Lists.Sort(path)
+
+	var parentStack []*Task
+	isParentInStack := func(t *Task) bool {
+		for ndx := len(parentStack) - 1; ndx >= 0; ndx-- {
+			if parentStack[ndx] == t {
+				return true
+			}
+		}
+		return false
+	}
+	var parent *Task
+	for _, task := range Lists[path].Tasks {
+		if task.Parent != nil && !isParentInStack(task.Parent) {
+			// going into a new depth
+			parentStack = append(parentStack, task.Parent)
+			parent = task.Parent
+		} else if (task.Parent == nil && parent != nil) ||
+			(task.Parent != nil && task.Parent != parent) {
+			// coming out of a depth
+			for ndx := len(parentStack) - 1; ndx >= 0; ndx-- {
+				if parentStack[ndx] == task.Parent {
+					break
+				}
+				parentStack = parentStack[:ndx]
+			}
+			parent = task.Parent
+		}
+
+		rtask := task.Render()
+		taskToRTask[task] = rtask
+		parentToChildren[task.Parent] = append(parentToChildren[task.Parent], task)
+		if rtask.focused {
+			node := task
+			for node != nil {
+				taskToRTask[node].focused = true
+				node = node.Parent
+			}
+		}
+		parentToChildrenDepth[task.Parent] = len(parentStack)
+		parentToChildrenFocus[task.Parent] = parentToChildrenFocus[task.Parent] || taskHasFocus(task)
+	}
+
+	// second pass: filtering and processing
+	var out []*rTask
 	idList := make(map[string]bool)
 	listInfo := rInfo{}
-	for _, task := range Lists[path].Tasks {
-		if task.IsParentCollapsed() {
-			continue
-		}
-		rtask := task.Render()
-		out = append(out, rtask)
-		if rtask.task != nil {
-			if rtask.task.EID != nil {
-				idList[*rtask.task.EID] = true
-			}
-			if rtask.task.PID != nil {
-				idList[*rtask.task.PID] = true
-			}
-		}
-		listInfo.set(&rtask.rInfo)
+
+	flushEllipsis := func(count, depth int) {
+		out = append(out, &rTask{
+			tokens: []*rToken{
+				{raw: "...", color: "print.color-hidden"},
+				{raw: "-" + strconv.Itoa(count), color: "print.color-hidden"},
+				{raw: "...", color: "print.color-hidden"},
+			},
+			depth: depth,
+			decor: true,
+		})
 	}
+
+	var render func(*Task)
+	render = func(node *Task) {
+		siblings, ok := parentToChildren[node]
+		if !ok {
+			return
+		}
+		siblingDepth := parentToChildrenDepth[node]
+		var shf bool = parentToChildrenFocus[node] // siblings have focus
+		var hiddenCount int
+		for _, task := range siblings {
+			rtask := taskToRTask[task]
+			if shf && !taskHasFocus(task) && !taskHasDerivedFocus(rtask) {
+				hiddenCount += 1 + len(task.Children)
+				continue
+			}
+			if shf && (taskHasFocus(task) || taskHasDerivedFocus(rtask)) && hiddenCount > 0 {
+				flushEllipsis(hiddenCount, siblingDepth)
+			}
+			if shf && (taskHasFocus(task) || taskHasDerivedFocus(rtask)) {
+				hiddenCount = 0
+			}
+			if task.IsParentCollapsed() {
+				continue
+			}
+			out = append(out, rtask)
+			if rtask.task != nil {
+				if rtask.task.EID != nil {
+					idList[*rtask.task.EID] = true
+				}
+				if rtask.task.PID != nil {
+					idList[*rtask.task.PID] = true
+				}
+			}
+			listInfo.set(&rtask.rInfo)
+
+			if task.EID != nil {
+				render(task)
+			}
+		}
+		if hiddenCount > 0 {
+			flushEllipsis(hiddenCount, siblingDepth)
+		}
+	}
+	render(nil)
 	idColors := colorizeIds(idList)
 	for _, rtask := range out {
 		for _, tk := range rtask.tokens {
-			if tk.token.Type == TokenID {
+			if tk.token != nil && tk.token.Type == TokenID {
 				tk.color = idColors[*tk.token.Value.(*string)]
 				if tk.dominantColor == "" &&
 					((tk.token.Key == "id" && len(rtask.task.Children) == 0) ||
@@ -733,7 +838,7 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 		emptyCatThere := false
 		categories := make(map[string]bool)
 		for _, rtask := range rtasks[path] {
-			if rtask.task.Prog != nil {
+			if rtask.task != nil && rtask.task.Prog != nil {
 				if root := rtask.task.Root(); root == rtask.task { // only take root tasks into account
 					if rtask.task.Prog.Category == "" {
 						emptyCatThere = true
@@ -748,7 +853,7 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 
 		out.WriteString(formatListHeader(path, sessionInfo.maxLen))
 		for _, rtask := range rtasks[path] {
-			if useCatHeader && rtask.task.Prog != nil && rtask.task.Prog.Category != lastCat {
+			if useCatHeader && rtask.task != nil && rtask.task.Prog != nil && rtask.task.Prog.Category != lastCat {
 				if root := rtask.task.Root(); root == rtask.task { // not a nested progress
 					cat := rtask.task.Prog.Category
 					if cat == "" {
@@ -758,7 +863,7 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 					lastCat = rtask.task.Prog.Category
 				}
 			}
-			if useCatHeader && rtask.task.Prog == nil && firstNonCat {
+			if useCatHeader && rtask.task != nil && rtask.task.Prog == nil && firstNonCat {
 				if root := rtask.task.Root(); root == rtask.task { // not a nested progress
 					firstNonCat = false
 					out.WriteString(formatCategoryHeader("", &sessionInfo))

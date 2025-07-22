@@ -194,6 +194,16 @@ func TestParseTask(t *testing.T) {
 			assert.Equal("534", *task.PID, "PID")
 		}
 	})
+	t.Run("validate equal $id $P: revert id", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$id=200 $P=200")
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenID, "id"))
+		if assert.NotNil(tk) && assert.NotNil(task.EID) {
+			assert.Equal(tk.Value.(*string), task.EID)
+		}
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenID, "P"))
+		assert.Nil(tk)
+		assert.Nil(task.Parent)
+	})
 
 	t.Run("validate invalid absolute dates: %Y", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=2025")
@@ -486,6 +496,16 @@ func TestParseTask(t *testing.T) {
 		tk = task.Tokens[len(task.Tokens)-2]
 		assert.Empty(tk.Key)
 		assert.Equal(`\'\'\'`, *tk.Value.(*string))
+	})
+
+	t.Run("validate token focus", func(t *testing.T) {
+		task, _ := ParseTask(nil, "hellow $focus")
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenFormat, "focus"))
+		require.NotNil(t, tk)
+		assert.Equal("$focus", tk.raw)
+		assert.Nil(tk.Value)
+		require.NotNil(t, task.Fmt)
+		assert.True(task.Fmt.Focus)
 	})
 }
 
