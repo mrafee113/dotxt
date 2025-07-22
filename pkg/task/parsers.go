@@ -466,6 +466,7 @@ ai says to look out for these:
   - That will only chase at most 3 hops down the fallback chain. If you ever extend temporalFallback (e.g. add more levels), you’d have to bump that constant.
   - Dual key-remapping for reminders
   - You temporarily rename "r" to "r<idx>" in the first pass, then map everything using nodes[key] loops over the hard-coded slice append([]string{"c", "due", …}, rKeys…). If someone writes two reminders back-to-back but with the same raw text (e.g. duplicate tokens), the index hack could mismatch.
+    TODO: write an exhaustive testcase generator against these
 */
 func resolveDates(tokens []*Token) []error {
 	var errs []error
