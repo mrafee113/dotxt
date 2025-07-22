@@ -100,7 +100,8 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 			}
 			return "\n" + md.newLinePrefix + fold(text)
 		}
-		if n > maxWidth || r.idLen+1+n > maxWidth { // string is so long it has to be split
+		if n > maxWidth || r.idLen+1+n > maxWidth ||
+			md.newLineLen+r.idLen+1+n > maxWidth { // string is so long it has to be split
 			oldLen := md.length
 			md.length = md.newLineLen
 			return utils.RuneSlice(text, 0, maxWidth-oldLen-1) + "\\\n" +

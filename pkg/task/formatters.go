@@ -808,7 +808,7 @@ func RenderList(path string) ([]*rTask, *rInfo, error) {
 	return out, &listInfo, nil
 }
 
-func PrintLists(paths []string, maxLen, minlen int) error {
+func PrintLists(paths []string, maxLen, minLen int) error {
 	var err error
 	for ndx := range paths {
 		paths[ndx], err = prepFileTaskFromPath(paths[ndx])
@@ -827,7 +827,7 @@ func PrintLists(paths []string, maxLen, minlen int) error {
 		sessionInfo.set(listInfo)
 	}
 
-	sessionInfo.maxLen = max(min(sessionInfo.maxLen, maxLen), minlen)
+	sessionInfo.maxLen = max(min(sessionInfo.maxLen, maxLen), minLen)
 	for _, path := range paths { // propogate downwards
 		for _, rtask := range rtasks[path] {
 			rtask.rInfo.set(&sessionInfo)

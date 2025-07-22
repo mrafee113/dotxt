@@ -544,11 +544,11 @@ func TestRenderList(t *testing.T) {
 		cleanupRelations(path)
 		Lists.Sort(path)
 		rtasks, listinfo, err := RenderList(path)
+		assert.NoError(err)
 		for _, rtask := range rtasks {
 			rtask.rInfo.set(listinfo)
 		}
 
-		assert.NoError(err)
 		assert.Equal("00 0 $id=1", rtasks[0].stringify(false, 50))
 		{
 			assert.Equal("      ... -1 ...", rtasks[1].stringify(false, 50))
@@ -841,17 +841,17 @@ func TestPrintLists(t *testing.T) {
 
 		assert.Equal(39, utils.RuneCount(out[6]))
 		assert.Equal(50, utils.RuneCount(out[7]))
-		assert.Equal(36, utils.RuneCount(out[8]))
+		assert.Equal(50, utils.RuneCount(out[8]))
 
-		assert.Equal(68, utils.RuneCount(out[9])) // category header
-		assert.Equal(29, utils.RuneCount(out[10]))
+		assert.Equal(50, utils.RuneCount(out[9])) // category header
+		assert.Equal(50, utils.RuneCount(out[10]))
 	})
 	t.Run("category headers", func(t *testing.T) {
 		Lists.Empty(path, task1, task2, task3)
 		out := capture(50, 10)
 		assert.Equal(50, utils.RuneCount(out[1]))
 		assert.Equal(41, utils.RuneCount(out[5]))
-		assert.Equal(68, utils.RuneCount(out[9]))
+		assert.Equal(50, utils.RuneCount(out[9]))
 	})
 	t.Run("nested progress and category headers", func(t *testing.T) {
 		Lists.Empty(path)
