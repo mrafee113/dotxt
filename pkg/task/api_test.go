@@ -165,28 +165,40 @@ func TestPrependToTask(t *testing.T) {
 	AddTaskFromStr("0", path)
 	AddTaskFromStr("1 $c=2024-05-05T05-05", path)
 	AddTaskFromStr("(A) 2", path)
-	err := PrependToTask(1, "new data +prj @at #tag $due=1w", path)
-	require.Nil(t, err)
-	task := Lists[path].Tasks[1]
-	dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
-	assert.Equal(*dt, *task.Time.DueDate)
-	assert.Len(task.Hints, 3)
-	assert.Equal([]string{"+prj", "@at", "#tag"}, func() []string {
-		var out []string
-		for _, h := range task.Hints {
-			out = append(out, *h)
+	AddTaskFromStr("(B)  3", path)
+	t.Run("1", func(t *testing.T) {
+		err := PrependToTask(1, "new data +prj @at #tag $due=1w", path)
+		require.Nil(t, err)
+		task := Lists[path].Tasks[1]
+		dt, _ := parseAbsoluteDatetime("2024-05-12T05-05")
+		assert.Equal(*dt, *task.Time.DueDate)
+		assert.Len(task.Hints, 3)
+		assert.Equal([]string{"+prj", "@at", "#tag"}, func() []string {
+			var out []string
+			for _, h := range task.Hints {
+				out = append(out, *h)
+			}
+			return out
+		}())
+		assert.Equal("new data 1", task.NormRegular())
+		if assert.NotNil(task.ID) {
+			assert.Equal(1, *task.ID)
 		}
-		return out
-	}())
-	assert.Equal("new data 1", task.NormRegular())
-	if assert.NotNil(task.ID) {
-		assert.Equal(1, *task.ID)
-	}
-	err = PrependToTask(2, "something new", path)
-	require.Nil(t, err)
-	task = Lists[path].Tasks[2]
-	assert.Equal("(A)", *task.Priority)
-	assert.Equal("(A) something new 2", task.Norm())
+	})
+	t.Run("2", func(t *testing.T) {
+		err := PrependToTask(2, "something new", path)
+		require.Nil(t, err)
+		task := Lists[path].Tasks[2]
+		assert.Equal("(A)", *task.Priority)
+		assert.Equal("(A) something new 2", task.Norm())
+	})
+	t.Run("3", func(t *testing.T) {
+		err := PrependToTask(3, "something new", path)
+		require.Nil(t, err)
+		task := Lists[path].Tasks[3]
+		assert.Equal("(B)", *task.Priority)
+		assert.Equal("(B) something new  3", task.Norm())
+	})
 }
 
 func TestReplaceTask(t *testing.T) {
@@ -251,7 +263,7 @@ func TestDeprioritizeTask(t *testing.T) {
 		err := DeprioritizeTask(1, path)
 		assert.NoError(err)
 		assert.Nil(Lists[path].Tasks[1].Priority)
-		_, ndx := Lists[path].Tasks[1].Tokens.Find(TkByType(TokenPriority))
+		_, ndx := Lists[path].Tasks[1].Tokens.Find(TkByTypeKey(TokenPriority, "priority"))
 		assert.Negative(ndx)
 	})
 }

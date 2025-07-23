@@ -233,12 +233,8 @@ func DeprioritizeTask(id int, path string) error {
 		return nil
 	}
 
-	for ndx := len(task.Tokens) - 1; ndx >= 0; ndx-- {
-		if task.Tokens[ndx].Type == TokenPriority {
-			task.Tokens = slices.Delete(task.Tokens, ndx, ndx+1)
-			break
-		}
-	}
+	_, ndx := task.Tokens.Find(TkByType(TokenPriority))
+	task.Tokens = slices.Delete(task.Tokens, ndx, ndx+1)
 	task.Priority = nil
 	return nil
 }
@@ -251,12 +247,20 @@ func PrioritizeTask(id int, priority, path string) error {
 
 	priority = strings.TrimSpace(priority)
 	n := utils.RuneCount(priority)
-	if n > 1 && utils.RuneAt(priority, 0) != '(' {
+	if n > 1 && !strings.ContainsRune("[(", utils.RuneAt(priority, 0)) {
 		priority = "(" + priority
 		n += 1
 	}
-	if n > 1 && utils.RuneAt(priority, n-1) != ')' {
-		priority = priority + ")"
+	if n > 1 && !strings.ContainsRune(")]", utils.RuneAt(priority, n-1)) {
+		if utils.RuneAt(priority, 0) == '[' {
+			priority = priority + "]"
+		} else {
+			priority = priority + ")"
+		}
+	}
+	err = validatePriority(priority)
+	if err != nil {
+		return err
 	}
 
 	task.Priority = &priority

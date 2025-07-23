@@ -679,8 +679,12 @@ func parseTokens(line string) ([]*Token, []error) {
 	tokenStrings := tokenizeLine(line)
 	if len(tokenStrings) > 0 {
 		if err := validatePriority(tokenStrings[0]); err == nil {
+			prioKey := "priority"
+			if tokenStrings[0][0] == '[' {
+				prioKey = "anti-priority"
+			}
 			tokens = append(tokens, &Token{
-				Type: TokenPriority, Key: "priority",
+				Type: TokenPriority, Key: prioKey,
 				raw: &tokenStrings[0], Value: &tokenStrings[0],
 			})
 			tokenStrings = tokenStrings[1:]

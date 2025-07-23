@@ -382,6 +382,21 @@ func TestTokens(t *testing.T) {
 			}
 		})
 	})
+	t.Run("priority and anti-priority", func(t *testing.T) {
+		task, _ := ParseTask(nil, "(A)")
+		assert.Equal("(A)", *task.Priority)
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenPriority, "priority"))
+		assert.NotNil(tk)
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenPriority, "anti-priority"))
+		assert.Nil(tk)
+
+		task, _ = ParseTask(nil, "[A]")
+		assert.Equal("[A]", *task.Priority)
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenPriority, "anti-priority"))
+		assert.NotNil(tk)
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenPriority, "priority"))
+		assert.Nil(tk)
+	})
 }
 
 func TestRoot(t *testing.T) {

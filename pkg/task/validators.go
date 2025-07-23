@@ -44,12 +44,15 @@ func validatePriority(token string) error {
 	if utils.RuneCount(token) <= 2 {
 		return terrors.ErrEmptyText
 	}
-	if utils.RuneAt(token, 0) != '(' {
-		return fmt.Errorf("%w: %w: (", terrors.ErrParse, terrors.ErrNotFound)
+	prioMatch := ')'
+	if prioChar := utils.RuneAt(token, 0); prioChar != '(' && prioChar != '[' {
+		return fmt.Errorf("%w: %w: '(' nor '['", terrors.ErrParse, terrors.ErrNotFound)
+	} else if prioChar == '[' {
+		prioMatch = ']'
 	}
 	n := utils.RuneCount(token)
-	if utils.RuneAt(token, n-1) != ')' {
-		return fmt.Errorf("%w: %w: )", terrors.ErrParse, terrors.ErrNotFound)
+	if utils.RuneAt(token, n-1) != prioMatch {
+		return fmt.Errorf("%w: %w: '%c'", terrors.ErrParse, terrors.ErrNotFound, prioMatch)
 	}
 	return nil
 }

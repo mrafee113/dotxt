@@ -51,15 +51,18 @@ func permutations[T any](src []T) [][]T {
 func TestSortTask(t *testing.T) {
 	assert := assert.New(t)
 	var arr []*Task
+	path, _ := parseFilepath("test")
 	prep := func(lines []string) {
-		arr = make([]*Task, len(lines))
+		Lists.Empty(path)
 		for ndx, line := range lines {
 			task, err := ParseTask(&ndx, line)
 			assert.NoError(err)
 			assert.NotNil(task)
-			arr[ndx] = task
+			Lists.Append(path, task)
 		}
-		arr = sortTasks(arr)
+		cleanupRelations(path)
+		Lists.Sort(path)
+		arr = Lists[path].Tasks
 	}
 	t.Run("progress", func(t *testing.T) {
 		for _, lineSet := range permutations([]string{
@@ -93,6 +96,74 @@ func TestSortTask(t *testing.T) {
 			assert.Equal("s", arr[3].Norm())
 			assert.Equal("(B) s", arr[1].Norm())
 			assert.Equal("(C) s", arr[2].Norm())
+		}
+	})
+	t.Run("anti-priority", func(t *testing.T) {
+		for _, lineSet := range shuffleCount([]string{
+			"[0] $p=unit/0/100/cat", "$p=unit/0/100/cat",
+			"(z) $p=unit/0/100", "$p=unit/0/100",
+			"$p=unit/0/100/catA", "$p=unit/0/100/catB",
+			"(A) s", "s", "[D] s",
+			"(B) s", "(C) s",
+			"+b +a", "s",
+			"+b +a +z", "+z +b +0",
+			"#a", "#ab", "#a #b #c",
+			"@a", "@ab", "@a @b @c",
+			"#a @a", "#a @b", "#b @a",
+			"@a #b", "@a #b", "@b #a",
+			"a +b", "+b",
+			"c", "d",
+			"a",
+			"b $id=1",
+			"(z) x $P=1",
+			"z.1 $P=1",
+			"[0] a.2 $P=1",
+			"c",
+			"$due=1w $dead=1w", "$due=1w $dead=2w",
+			"$due=1w $end=1w", "$due=1w $end=2w",
+		}, 5) {
+			prep(lineSet)
+			assert.Equal("$p=unit/0/100/cat", arr[0].Norm())
+			assert.Equal("[0] $p=unit/0/100/cat", arr[1].Norm())
+			assert.Equal("$p=unit/0/100/catA", arr[2].Norm())
+			assert.Equal("$p=unit/0/100/catB", arr[3].Norm())
+			assert.Equal("(z) $p=unit/0/100", arr[4].Norm())
+			assert.Equal("$p=unit/0/100", arr[5].Norm())
+			assert.Equal("(A) s", arr[6].Norm())
+			assert.Equal("(B) s", arr[7].Norm())
+			assert.Equal("(C) s", arr[8].Norm())
+			assert.Equal("+z +b +0", arr[9].Norm())
+			assert.Equal("+b +a", arr[10].Norm())
+			assert.Equal("+b +a +z", arr[11].Norm())
+			assert.Equal("a +b", arr[12].Norm())
+			assert.Equal("+b", arr[13].Norm())
+			assert.Equal("#a", arr[14].Norm())
+			assert.Equal("#a #b #c", arr[15].Norm())
+			assert.Equal("#a @a", arr[16].Norm())
+			assert.Equal("#a @b", arr[17].Norm())
+			assert.Equal("#ab", arr[18].Norm())
+			assert.Equal("#b @a", arr[19].Norm())
+			assert.Equal("@a", arr[20].Norm())
+			assert.Equal("@a #b", arr[21].Norm())
+			assert.Equal("@a #b", arr[22].Norm())
+			assert.Equal("@a @b @c", arr[23].Norm())
+			assert.Equal("@ab", arr[24].Norm())
+			assert.Equal("@b #a", arr[25].Norm())
+			assert.Equal("a", arr[26].Norm())
+			assert.Equal("b $id=1", arr[27].Norm())
+			assert.Equal("(z) x $P=1", arr[28].Norm())
+			assert.Equal("z.1 $P=1", arr[29].Norm())
+			assert.Equal("[0] a.2 $P=1", arr[30].Norm())
+			assert.Equal("c", arr[31].Norm())
+			assert.Equal("c", arr[32].Norm())
+			assert.Equal("d", arr[33].Norm())
+			assert.Equal("s", arr[34].Norm())
+			assert.Equal("s", arr[35].Norm())
+			assert.Equal("$due=1w $dead=1w", arr[36].Norm())
+			assert.Equal("$due=1w $dead=2w", arr[37].Norm())
+			assert.Equal("$due=1w $end=1w", arr[38].Norm())
+			assert.Equal("$due=1w $end=2w", arr[39].Norm())
+			assert.Equal("[D] s", arr[40].Norm())
 		}
 	})
 	t.Run("hints", func(t *testing.T) {
@@ -146,24 +217,12 @@ func TestSortTask(t *testing.T) {
 			"a.2 $P=1",
 			"c",
 		}) {
-			path, _ := parseFilepath("test")
-			prep := func(lines []string) {
-				Lists.Empty(path)
-				for ndx, line := range lines {
-					task, err := ParseTask(&ndx, line)
-					assert.NoError(err)
-					assert.NotNil(task)
-					Lists.Append(path, task)
-				}
-				cleanupRelations(path)
-				Lists.Sort(path)
-			}
 			prep(lineSet)
-			assert.Equal("a", Lists[path].Tasks[0].Norm())
-			assert.Equal("b $id=1", Lists[path].Tasks[1].Norm())
-			assert.Equal("a.2 $P=1", Lists[path].Tasks[2].Norm())
-			assert.Equal("z.1 $P=1", Lists[path].Tasks[3].Norm())
-			assert.Equal("c", Lists[path].Tasks[4].Norm())
+			assert.Equal("a", arr[0].Norm())
+			assert.Equal("b $id=1", arr[1].Norm())
+			assert.Equal("a.2 $P=1", arr[2].Norm())
+			assert.Equal("z.1 $P=1", arr[3].Norm())
+			assert.Equal("c", arr[4].Norm())
 		}
 		for _, lineSet := range shuffleCount([]string{
 			"$id=0", "$id=1", "$id=2",
@@ -171,10 +230,10 @@ func TestSortTask(t *testing.T) {
 		}, 20) {
 			prep(lineSet)
 			assert.Equal("$id=0", arr[0].Norm())
-			assert.Equal("$id=1", arr[1].Norm())
-			assert.Equal("$id=2", arr[2].Norm())
-			assert.Equal("$P=0", arr[3].Norm())
-			assert.Equal("$P=1", arr[4].Norm())
+			assert.Equal("$P=0", arr[1].Norm())
+			assert.Equal("$id=1", arr[2].Norm())
+			assert.Equal("$P=1", arr[3].Norm())
+			assert.Equal("$id=2", arr[4].Norm())
 			assert.Equal("$P=2", arr[5].Norm())
 		}
 		for _, lineSet := range shuffleCount([]string{
@@ -184,17 +243,6 @@ func TestSortTask(t *testing.T) {
 			"$P=-2", "$P=-3", "$P=-4",
 		}, 20) {
 			path, _ := parseFilepath("test")
-			prep := func(lines []string) {
-				Lists.Empty(path)
-				for ndx, line := range lines {
-					task, err := ParseTask(&ndx, line)
-					assert.NoError(err)
-					assert.NotNil(task)
-					Lists.Append(path, task)
-				}
-				cleanupRelations(path)
-				Lists.Sort(path)
-			}
 			prep(lineSet)
 			assert.Equal("$id=-1", Lists[path].Tasks[0].Norm())
 			assert.Equal("$id=0", Lists[path].Tasks[1].Norm())

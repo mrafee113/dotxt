@@ -97,6 +97,8 @@ func TestParseTask(t *testing.T) {
 	t.Run("validate priority #4", func(t *testing.T) {
 		task, _ = ParseTask(nil, "(!@`#$$%^&*([]{}./';\",)")
 		assert.Equal("(!@`#$$%^&*([]{}./';\",)", *task.Priority)
+		task, _ = ParseTask(nil, "[!@`#$$%^&*([]{}./';\",]")
+		assert.Equal("[!@`#$$%^&*([]{}./';\",]", *task.Priority)
 	})
 
 	t.Run("validate hints #1", func(t *testing.T) {

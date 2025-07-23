@@ -169,6 +169,24 @@ func sortPriority(l, r *Task) int {
 	return sortString(*l.Priority, *r.Priority)
 }
 
+func sortAntiPriority(l, r *Task) int {
+	if l.Priority == nil && r.Priority == nil {
+		return 2
+	}
+	var ltk, rtk *Token
+	if l.Priority != nil {
+		ltk, _ = l.Tokens.Find(TkByTypeKey(TokenPriority, "anti-priority"))
+	}
+	if r.Priority != nil {
+		rtk, _ = r.Tokens.Find(TkByTypeKey(TokenPriority, "anti-priority"))
+	}
+
+	if v := sortNil(rtk, ltk); v != 3 { // given in reverse so that having anti-priority means going down
+		return v
+	}
+	return sortString(*l.Priority, *r.Priority)
+}
+
 func sortHints(l, r *Task) int {
 	extractPlus := func(hints []*string) (int, string, int, string) {
 		var out []string
@@ -235,6 +253,8 @@ func sortHelper(l, r *Task) int {
 		}
 		return v
 	} else if v = sortProgressCategory(l, r); v != 2 {
+		return v
+	} else if v = sortAntiPriority(l, r); v != 2 {
 		return v
 	} else if v = sortPriority(l, r); v != 2 {
 		return v

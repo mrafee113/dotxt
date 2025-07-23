@@ -16,18 +16,32 @@ func TestValidatePriority(t *testing.T) {
 		err = validatePriority("(some")
 		assert.ErrorIs(err, terrors.ErrNotFound)
 		assert.ErrorContains(err, ")")
+
+		err = validatePriority("[some")
+		assert.ErrorIs(err, terrors.ErrNotFound)
+		assert.ErrorContains(err, "]")
 	})
 	t.Run("invalid: closing symbol", func(t *testing.T) {
 		err = validatePriority("some)")
 		assert.ErrorIs(err, terrors.ErrNotFound)
 		assert.ErrorContains(err, "(")
+
+		err = validatePriority("some]")
+		assert.ErrorIs(err, terrors.ErrNotFound)
+		assert.ErrorContains(err, "[")
 	})
 	t.Run("valid: spaces", func(t *testing.T) {
 		err = validatePriority("(some thuing)")
 		assert.NoError(err)
+
+		err = validatePriority("[some thuing]")
+		assert.NoError(err)
 	})
 	t.Run("valid: normal", func(t *testing.T) {
-		err := validatePriority("(eyo!!)")
+		err = validatePriority("(eyo!!)")
+		assert.NoError(err)
+
+		err = validatePriority("[eyo!!]")
 		assert.NoError(err)
 	})
 }
