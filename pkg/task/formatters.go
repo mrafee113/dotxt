@@ -182,7 +182,7 @@ func formatPriorities(tasks []*rTask) {
 
 	assignColor := func(task *rTask, color string) {
 		for _, tk := range task.tokens {
-			if tk.token != nil && tk.token.Type == TokenPriority {
+			if tk.token != nil && tk.token.Type == TokenPriority && tk.token.Key == "priority" {
 				tk.color = color
 				break
 			}
@@ -208,7 +208,11 @@ func formatPriorities(tasks []*rTask) {
 		var prioed []*rTask
 		// horizontal call part 1
 		for _, rt := range tasks {
-			if rt.task != nil && rt.task.Priority == nil {
+			if rt.task == nil {
+				continue
+			}
+			ptk, _ := rt.task.Tokens.Find(TkByTypeKey(TokenPriority, "priority"))
+			if ptk == nil {
 				children := []*rTask{}
 				for _, child := range rt.task.Children {
 					if crt, ok := taskToRTask[child]; ok {
@@ -216,7 +220,7 @@ func formatPriorities(tasks []*rTask) {
 					}
 				}
 				assignHue(sortByPriority(children), startHue, endHue, 0)
-			} else if rt.task != nil && rt.task.Priority != nil {
+			} else {
 				prioed = append(prioed, rt)
 			}
 		}
@@ -442,27 +446,21 @@ func (t *Task) Render() *rTask {
 	addAsRegular := func(token *Token) {
 		out.tokens = append(out.tokens, &rToken{token: token, raw: token.String(), color: "print.color-default"})
 	}
-	specialTokenMap := func() map[string]*Token {
-		out := make(map[string]*Token)
-		t.Tokens.ForEach(func(tk *Token) {
-			switch tk.Type {
-			case TokenDate, TokenID, TokenDuration, TokenPriority, TokenProgress:
-				out[tk.Key] = tk
-			}
-		})
-		return out
-	}()
 
 	if t.Prog != nil {
-		out.tokens = append(out.tokens, &rToken{token: specialTokenMap["p"]})
+		tk, _ := t.Tokens.Find(TkByType(TokenProgress))
+		out.tokens = append(out.tokens, &rToken{token: tk})
 		out.countLen = utils.RuneCount(strconv.Itoa(t.Prog.Count))
 		out.doneCountLen = utils.RuneCount(strconv.Itoa(t.Prog.DoneCount))
 	}
 	if t.Priority != nil {
+		tk, _ := t.Tokens.Find(TkByType(TokenPriority))
+		color := "print.color-default"
+		if tk.Key == "anti-priority" {
+			color = "print.color-anti-priority"
+		}
 		out.tokens = append(out.tokens, &rToken{
-			token: specialTokenMap["priority"],
-			raw:   *t.Priority,
-			color: "print.color-default",
+			token: tk, raw: *t.Priority, color: color,
 		})
 	}
 

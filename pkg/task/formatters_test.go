@@ -412,6 +412,12 @@ func TestRender(t *testing.T) {
 			assert.Equal("&ampersand", rtask.tokens[6].raw)
 			assert.Equal("print.hints.color-ampersand", rtask.tokens[6].color)
 		})
+		t.Run("anti-priority", func(t *testing.T) {
+			task, _ := ParseTask(&id, "[z]")
+			rtask := task.Render()
+			assert.Equal("[z]", rtask.tokens[0].raw)
+			assert.Equal("print.color-anti-priority", rtask.tokens[0].color)
+		})
 	})
 	t.Run("after due", func(t *testing.T) {
 		task, _ := ParseTask(&id, "(A) +prj #tag @at $due=1d $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
