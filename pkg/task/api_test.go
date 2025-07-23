@@ -355,7 +355,7 @@ func TestDoneTask(t *testing.T) {
 	AddTaskFromStr("2 $id=2", path)
 	AddTaskFromStr("3", path)
 	AddTaskFromStr("4 $P=2", path)
-	AddTaskFromStr("5", path)
+	AddTaskFromStr("5 $focus", path)
 
 	err = DoneTask([]int{5, 2}, path)
 	require.NoError(t, err)
@@ -372,6 +372,7 @@ func TestDoneTask(t *testing.T) {
 	require.NoError(t, err)
 	tasks := strings.Split(string(raw), "\n")
 	assert.True(strings.HasPrefix(tasks[0], "5"))
+	assert.NotContains(tasks[0], "$focus")
 	assert.True(strings.HasPrefix(tasks[1], "2 $id=2"))
 }
 

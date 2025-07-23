@@ -361,6 +361,11 @@ func DoneTask(ids []int, path string) error {
 
 	var out []string
 	for _, task := range tasks {
+		if task.Fmt != nil && task.Fmt.Focus {
+			task.Fmt.Focus = false
+			_, ndx := task.Tokens.Find(TkByTypeKey(TokenFormat, "focus"))
+			task.Tokens = slices.Delete(task.Tokens, ndx, ndx+1)
+		}
 		out = append(out, task.Raw())
 	}
 	return appendToDoneFile(strings.Join(out, "\n"), path)
