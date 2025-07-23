@@ -155,7 +155,7 @@ func TestParseTask(t *testing.T) {
 	t.Run("validate $id $P: strings", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$id=noway $P=nada")
 		tk, _ := task.Tokens.Find(func(tk *Token) bool {
-			return tk.Type == TokenID && strings.HasPrefix(tk.raw, "$id=")
+			return tk.Type == TokenID && strings.HasPrefix(*tk.raw, "$id=")
 		})
 		if assert.NotNil(tk) {
 			assert.Equal("noway", *tk.Value.(*string))
@@ -164,7 +164,7 @@ func TestParseTask(t *testing.T) {
 			assert.Equal("noway", *task.EID, "EID")
 		}
 		tk, _ = task.Tokens.Find(func(tk *Token) bool {
-			return tk.Type == TokenID && strings.HasPrefix(tk.raw, "$P=")
+			return tk.Type == TokenID && strings.HasPrefix(*tk.raw, "$P=")
 		})
 		if assert.NotNil(tk) {
 			assert.Equal("nada", *tk.Value.(*string))
@@ -176,7 +176,7 @@ func TestParseTask(t *testing.T) {
 	t.Run("validate $id $P: valid", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$id=20002 $P=534")
 		tk, _ := task.Tokens.Find(func(tk *Token) bool {
-			return tk.Type == TokenID && strings.HasPrefix(tk.raw, "$id=")
+			return tk.Type == TokenID && strings.HasPrefix(*tk.raw, "$id=")
 		})
 		if assert.NotNil(tk) {
 			assert.Equal("20002", *tk.Value.(*string))
@@ -185,7 +185,7 @@ func TestParseTask(t *testing.T) {
 			assert.Equal("20002", *task.EID, "EID")
 		}
 		tk, _ = task.Tokens.Find(func(tk *Token) bool {
-			return tk.Type == TokenID && strings.HasPrefix(tk.raw, "$P=")
+			return tk.Type == TokenID && strings.HasPrefix(*tk.raw, "$P=")
 		})
 		if assert.NotNil(tk) {
 			assert.Equal("534", *tk.Value.(*string))
@@ -239,7 +239,7 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=")
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$due=", tk.raw)
+			assert.Equal("$due=", *tk.raw)
 		}
 		assert.Nil(task.Time.DueDate)
 	})
@@ -247,7 +247,7 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=+2a")
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$due=+2a", tk.raw)
+			assert.Equal("$due=+2a", *tk.raw)
 		}
 		assert.Nil(task.Time.DueDate)
 	})
@@ -255,7 +255,7 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=abc:1y")
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$due=abc:1y", tk.raw)
+			assert.Equal("$due=abc:1y", *tk.raw)
 		}
 		assert.Nil(task.Time.DueDate)
 	})
@@ -263,7 +263,7 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=c;123")
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$due=c;123", tk.raw)
+			assert.Equal("$due=c;123", *tk.raw)
 		}
 		assert.Nil(task.Time.DueDate)
 	})
@@ -338,7 +338,7 @@ func TestParseTask(t *testing.T) {
 		}
 		tk, _ = task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$c=1y", tk.raw)
+			assert.Equal("$c=1y", *tk.raw)
 		}
 		assert.Exactly(rightNow, *task.Time.CreationDate, "CreationDate")
 	})
@@ -348,7 +348,7 @@ func TestParseTask(t *testing.T) {
 		assert.Equal(-1, ndx)
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$dead=2026-06-06T00-00", tk.raw)
+			assert.Equal("$dead=2026-06-06T00-00", *tk.raw)
 		}
 		assert.Nil(task.Time.Deadline, "Deadline") // when there's deadline but no due, deadline loses depth
 	})
@@ -358,7 +358,7 @@ func TestParseTask(t *testing.T) {
 		assert.Equal(-1, ndx)
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$end=1w", tk.raw)
+			assert.Equal("$end=1w", *tk.raw)
 		}
 		assert.Nil(task.Time.EndDate, "EndDate") // when there's end but no due, end loses depth
 	})
@@ -368,7 +368,7 @@ func TestParseTask(t *testing.T) {
 		assert.Equal(-1, ndx)
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$dead=c:2d", tk.raw)
+			assert.Equal("$dead=c:2d", *tk.raw)
 		}
 		assert.Nil(task.Time.Deadline, "Deadline") // when deadline <= due, deadline loses depth
 	})
@@ -378,23 +378,23 @@ func TestParseTask(t *testing.T) {
 		assert.Equal(-1, ndx)
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$end=c:2d", tk.raw)
+			assert.Equal("$end=c:2d", *tk.raw)
 		}
 		assert.Nil(task.Time.EndDate, "EndDate") // when end <= due, end loses depth
 	})
 	t.Run("validate date semantics: dead-end existence dependency", func(t *testing.T) {
 		task, _ = ParseTask(nil, "$dead=10d $end=1w $due=2w")
 		tk, _ := task.Tokens.Find(func(tk *Token) bool {
-			return tk.Type == TokenText && strings.Contains(tk.raw, "dead")
+			return tk.Type == TokenText && strings.Contains(*tk.raw, "dead")
 		})
 		if assert.NotNil(tk) {
-			assert.Equal("$dead=10d", tk.raw)
+			assert.Equal("$dead=10d", *tk.raw)
 		}
 		tk, _ = task.Tokens.Find(func(tk *Token) bool {
-			return tk.Type == TokenText && strings.Contains(tk.raw, "end")
+			return tk.Type == TokenText && strings.Contains(*tk.raw, "end")
 		})
 		if assert.NotNil(tk) {
-			assert.Equal("$end=1w", tk.raw)
+			assert.Equal("$end=1w", *tk.raw)
 		}
 		assert.Nil(task.Time.Deadline, "Deadline")
 		assert.Nil(task.Time.EndDate, "EndDate") // when end & dead, then both lose depth
@@ -403,7 +403,7 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$c=2025-05-05T05-05 $due=2023-05-05T05-05")
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$due=2023-05-05T05-05", tk.raw)
+			assert.Equal("$due=2023-05-05T05-05", *tk.raw)
 		}
 		_, ndx := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		assert.Equal(-1, ndx)
@@ -416,7 +416,7 @@ func TestParseTask(t *testing.T) {
 			assert.Exactly(*dt, *task.Time.Reminders[0], "Reminders")
 		}
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
-		assert.Equal("$r=c:-1w", tk.raw)
+		assert.Equal("$r=c:-1w", *tk.raw)
 	})
 
 	t.Run("validate date semantics: every-due dependency", func(t *testing.T) {
@@ -446,7 +446,7 @@ func TestParseTask(t *testing.T) {
 		assert.Equal(-1, ndx)
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$every=23h59M59s", tk.raw)
+			assert.Equal("$every=23h59M59s", *tk.raw)
 		}
 		assert.Nil(task.Time.Every, "Every")
 	})
@@ -456,7 +456,7 @@ func TestParseTask(t *testing.T) {
 		assert.Equal(-1, ndx)
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$every=10y", tk.raw)
+			assert.Equal("$every=10y", *tk.raw)
 		}
 		assert.Nil(task.Time.Every, "Every")
 	})
@@ -466,7 +466,7 @@ func TestParseTask(t *testing.T) {
 		assert.Equal(-1, ndx)
 		tk, _ := task.Tokens.Find(TkByType(TokenText))
 		if assert.NotNil(tk) {
-			assert.Equal("$every=-1w", tk.raw)
+			assert.Equal("$every=-1w", *tk.raw)
 		}
 		assert.Nil(task.Time.Every, "Every")
 	})
@@ -476,22 +476,22 @@ func TestParseTask(t *testing.T) {
 		tk, ndx := task.Tokens.Find(TkByTypeKey(TokenText, ""))
 		if assert.NotNil(tk) {
 			assert.Equal("t1", *tk.Value.(*string))
-			assert.Equal("t1", tk.raw)
+			assert.Equal("t1", *tk.raw)
 		}
 		tk, ndx = task.Tokens.FindFrom(TkByTypeKey(TokenText, "quote"), ndx+1)
 		if assert.NotNil(tk) {
 			assert.Equal("'t2 \\' t2'", *tk.Value.(*string))
-			assert.Equal("'t2 \\' t2'", tk.raw)
+			assert.Equal("'t2 \\' t2'", *tk.raw)
 		}
 		tk, ndx = task.Tokens.FindFrom(TkByTypeKey(TokenText, "quote"), ndx+1)
 		if assert.NotNil(tk) {
 			assert.Equal("\"t3 \\\" t3\"", *tk.Value.(*string))
-			assert.Equal("\"t3 \\\" t3\"", tk.raw)
+			assert.Equal("\"t3 \\\" t3\"", *tk.raw)
 		}
 		tk, _ = task.Tokens.FindFrom(TkByTypeKey(TokenText, "quote"), ndx+1)
 		if assert.NotNil(tk) {
 			assert.Equal("`t4 \\` t4`", *tk.Value.(*string))
-			assert.Equal("`t4 \\` t4`", tk.raw)
+			assert.Equal("`t4 \\` t4`", *tk.raw)
 		}
 		tk = task.Tokens[len(task.Tokens)-2]
 		assert.Empty(tk.Key)
@@ -502,7 +502,7 @@ func TestParseTask(t *testing.T) {
 		task, _ := ParseTask(nil, "hellow $focus")
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenFormat, "focus"))
 		require.NotNil(t, tk)
-		assert.Equal("$focus", tk.raw)
+		assert.Equal("$focus", *tk.raw)
 		assert.Nil(tk.Value)
 		require.NotNil(t, task.Fmt)
 		assert.True(task.Fmt.Focus)
@@ -1001,7 +1001,7 @@ func TestResolveDates(t *testing.T) {
 						}
 					}
 					tokens = append(tokens, &Token{
-						Type: TokenDate, raw: token,
+						Type: TokenDate, raw: &token,
 						Key: key, Value: &tkValue,
 					})
 				}
@@ -1046,14 +1046,14 @@ func TestResolveDates(t *testing.T) {
 					assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
 				}
 			case "r":
-				if tk.raw == "$r=-5h" {
+				if *tk.raw == "$r=-5h" {
 					if assert.NotNil(tdv.Value) {
 						assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(-5*60*60*time.Second), *tdv.Value)
 					}
 					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "due") {
 						assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
 					}
-				} else if tk.raw == "$r=+5M" {
+				} else if *tk.raw == "$r=+5M" {
 					if assert.NotNil(tdv.Value) {
 						assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(5*60*time.Second), *tdv.Value)
 					}
@@ -1102,14 +1102,14 @@ func TestResolveDates(t *testing.T) {
 					assert.Equal(*tdv.RelVal, rightNow)
 				}
 			case "r":
-				if tk.raw == "$r=c:-5h" {
+				if *tk.raw == "$r=c:-5h" {
 					if assert.NotNil(tdv.Value) {
 						assert.Equal(tkM["c"].Value.(*TokenDateValue).Value.Add(-5*60*60*time.Second), *tdv.Value)
 					}
 					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "c") {
 						assert.Equal(*tdv.RelVal, *tkM["c"].Value.(*TokenDateValue).Value)
 					}
-				} else if tk.raw == "$r=due:+5M" {
+				} else if *tk.raw == "$r=due:+5M" {
 					if assert.NotNil(tdv.Value) {
 						assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(5*60*time.Second), *tdv.Value)
 					}
@@ -1158,14 +1158,14 @@ func TestResolveDates(t *testing.T) {
 					assert.Equal(*tdv.RelVal, rightNow)
 				}
 			case "r":
-				if tk.raw == "$r=c:-5h" {
+				if *tk.raw == "$r=c:-5h" {
 					if assert.NotNil(tdv.Value) {
 						assert.Equal(tkM["c"].Value.(*TokenDateValue).Value.Add(-5*60*60*time.Second), *tdv.Value)
 					}
 					if assert.NotNil(tdv.RelVal) && assert.Equal(tdv.RelKey, "c") {
 						assert.Equal(*tdv.RelVal, *tkM["c"].Value.(*TokenDateValue).Value)
 					}
-				} else if tk.raw == "$r=due:+5M" {
+				} else if *tk.raw == "$r=due:+5M" {
 					if assert.NotNil(tdv.Value) {
 						assert.Equal(tkM["due"].Value.(*TokenDateValue).Value.Add(5*60*time.Second), *tdv.Value)
 					}
@@ -1173,7 +1173,7 @@ func TestResolveDates(t *testing.T) {
 						assert.Equal(*tdv.RelVal, *tkM["due"].Value.(*TokenDateValue).Value)
 					}
 				} else {
-					t.Error("reminder(s) is/are missing raw=", tk.raw)
+					t.Error("reminder(s) is/are missing raw=", *tk.raw)
 				}
 			}
 		}

@@ -267,20 +267,20 @@ func TestPrioritizeTask(t *testing.T) {
 		err := PrioritizeTask(0, "prio", path)
 		assert.NoError(err)
 		assert.Equal("prio", *Lists[path].Tasks[0].Priority)
-		assert.Equal("(prio)", Lists[path].Tasks[0].Tokens[0].raw)
+		assert.Equal("(prio)", *Lists[path].Tasks[0].Tokens[0].raw)
 	})
 	t.Run("prior priority", func(t *testing.T) {
 		assert.Equal("with", *Lists[path].Tasks[1].Priority)
 		err := PrioritizeTask(1, "prio", path)
 		assert.NoError(err)
 		assert.Equal("prio", *Lists[path].Tasks[1].Priority)
-		assert.Equal("(prio)", Lists[path].Tasks[1].Tokens[0].raw)
+		assert.Equal("(prio)", *Lists[path].Tasks[1].Tokens[0].raw)
 	})
 	t.Run("ineffective parentheses", func(t *testing.T) {
 		err := PrioritizeTask(1, "(NewPrio)", path)
 		assert.NoError(err)
 		assert.Equal("NewPrio", *Lists[path].Tasks[1].Priority)
-		assert.Equal("(NewPrio)", Lists[path].Tasks[1].Tokens[0].raw)
+		assert.Equal("(NewPrio)", *Lists[path].Tasks[1].Tokens[0].raw)
 	})
 }
 
@@ -451,7 +451,7 @@ func TestIncrementProgressCount(t *testing.T) {
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
 			assert.Equal(12, tk.Value.(*Progress).Count)
-			assert.Contains(tk.raw, "12/100")
+			assert.Contains(*tk.raw, "12/100")
 		}
 	})
 	t.Run("negative", func(t *testing.T) {
@@ -463,7 +463,7 @@ func TestIncrementProgressCount(t *testing.T) {
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
 			assert.Equal(8, tk.Value.(*Progress).Count)
-			assert.Contains(tk.raw, "8/100")
+			assert.Contains(*tk.raw, "8/100")
 		}
 	})
 	t.Run("exceed positive", func(t *testing.T) {
@@ -475,7 +475,7 @@ func TestIncrementProgressCount(t *testing.T) {
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
 			assert.Equal(100, tk.Value.(*Progress).Count)
-			assert.Contains(tk.raw, "100/100")
+			assert.Contains(*tk.raw, "100/100")
 		}
 	})
 	t.Run("exceed negative", func(t *testing.T) {
@@ -487,7 +487,7 @@ func TestIncrementProgressCount(t *testing.T) {
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
 			assert.Equal(0, tk.Value.(*Progress).Count)
-			assert.Contains(tk.raw, "unit/0/100/cat")
+			assert.Contains(*tk.raw, "unit/0/100/cat")
 		}
 	})
 }
@@ -515,7 +515,7 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		tk, ndx := Lists[path].Tasks[0].Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
-			assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
+			assert.Equal(fmt.Sprintf("$due=%s", dueStr), *tk.raw)
 		}
 		assert.Equal("2 $every=1y $due=2y", Lists[path].Tasks[2].Norm())
 	})
@@ -535,7 +535,7 @@ func TestCheckAndRecurTasks(t *testing.T) {
 		tk, ndx := Lists[path].Tasks[6].Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
-			assert.Equal(fmt.Sprintf("$due=%s", dueStr), tk.raw)
+			assert.Equal(fmt.Sprintf("$due=%s", dueStr), *tk.raw)
 		}
 		assert.Equal(dt.Add(30*24*60*60*time.Second), *Lists[path].Tasks[6].Time.Deadline)
 	})

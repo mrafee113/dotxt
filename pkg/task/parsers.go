@@ -345,7 +345,7 @@ func (tk *Token) unparseRelativeDatetime(val *time.Time) string {
 		relVal = &rightNow
 	}
 	newDtTxt := unparseRelativeDatetime(*val, *relVal)
-	if strings.ContainsRune(tk.raw, ':') {
+	if strings.ContainsRune(*tk.raw, ':') {
 		newDtTxt = fmt.Sprintf("%s:%s", tkDt.RelKey, newDtTxt)
 	}
 	newDtTxt = fmt.Sprintf("$%s=%s", tk.Key, newDtTxt)
@@ -563,7 +563,7 @@ func resolveDates(tokens []*Token) []error {
 func dateToTextToken(dt *Token) {
 	dt.Key = ""
 	dt.Type = TokenText
-	dt.Value = utils.MkPtr(dt.raw)
+	dt.Value = dt.raw
 }
 
 /*
@@ -692,7 +692,7 @@ func parseTokens(line string) ([]*Token, []error) {
 		if err != nil {
 			errs = append(errs, err)
 		}
-		tokens = append(tokens, &Token{Type: TokenText, raw: tokenStr, Value: &tokenStr})
+		tokens = append(tokens, &Token{Type: TokenText, raw: &tokenStr, Value: &tokenStr})
 	}
 	tokenStrings := tokenizeLine(line)
 	if len(tokenStrings) > 0 {
@@ -700,8 +700,8 @@ func parseTokens(line string) ([]*Token, []error) {
 			p := utils.RuneSlice(tokenStrings[0], i, j)
 			tokens = append(tokens, &Token{
 				Type: TokenPriority, Key: "priority",
+				raw:   utils.MkPtr(fmt.Sprintf("(%s)", p)),
 				Value: &p,
-				raw:   fmt.Sprintf("(%s)", p),
 			})
 			tokenStrings = tokenStrings[1:]
 		}
@@ -727,8 +727,8 @@ func parseTokens(line string) ([]*Token, []error) {
 				return spaces >= 2 || (spaces >= 1 && (ndx == len(tokenStrings)-1 || ndx == 0))
 			}() {
 			tokens = append(tokens, &Token{
-				Type: TokenText, raw: tokenStr,
-				Key: ";", Value: utils.MkPtr(tokenStr),
+				Type: TokenText, raw: &tokenStr,
+				Key: ";", Value: &tokenStr,
 			})
 			continue
 		}
@@ -739,7 +739,7 @@ func parseTokens(line string) ([]*Token, []error) {
 				continue
 			}
 			tokens = append(tokens, &Token{
-				Type: TokenHint, raw: tokenStr,
+				Type: TokenHint, raw: &tokenStr,
 				Key:   utils.RuneSlice(tokenStr, 0, 1),
 				Value: utils.MkPtr(utils.RuneSlice(tokenStr, 1)),
 			})
@@ -751,7 +751,7 @@ func parseTokens(line string) ([]*Token, []error) {
 				case "focus":
 					tokens = append(tokens, &Token{
 						Type: TokenFormat, Key: "focus",
-						raw: tokenStr,
+						raw: &tokenStr,
 					})
 				default:
 					handleTokenText(tokenStr, nil)
@@ -781,7 +781,7 @@ func parseTokens(line string) ([]*Token, []error) {
 			case "-id", "id", "P":
 				k := strings.Replace(key, "-", "", 1)
 				tokens = append(tokens, &Token{
-					Type: TokenID, raw: tokenStr,
+					Type: TokenID, raw: &tokenStr,
 					Key: k, Value: utils.MkPtr(value),
 				})
 			case "c", "due", "end", "dead", "r":
@@ -796,7 +796,7 @@ func parseTokens(line string) ([]*Token, []error) {
 					}
 				}
 				tokens = append(tokens, &Token{
-					Type: TokenDate, raw: tokenStr,
+					Type: TokenDate, raw: &tokenStr,
 					Key: key, Value: &tkValue,
 				})
 			case "every":
@@ -808,7 +808,7 @@ func parseTokens(line string) ([]*Token, []error) {
 					continue
 				}
 				tokens = append(tokens, &Token{
-					Type: TokenDuration, raw: tokenStr,
+					Type: TokenDuration, raw: &tokenStr,
 					Key: key, Value: duration,
 				})
 			case "p":
@@ -818,7 +818,7 @@ func parseTokens(line string) ([]*Token, []error) {
 					continue
 				}
 				tokens = append(tokens, &Token{
-					Type: TokenProgress, raw: tokenStr,
+					Type: TokenProgress, raw: &tokenStr,
 					Key: "p", Value: progress,
 				})
 			default:
@@ -830,8 +830,7 @@ func parseTokens(line string) ([]*Token, []error) {
 				handleTokenText(tokenStr, nil)
 				continue
 			}
-			var ptr *string = utils.MkPtr(tokenStr)
-			tokens = append(tokens, &Token{Type: TokenText, Key: "quote", raw: *ptr, Value: ptr})
+			tokens = append(tokens, &Token{Type: TokenText, Key: "quote", raw: &tokenStr, Value: &tokenStr})
 		default:
 			handleTokenText(tokenStr, nil)
 		}
@@ -912,7 +911,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	if task.Time.CreationDate == nil {
 		task.Time.CreationDate = utils.MkPtr(rightNow)
 		task.Tokens = append(task.Tokens, &Token{
-			Type: TokenDate, raw: fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow)),
+			Type: TokenDate, raw: utils.MkPtr(fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow))),
 			Key: "c", Value: &TokenDateValue{
 				Value: task.Time.CreationDate,
 			},
@@ -922,7 +921,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 		val := task.Time.CreationDate.Add(*task.Time.Every)
 		task.Time.DueDate = &val
 		task.Tokens = append(task.Tokens, &Token{
-			Type: TokenDate, raw: fmt.Sprintf("$due=%s", unparseRelativeDatetime(val, *task.Time.CreationDate)),
+			Type: TokenDate, raw: utils.MkPtr(fmt.Sprintf("$due=%s", unparseRelativeDatetime(val, *task.Time.CreationDate))),
 			Key: "due", Value: &TokenDateValue{
 				Value: &val, RelKey: "due", RelVal: task.Time.CreationDate,
 				Offset: utils.MkPtr(*task.Time.Every),

@@ -419,7 +419,7 @@ func colorizeIds(ids map[string]bool) map[string]string {
 
 func formatID(tk Token) string {
 	var idCollapse string
-	if strings.HasPrefix(tk.raw, "$-id=") {
+	if strings.HasPrefix(*tk.raw, "$-id=") {
 		idCollapse = "-"
 	}
 	return fmt.Sprintf("$%s%s=%s", idCollapse, tk.Key, *tk.Value.(*string))

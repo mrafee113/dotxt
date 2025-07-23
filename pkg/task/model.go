@@ -124,7 +124,7 @@ type TokenDateValue struct {
 
 type Token struct {
 	Type  TokenType
-	raw   string // an attempt to carry extra token metadata from the original text
+	raw   *string // an attempt to carry extra token metadata from the original text
 	Key   string
 	Value any // whatever the case this must be a pointer type
 }
@@ -199,7 +199,7 @@ func (tk *Token) String() string {
 	case TokenID:
 		val := *tk.Value.(*string)
 		for _, prefix := range []string{"$id=", "$-id=", "$P="} {
-			if strings.HasPrefix(tk.raw, prefix) {
+			if strings.HasPrefix(*tk.raw, prefix) {
 				return prefix + val
 			}
 		}
@@ -221,7 +221,7 @@ func (tk *Token) String() string {
 		if err == nil {
 			return "$p=" + p
 		}
-		return tk.raw
+		return *tk.raw
 	case TokenFormat:
 		if tk.Key == "focus" {
 			return "$focus"
@@ -355,7 +355,7 @@ func (t *Task) Root() *Task {
 
 func (t *Task) IsCollapsed() bool {
 	tk, _ := t.Tokens.Find(TkByTypeKey(TokenID, "id"))
-	return tk != nil && strings.HasPrefix(tk.raw, "$-id")
+	return tk != nil && strings.HasPrefix(*tk.raw, "$-id")
 }
 
 func (t *Task) IsParentCollapsed() bool {
@@ -395,7 +395,7 @@ func (t *Task) revertIDtoText(key string) {
 	if tk != nil {
 		tk.Type = TokenText
 		tk.Key = ""
-		tk.Value = utils.MkPtr(tk.raw)
+		tk.Value = tk.raw
 	}
 }
 
@@ -404,12 +404,12 @@ func (t *Task) update(new *Task) error {
 	if curCreationDtToken != nil {
 		newCreationDtToken, _ := new.Tokens.Find(TkByTypeKey(TokenDate, "c"))
 		if newCreationDtToken != nil {
-			newCreationDtToken.raw = curCreationDtToken.raw
+			*newCreationDtToken.raw = *curCreationDtToken.raw
 			newCreationDtToken.Value = curCreationDtToken.Value.(*TokenDateValue)
 		} else {
 			new.Tokens = append(new.Tokens, &Token{
 				Type: TokenDate, Key: "c",
-				raw:   curCreationDtToken.raw,
+				raw:   utils.MkPtr(*curCreationDtToken.raw),
 				Value: curCreationDtToken.Value.(*TokenDateValue),
 			})
 		}
@@ -448,7 +448,7 @@ func (t *Task) updateDate(field string, newDt *time.Time) error {
 	} else {
 		newDtTxt = token.unparseRelativeDatetime(newDt)
 	}
-	token.raw = newDtTxt
+	*token.raw = newDtTxt
 	tkDt.Value = newDt
 	t.Time.setField(field, newDt)
 	return nil

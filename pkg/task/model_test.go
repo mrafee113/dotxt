@@ -19,7 +19,7 @@ func TestUpdate(t *testing.T) {
 		tk, ndx := task.Tokens.Find(TkByTypeKey(TokenDate, key))
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
-			assert.True(strings.HasPrefix(tk.raw, "$"+key+"="))
+			assert.True(strings.HasPrefix(*tk.raw, "$"+key+"="))
 			assert.Equal(*value, *tk.Value.(*TokenDateValue).Value)
 		}
 	}
@@ -37,7 +37,7 @@ func TestUpdate(t *testing.T) {
 			} else if tk.Type == TokenProgress {
 				assert.Equal(90, tk.Value.(*Progress).Count)
 			} else if tk.Type == TokenDate && tk.Key == "c" {
-				assert.True(strings.HasPrefix(tk.raw, "$c="))
+				assert.True(strings.HasPrefix(*tk.raw, "$c="))
 				assert.Equal(*dt, *tk.Value.(*TokenDateValue).Value)
 			}
 		})
@@ -89,7 +89,7 @@ func TestUpdate(t *testing.T) {
 		})
 		assert.GreaterOrEqual(ndx, 0)
 		if assert.NotNil(tk) {
-			assert.True(strings.HasPrefix(tk.raw, "$r="))
+			assert.True(strings.HasPrefix(*tk.raw, "$r="))
 			assert.Equal(*dt, *tk.Value.(*TokenDateValue).Value)
 		}
 	})
@@ -129,7 +129,7 @@ func TestUpdateDate(t *testing.T) {
 		assert.Equal(dt, *task.Time.DueDate)
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if assert.NotNil(tk) {
-			assert.Equal("$due=1w", tk.raw)
+			assert.Equal("$due=1w", *tk.raw)
 			assert.Equal(dt, *tk.Value.(*TokenDateValue).Value)
 		}
 	})
@@ -142,7 +142,7 @@ func TestUpdateDate(t *testing.T) {
 		assert.Equal(dt, *task.Time.Deadline)
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "dead"))
 		if assert.NotNil(tk) {
-			assert.Equal("$dead=c:3m", tk.raw)
+			assert.Equal("$dead=c:3m", *tk.raw)
 			assert.Equal(dt, *tk.Value.(*TokenDateValue).Value)
 		}
 	})
@@ -155,7 +155,7 @@ func TestUpdateDate(t *testing.T) {
 		assert.Equal(*dt, *task.Time.DueDate)
 		tk, _ := task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		if assert.NotNil(tk) {
-			assert.Equal("$due=2025-07-05T05-05", tk.raw)
+			assert.Equal("$due=2025-07-05T05-05", *tk.raw)
 			assert.Equal(*dt, *tk.Value.(*TokenDateValue).Value)
 		}
 	})
@@ -339,7 +339,7 @@ func TestTokens(t *testing.T) {
 			tc := "   \\;  \\;;asd\\;   a\\;     \\;a\\;b \\; \\;c d\\;    b "
 			task, _ := ParseTask(nil, tc)
 			for _, tk := range task.Tokens {
-				if strings.Contains(tk.raw, "\\;") || strings.Contains(tk.raw, "  ") {
+				if strings.Contains(*tk.raw, "\\;") || strings.Contains(*tk.raw, "  ") {
 					assert.Equal(TokenText, tk.Type)
 					assert.Equal(";", tk.Key)
 				}
@@ -350,7 +350,7 @@ func TestTokens(t *testing.T) {
 			tc := ";asd  a   a    b  c d"
 			task, _ = ParseTask(nil, tc)
 			for _, tk := range task.Tokens {
-				if strings.Contains(tk.raw, "\\;") || strings.Contains(tk.raw, "  ") {
+				if strings.Contains(*tk.raw, "\\;") || strings.Contains(*tk.raw, "  ") {
 					assert.Equal(TokenText, tk.Type)
 					assert.Equal(";", tk.Key)
 				}
@@ -361,7 +361,7 @@ func TestTokens(t *testing.T) {
 			for _, tc := range []string{" a", "   a"} {
 				task, _ = ParseTask(nil, tc)
 				for _, tk := range task.Tokens {
-					if strings.Contains(tk.raw, "\\;") || strings.Contains(tk.raw, "  ") {
+					if strings.Contains(*tk.raw, "\\;") || strings.Contains(*tk.raw, "  ") {
 						assert.Equal(TokenText, tk.Type)
 						assert.Equal(";", tk.Key)
 					}
@@ -373,7 +373,7 @@ func TestTokens(t *testing.T) {
 			for _, tc := range []string{"a ", "a    "} {
 				task, _ = ParseTask(nil, tc)
 				for _, tk := range task.Tokens {
-					if strings.Contains(tk.raw, "\\;") || strings.Contains(tk.raw, "  ") {
+					if strings.Contains(*tk.raw, "\\;") || strings.Contains(*tk.raw, "  ") {
 						assert.Equal(TokenText, tk.Type)
 						assert.Equal(";", tk.Key)
 					}

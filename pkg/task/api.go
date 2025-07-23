@@ -268,7 +268,7 @@ func PrioritizeTask(id int, priority, path string) error {
 	hadPriority := task.Priority != nil && *task.Priority != ""
 	task.Priority = &priority
 	pToken := Token{
-		Type: TokenPriority, raw: fmt.Sprintf("(%s)", priority), Key: "priority",
+		Type: TokenPriority, raw: utils.MkPtr(fmt.Sprintf("(%s)", priority)), Key: "priority",
 		Value: utils.MkPtr(strings.TrimSuffix(strings.TrimPrefix(priority, "("), ")")),
 	}
 	if hadPriority {
@@ -444,7 +444,7 @@ func IncrementProgressCount(id int, path string, value int) error {
 	if pToken == nil {
 		return fmt.Errorf("%w: task with id '%d' has no progress", terrors.ErrValue, id)
 	}
-	pToken.raw = progText
+	*pToken.raw = progText
 	return nil
 }
 
@@ -470,7 +470,7 @@ func SetProgressCount(id int, path string, value int) error {
 	if pToken == nil {
 		return fmt.Errorf("%w: task with id '%d' has no progress", terrors.ErrValue, id)
 	}
-	pToken.raw = progText
+	*pToken.raw = progText
 	return nil
 }
 
@@ -523,10 +523,10 @@ func ToggleCollapsed(id int, path string) error {
 	if tk == nil {
 		return fmt.Errorf("%w: task with id '%d' has no $id", terrors.ErrNotFound, id)
 	}
-	if strings.HasPrefix(tk.raw, "$-id") {
-		tk.raw = strings.Replace(tk.raw, "$-id", "$id", 1)
+	if strings.HasPrefix(*tk.raw, "$-id") {
+		*tk.raw = strings.Replace(*tk.raw, "$-id", "$id", 1)
 	} else {
-		tk.raw = strings.Replace(tk.raw, "$id", "$-id", 1)
+		*tk.raw = strings.Replace(*tk.raw, "$id", "$-id", 1)
 	}
 	return nil
 }

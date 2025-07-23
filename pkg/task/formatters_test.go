@@ -333,7 +333,7 @@ func TestRender(t *testing.T) {
 		assert.Equal(task, rtask.task, "task")
 		assert.Equal(id, rtask.id, "id")
 		assert.Equal("print.color-index", rtask.idColor, "idColor")
-		assert.Equal("$p=unit/2/15/cat", rtask.tokens[0].token.raw)
+		assert.Equal("$p=unit/2/15/cat", *rtask.tokens[0].token.raw)
 		assert.Equal("(A)", rtask.tokens[1].raw)
 		assert.Equal("print.color-default", rtask.tokens[1].color)
 		assert.Equal("+prj", rtask.tokens[2].raw)
