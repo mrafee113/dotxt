@@ -176,7 +176,7 @@ func PrependToTask(id int, text, path string) error {
 	}
 
 	var newText string
-	if task.Priority != nil && *task.Priority != "" {
+	if task.Priority != nil {
 		var out []string
 		task.Tokens.ForEach(func(tk *Token) {
 			if tk.Type != TokenPriority {
@@ -184,7 +184,7 @@ func PrependToTask(id int, text, path string) error {
 			}
 		})
 		curText := strings.Join(out, " ")
-		newText = fmt.Sprintf("(%s) %s %s", *task.Priority, text, curText)
+		newText = fmt.Sprintf("%s %s %s", *task.Priority, text, curText)
 	} else {
 		newText = text + " " + task.Raw()
 	}
@@ -242,7 +242,7 @@ func DeprioritizeTask(id int, path string) error {
 	if err != nil {
 		return err
 	}
-	if (task.Priority != nil && *task.Priority == "") || task.Priority == nil {
+	if task.Priority == nil {
 		return nil
 	}
 
@@ -262,23 +262,26 @@ func PrioritizeTask(id int, priority, path string) error {
 		return err
 	}
 
-	if prioLen := utils.RuneCount(priority); prioLen > 2 && priority[0] == '(' && priority[prioLen-1] == ')' {
-		priority = priority[1 : prioLen-1]
+	priority = strings.TrimSpace(priority)
+	n := utils.RuneCount(priority)
+	if n > 1 && utils.RuneAt(priority, 0) != '(' {
+		priority = "(" + priority
+		n += 1
 	}
-	hadPriority := task.Priority != nil && *task.Priority != ""
+	if n > 1 && utils.RuneAt(priority, n-1) != ')' {
+		priority = priority + ")"
+	}
+
 	task.Priority = &priority
-	pToken := Token{
-		Type: TokenPriority, raw: utils.MkPtr(fmt.Sprintf("(%s)", priority)), Key: "priority",
-		Value: utils.MkPtr(strings.TrimSuffix(strings.TrimPrefix(priority, "("), ")")),
-	}
-	if hadPriority {
-		for ndx := range task.Tokens {
-			if task.Tokens[ndx].Type == TokenPriority {
-				task.Tokens[ndx] = &pToken
-			}
-		}
+	tk, _ := task.Tokens.Find(TkByTypeKey(TokenPriority, "priority"))
+	if tk != nil {
+		tk.raw = &priority
+		tk.Value = &priority
 	} else {
-		task.Tokens = append([]*Token{&pToken}, task.Tokens...)
+		task.Tokens = append([]*Token{{
+			Type: TokenPriority, Key: "priority",
+			raw: &priority, Value: &priority,
+		}}, task.Tokens...)
 	}
 	return nil
 }

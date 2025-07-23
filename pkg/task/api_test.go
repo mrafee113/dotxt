@@ -185,7 +185,7 @@ func TestPrependToTask(t *testing.T) {
 	err = PrependToTask(2, "something new", path)
 	require.Nil(t, err)
 	task = Lists[path].Tasks[2]
-	assert.Equal("A", *task.Priority)
+	assert.Equal("(A)", *task.Priority)
 	assert.Equal("(A) something new 2", task.Norm())
 }
 
@@ -247,7 +247,7 @@ func TestDeprioritizeTask(t *testing.T) {
 		assert.Nil(Lists[path].Tasks[0].Priority)
 	})
 	t.Run("priority", func(t *testing.T) {
-		assert.Equal("with", *Lists[path].Tasks[1].Priority)
+		assert.Equal("(with)", *Lists[path].Tasks[1].Priority)
 		err := DeprioritizeTask(1, path)
 		assert.NoError(err)
 		assert.Nil(Lists[path].Tasks[1].Priority)
@@ -266,20 +266,20 @@ func TestPrioritizeTask(t *testing.T) {
 		assert.Nil(Lists[path].Tasks[0].Priority)
 		err := PrioritizeTask(0, "prio", path)
 		assert.NoError(err)
-		assert.Equal("prio", *Lists[path].Tasks[0].Priority)
+		assert.Equal("(prio)", *Lists[path].Tasks[0].Priority)
 		assert.Equal("(prio)", *Lists[path].Tasks[0].Tokens[0].raw)
 	})
 	t.Run("prior priority", func(t *testing.T) {
-		assert.Equal("with", *Lists[path].Tasks[1].Priority)
+		assert.Equal("(with)", *Lists[path].Tasks[1].Priority)
 		err := PrioritizeTask(1, "prio", path)
 		assert.NoError(err)
-		assert.Equal("prio", *Lists[path].Tasks[1].Priority)
+		assert.Equal("(prio)", *Lists[path].Tasks[1].Priority)
 		assert.Equal("(prio)", *Lists[path].Tasks[1].Tokens[0].raw)
 	})
 	t.Run("ineffective parentheses", func(t *testing.T) {
 		err := PrioritizeTask(1, "(NewPrio)", path)
 		assert.NoError(err)
-		assert.Equal("NewPrio", *Lists[path].Tasks[1].Priority)
+		assert.Equal("(NewPrio)", *Lists[path].Tasks[1].Priority)
 		assert.Equal("(NewPrio)", *Lists[path].Tasks[1].Tokens[0].raw)
 	})
 }

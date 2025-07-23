@@ -438,25 +438,6 @@ func unparseProgress(progress Progress) (string, error) {
 	return base, nil
 }
 
-func parsePriority(line string) (int, int, error) {
-	if utils.RuneCount(line) == 0 {
-		return -1, -1, terrors.ErrEmptyText
-	}
-	if utils.RuneAt(line, 0) != '(' {
-		return -1, -1, fmt.Errorf("%w: %w: (", terrors.ErrParse, terrors.ErrNotFound)
-	}
-	ndx := 1
-	n := utils.RuneCount(line)
-	for ; ndx < n && utils.RuneAt(line, ndx) != ' '; ndx++ {
-	}
-	ndx--
-	if utils.RuneAt(line, ndx) == ')' {
-		return 1, ndx, nil
-	} else {
-		return -1, -1, fmt.Errorf("%w: %w: priority", terrors.ErrParse, terrors.ErrNotFound)
-	}
-}
-
 /*
 ai says to look out for these:
   - The for len(resolved)-1 < dtCount loop can hang
@@ -696,12 +677,10 @@ func parseTokens(line string) ([]*Token, []error) {
 	}
 	tokenStrings := tokenizeLine(line)
 	if len(tokenStrings) > 0 {
-		if i, j, err := parsePriority(tokenStrings[0]); err == nil {
-			p := utils.RuneSlice(tokenStrings[0], i, j)
+		if err := validatePriority(tokenStrings[0]); err == nil {
 			tokens = append(tokens, &Token{
 				Type: TokenPriority, Key: "priority",
-				raw:   utils.MkPtr(fmt.Sprintf("(%s)", p)),
-				Value: &p,
+				raw: &tokenStrings[0], Value: &tokenStrings[0],
 			})
 			tokenStrings = tokenStrings[1:]
 		}

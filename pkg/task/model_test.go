@@ -27,13 +27,13 @@ func TestUpdate(t *testing.T) {
 		task, _ := ParseTask(nil, "(A) +p #t @a $p=unit/10/100/cat $due=1w $dead=1w $c=2024-05-05T05-05")
 		newTask, _ := ParseTask(nil, "(B) +p #t @a $p=unit/90/100/cat $due=1w $dead=1w")
 		task.update(newTask)
-		assert.Equal("B", *task.Priority)
+		assert.Equal("(B)", *task.Priority)
 		assert.Equal(90, task.Prog.Count)
 		dt, _ := parseAbsoluteDatetime("2024-05-05T05-05")
 		assert.Exactly(*dt, *task.Time.CreationDate)
 		task.Tokens.ForEach(func(tk *Token) {
 			if tk.Type == TokenPriority {
-				assert.Equal("B", *tk.Value.(*string))
+				assert.Equal("(B)", *tk.Value.(*string))
 			} else if tk.Type == TokenProgress {
 				assert.Equal(90, tk.Value.(*Progress).Count)
 			} else if tk.Type == TokenDate && tk.Key == "c" {

@@ -154,7 +154,7 @@ func formatPriorities(tasks []*rTask) {
 				continue
 			}
 			tcnt := 0
-			if t.Priority != nil && *t.Priority != "" {
+			if t.Priority != nil {
 				if _, ok := prios[*t.Priority]; !ok {
 					prios[*t.Priority] = true
 					tcnt = 1
@@ -217,7 +217,7 @@ func formatPriorities(tasks []*rTask) {
 					}
 				}
 				assignHue(sortByPriority(children), startHue, endHue, 0)
-			} else if rt.task != nil && rt.task.Priority != nil && *rt.task.Priority != "" {
+			} else if rt.task != nil && rt.task.Priority != nil {
 				prioed = append(prioed, rt)
 			}
 		}
@@ -237,7 +237,7 @@ func formatPriorities(tasks []*rTask) {
 		prefixes := []string{}
 		groups := make(map[string][]*rTask)
 		for _, rt := range tasks {
-			prio := *rt.task.Priority
+			prio := *rt.task.Priority // TODO: document what prio and prefix are doing
 			prefix := prio
 			if utils.RuneCount(prio) > depth {
 				prefix = utils.RuneSlice(prio, 0, depth+1)
@@ -459,10 +459,10 @@ func (t *Task) Render() *rTask {
 		out.countLen = utils.RuneCount(strconv.Itoa(t.Prog.Count))
 		out.doneCountLen = utils.RuneCount(strconv.Itoa(t.Prog.DoneCount))
 	}
-	if t.Priority != nil && *t.Priority != "" {
+	if t.Priority != nil {
 		out.tokens = append(out.tokens, &rToken{
 			token: specialTokenMap["priority"],
-			raw:   fmt.Sprintf("(%s)", *t.Priority),
+			raw:   *t.Priority,
 			color: "print.color-default",
 		})
 	}

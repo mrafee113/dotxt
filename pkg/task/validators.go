@@ -9,8 +9,11 @@ import (
 )
 
 func validateHint(token string) error {
-	if strings.IndexAny(token, "#@+!?*&") != 0 || utils.RuneCount(strings.TrimSpace(token)) < 2 {
-		return fmt.Errorf("%w: token '%s' is not a hint", terrors.ErrValue, token)
+	if ln := utils.RuneCount(strings.TrimSpace(token)); ln <= 1 {
+		return fmt.Errorf("%w: '%s' is not long enough with len '%d'", terrors.ErrValue, token, ln)
+	}
+	if !strings.ContainsRune("#@+!?*&", utils.RuneAt(token, 0)) {
+		return fmt.Errorf("%w: '%s' has unsupported opening symbol '%c'", terrors.ErrValue, token, utils.RuneAt(token, 0))
 	}
 	return nil
 }
@@ -30,9 +33,23 @@ func validateHexColor(color string) error {
 		return fmt.Errorf("%w: hex color must start with '#'", terrors.ErrValue)
 	}
 	for _, char := range color[1:] {
-		if !(unicode.IsDigit(char) || unicode.IsLetter(char)) {
+		if !(unicode.IsDigit(char) || (unicode.IsLetter(char) && strings.ContainsRune("AaBbCcDdEeFf", char))) {
 			return fmt.Errorf("%w: hex color must only consist of letters and digits", terrors.ErrValue)
 		}
+	}
+	return nil
+}
+
+func validatePriority(token string) error {
+	if utils.RuneCount(token) <= 2 {
+		return terrors.ErrEmptyText
+	}
+	if utils.RuneAt(token, 0) != '(' {
+		return fmt.Errorf("%w: %w: (", terrors.ErrParse, terrors.ErrNotFound)
+	}
+	n := utils.RuneCount(token)
+	if utils.RuneAt(token, n-1) != ')' {
+		return fmt.Errorf("%w: %w: )", terrors.ErrParse, terrors.ErrNotFound)
 	}
 	return nil
 }

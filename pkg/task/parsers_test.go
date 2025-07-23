@@ -96,7 +96,7 @@ func TestParseTask(t *testing.T) {
 
 	t.Run("validate priority #4", func(t *testing.T) {
 		task, _ = ParseTask(nil, "(!@`#$$%^&*([]{}./';\",)")
-		assert.Equal("!@`#$$%^&*([]{}./';\",", *task.Priority)
+		assert.Equal("(!@`#$$%^&*([]{}./';\",)", *task.Priority)
 	})
 
 	t.Run("validate hints #1", func(t *testing.T) {
@@ -506,41 +506,6 @@ func TestParseTask(t *testing.T) {
 		assert.Nil(tk.Value)
 		require.NotNil(t, task.Fmt)
 		assert.True(task.Fmt.Focus)
-	})
-}
-
-func TestParsePriority(t *testing.T) {
-	assert := assert.New(t)
-	var err error
-	t.Run("invalid: (some", func(t *testing.T) {
-		_, _, err = parsePriority("(some")
-		assert.ErrorIs(err, terrors.ErrNotFound, "(some")
-	})
-	t.Run("invalid: some)", func(t *testing.T) {
-		_, _, err = parsePriority("some)")
-		assert.ErrorIs(err, terrors.ErrNotFound, "some)")
-		assert.ErrorContains(err, "(", "some)")
-	})
-	t.Run("invalid: (some )", func(t *testing.T) {
-		_, _, err = parsePriority("(some )")
-		assert.ErrorIs(err, terrors.ErrParse, "(some )")
-		assert.ErrorIs(err, terrors.ErrNotFound)
-		assert.ErrorContains(err, "priority", "(some )")
-	})
-	t.Run("valid: (eyo!!)", func(t *testing.T) {
-		line := "(eyo!!) some things"
-		i, j, err := parsePriority(line)
-		assert.NoError(err, "err")
-		assert.Equal(1, i, "start-index")
-		assert.Equal(5+1, j, "end-index")
-		assert.Equal("eyo!!", line[i:j])
-	})
-	t.Run("invalid: (some))eyo", func(t *testing.T) {
-		line := "(some))eyo"
-		_, _, err := parsePriority(line)
-		require.Error(t, err)
-		assert.ErrorIs(err, terrors.ErrParse)
-
 	})
 }
 
