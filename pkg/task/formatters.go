@@ -119,8 +119,7 @@ func formatAbsoluteDatetime(dt *time.Time, relDt *time.Time) string {
 	if relDt == nil {
 		return dt.Format("2006-01-02T15-04")
 	}
-	d := dt.Sub(*relDt)
-	return formatDuration(&d)
+	return formatDuration(utils.MkPtr(dt.Sub(*relDt)))
 }
 
 func formatPriorities(tasks []*rTask) {

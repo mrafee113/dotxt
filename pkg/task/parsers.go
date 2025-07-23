@@ -335,6 +335,7 @@ func unparseRelativeDatetime(dt, rel time.Time) string {
 	return unparseDuration(dt.Sub(rel))
 }
 
+// TODO: rewrite supporting errors. unparseRelativeDatetime should't be called on TokenDates that aren't relative
 func (tk *Token) unparseRelativeDatetime(val *time.Time) string {
 	tkDt := tk.Value.(*TokenDateValue)
 	if val == nil {
@@ -761,7 +762,7 @@ func parseTokens(line string) ([]*Token, []error) {
 				k := strings.Replace(key, "-", "", 1)
 				tokens = append(tokens, &Token{
 					Type: TokenID, raw: &tokenStr,
-					Key: k, Value: utils.MkPtr(value),
+					Key: k, Value: &value,
 				})
 			case "c", "due", "end", "dead", "r":
 				var err error
@@ -888,22 +889,26 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 	task.Tokens = tokens
 	if task.Time.CreationDate == nil {
-		task.Time.CreationDate = utils.MkPtr(rightNow)
+		tmp := rightNow
+		task.Time.CreationDate = &tmp
 		task.Tokens = append(task.Tokens, &Token{
-			Type: TokenDate, raw: utils.MkPtr(fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow))),
-			Key: "c", Value: &TokenDateValue{
+			Type: TokenDate,
+			Key:  "c",
+			raw:  utils.MkPtr(fmt.Sprintf("$c=%s", unparseAbsoluteDatetime(rightNow))),
+			Value: &TokenDateValue{
 				Value: task.Time.CreationDate,
 			},
 		})
 	}
 	if task.Time.DueDate == nil && task.Time.Every != nil {
-		val := task.Time.CreationDate.Add(*task.Time.Every)
-		task.Time.DueDate = &val
+		task.Time.DueDate = utils.MkPtr(task.Time.CreationDate.Add(*task.Time.Every))
 		task.Tokens = append(task.Tokens, &Token{
-			Type: TokenDate, raw: utils.MkPtr(fmt.Sprintf("$due=%s", unparseRelativeDatetime(val, *task.Time.CreationDate))),
-			Key: "due", Value: &TokenDateValue{
-				Value: &val, RelKey: "due", RelVal: task.Time.CreationDate,
-				Offset: utils.MkPtr(*task.Time.Every),
+			Type: TokenDate,
+			Key:  "due",
+			raw:  utils.MkPtr(fmt.Sprintf("$due=%s", unparseRelativeDatetime(*task.Time.DueDate, *task.Time.CreationDate))),
+			Value: &TokenDateValue{
+				Value: task.Time.DueDate, RelKey: "due", RelVal: task.Time.CreationDate,
+				Offset: task.Time.Every,
 			},
 		})
 	}

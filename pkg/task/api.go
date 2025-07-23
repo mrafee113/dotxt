@@ -164,7 +164,7 @@ func AppendToTask(id int, text, path string) error {
 	if err != nil {
 		return err
 	}
-	task.ID = &id
+	task.ID = &id // TODO: why is this necessary?
 	cleanupRelations(path)
 	return nil
 }
@@ -192,7 +192,7 @@ func PrependToTask(id int, text, path string) error {
 	if err != nil {
 		return err
 	}
-	task.ID = &id
+	task.ID = &id // TODO: why is this necessary?
 	cleanupRelations(path)
 	return nil
 }
@@ -207,7 +207,7 @@ func ReplaceTask(id int, text, path string) error {
 	if err != nil {
 		return err
 	}
-	task.ID = &id
+	task.ID = &id // TODO: why is this necessary?
 	cleanupRelations(path)
 	return nil
 }
@@ -405,8 +405,7 @@ func RevertTask(ids []int, path string) error {
 	}
 
 	for _, text := range texts {
-		newId := Lists.Len(path)
-		task, err := ParseTask(&newId, text)
+		task, err := ParseTask(utils.MkPtr(Lists.Len(path)), text)
 		if err != nil {
 			return err
 		}
