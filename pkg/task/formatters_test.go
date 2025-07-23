@@ -557,19 +557,19 @@ func TestRenderList(t *testing.T) {
 
 		assert.Equal("00 0 $id=1", rtasks[0].stringify(false, 50))
 		{
-			assert.Equal("      ... -1 ...", rtasks[1].stringify(false, 50))
+			assert.Equal("     ... -1 ...", rtasks[1].stringify(false, 50))
 			assert.True(rtasks[1].decor)
 			assert.Contains(rtasks[1].stringify(false, 50), "1")
 		}
 		assert.Equal("   02 02 $P=1 $focus", rtasks[2].stringify(false, 50))
 		{
-			assert.Equal("      ... -1 ...", rtasks[3].stringify(false, 50))
+			assert.Equal("     ... -1 ...", rtasks[3].stringify(false, 50))
 			assert.True(rtasks[3].decor)
 			assert.Contains(rtasks[3].stringify(false, 50), "1")
 		}
 		assert.Equal("   04 04 $P=1 $focus", rtasks[4].stringify(false, 50))
 		{
-			assert.Equal("      ... -1 ...", rtasks[5].stringify(false, 50))
+			assert.Equal("     ... -1 ...", rtasks[5].stringify(false, 50))
 			assert.True(rtasks[5].decor)
 			assert.Contains(rtasks[5].stringify(false, 50), "1")
 		}
@@ -577,7 +577,7 @@ func TestRenderList(t *testing.T) {
 		assert.Equal("   07 07 $P=2 $focus", rtasks[7].stringify(false, 50))
 		assert.Equal("08 08 $id=3", rtasks[8].stringify(false, 50))
 		{
-			assert.Equal("      ... -1 ...", rtasks[9].stringify(false, 50))
+			assert.Equal("     ... -1 ...", rtasks[9].stringify(false, 50))
 			assert.True(rtasks[9].decor)
 			assert.Contains(rtasks[9].stringify(false, 50), "1")
 		}
@@ -585,12 +585,12 @@ func TestRenderList(t *testing.T) {
 		assert.Equal("11 11 $id=4", rtasks[11].stringify(false, 50))
 		assert.Equal("   12 12 $P=4 $focus", rtasks[12].stringify(false, 50))
 		{
-			assert.Equal("      ... -1 ...", rtasks[13].stringify(false, 50))
+			assert.Equal("     ... -1 ...", rtasks[13].stringify(false, 50))
 			assert.True(rtasks[13].decor)
 			assert.Contains(rtasks[13].stringify(false, 50), "1")
 		}
 		{
-			assert.Equal("   ... -5 ...", rtasks[14].stringify(false, 50))
+			assert.Equal("  ... -5 ...", rtasks[14].stringify(false, 50))
 			assert.True(rtasks[14].decor)
 			assert.Contains(rtasks[14].stringify(false, 50), "5")
 		}
@@ -607,7 +607,7 @@ func TestRenderList(t *testing.T) {
 		assert.Equal("      29 29 $P=20", rtasks[25].stringify(false, 50))
 		assert.Equal("   30 30 $P=19", rtasks[26].stringify(false, 50))
 		{
-			assert.Equal("   ... -1 ...", rtasks[27].stringify(false, 50))
+			assert.Equal("  ... -1 ...", rtasks[27].stringify(false, 50))
 			assert.True(rtasks[27].decor)
 			assert.Contains(rtasks[27].stringify(false, 50), "1")
 		}
@@ -788,7 +788,7 @@ func TestStringify(t *testing.T) {
 		assert.False(rtasks[0].decor)
 		assert.False(rtasks[2].decor)
 		assert.True(rtasks[1].decor)
-		assert.Equal(" ... -1 ...", rtasks[1].stringify(false, 50))
+		assert.Equal("... -1 ...", rtasks[1].stringify(false, 50))
 		assert.Equal("print.color-hidden", rtasks[1].tokens[0].color)
 	})
 }
@@ -929,20 +929,20 @@ func TestPrintLists(t *testing.T) {
 		out := capture(60, 50)
 		tc := `> printLists | ———————————————————————————————————
 00 0 $id=1 $focus
-      ... -1 ...
+     ... -1 ...
    02 02 $P=1 $focus
-      ... -1 ...
+     ... -1 ...
    04 04 $P=1 $focus
-      ... -1 ...
+     ... -1 ...
 06 06 $id=2 $focus
    07 07 $P=2 $focus
 08 08 $id=3 $focus
-      ... -1 ...
+     ... -1 ...
    10 10 $P=3 $focus
 11 11 $id=4 $focus
    12 12 $P=4 $focus
-      ... -1 ...
-   ... -5 ...
+     ... -1 ...
+  ... -5 ...
 19 19 $focus`
 		for ndx, line := range strings.Split(tc, "\n") {
 			line = strings.TrimRightFunc(line, unicode.IsSpace)

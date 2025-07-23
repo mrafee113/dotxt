@@ -129,7 +129,6 @@ func (r *rTask) stringify(toColor bool, maxWidth int) string {
 		writeSpace()
 	} else {
 		write("print.color-default", fmt.Sprintf("%s%s", idPrefix, strings.Repeat(" ", r.idLen)))
-		writeSpace()
 	}
 
 	if r.task != nil && r.task.IsCollapsed() {
