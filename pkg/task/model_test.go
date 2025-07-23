@@ -467,3 +467,50 @@ func TestRevertIDtoText(t *testing.T) {
 		get(0).revertIDtoText("something")
 	})
 }
+
+func TestUpdateByModifyingText(t *testing.T) {
+	assert := assert.New(t)
+	t.Run("normal", func(t *testing.T) {
+		task, _ := ParseTask(nil, " $c=rn:0s ")
+		task.updateByModifyingText("1", "1")
+		assert.Equal("1 $c=rn:0s 1", task.Raw())
+	})
+	t.Run("spaces", func(t *testing.T) {
+		task, _ := ParseTask(nil, "  $c=rn:0s  ")
+		task.updateByModifyingText("1", "1")
+		assert.Equal("1  $c=rn:0s  1", task.Raw())
+
+		task, _ = ParseTask(nil, " $c=rn:0s ")
+		task.updateByModifyingText(" ", " ")
+		assert.Equal("  $c=rn:0s  ", task.Raw())
+	})
+	t.Run("semi-colons", func(t *testing.T) {
+		task, _ := ParseTask(nil, "\\;$c=rn:0s\\;")
+		task.updateByModifyingText("1", "1")
+		assert.Equal("1\\;$c=rn:0s\\;1", task.Raw())
+
+		task, _ = ParseTask(nil, "$c=rn:0s")
+		task.updateByModifyingText("\\;", "\\;")
+		assert.Equal("\\;$c=rn:0s\\;", task.Raw())
+	})
+	t.Run("priority", func(t *testing.T) {
+		t.Run("spaces", func(t *testing.T) {
+			task, _ := ParseTask(nil, "(0)  $c=rn:0s")
+			task.updateByModifyingText("1", "")
+			assert.Equal("(0) 1  $c=rn:0s", task.Raw())
+
+			task, _ = ParseTask(nil, "(0) $c=rn:0s")
+			task.updateByModifyingText(" ", "")
+			assert.Equal("(0) $c=rn:0s", task.Raw())
+		})
+		t.Run("semi-colons", func(t *testing.T) {
+			task, _ := ParseTask(nil, "(0)\\;$c=rn:0s")
+			task.updateByModifyingText("1", "")
+			assert.Equal("(0) 1\\;$c=rn:0s", task.Raw())
+
+			task, _ = ParseTask(nil, "(0) $c=rn:0s")
+			task.updateByModifyingText("\\;", "")
+			assert.Equal("(0)\\;$c=rn:0s", task.Raw())
+		})
+	})
+}

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type List struct {
@@ -430,6 +431,55 @@ func (t *Task) updateFromText(new string) error {
 		return err
 	}
 	return nil
+}
+
+func (t *Task) updateByModifyingText(prefix, postfix string) error {
+	var newText string
+	if n := utils.RuneCount(prefix); n > 0 {
+		if t.Priority != nil {
+			priority := *t.Priority
+			t.Priority = nil
+			_, ndx := t.Tokens.Find(TkByType(TokenPriority))
+			t.Tokens = slices.Delete(t.Tokens, ndx, ndx+1)
+
+			leftOfPrefixIsSpace := unicode.IsSpace(utils.RuneAt(prefix, 0))
+			leftOfPrefixIsSemicolon := utils.RuneAt(prefix, 0) == '\\' &&
+				n >= 2 && utils.RuneAt(prefix, 1) == ';'
+			if leftOfPrefixIsSpace || leftOfPrefixIsSemicolon {
+				prefix = priority + prefix
+			} else {
+				prefix = priority + " " + prefix
+			}
+			n = utils.RuneCount(prefix)
+		}
+
+		newText = prefix
+		firstTokenIsSpacy := len(t.Tokens) > 0 && t.Tokens[0].Type == TokenText &&
+			t.Tokens[0].Key == ";"
+		rightOfPrefixIsSpace := unicode.IsSpace(utils.RuneAt(prefix, n-1))
+		rightOfPrefixIsSemicolon := utils.RuneAt(prefix, n-1) == ';' &&
+			n >= 2 && utils.RuneAt(prefix, n-2) == '\\'
+		if !firstTokenIsSpacy && !rightOfPrefixIsSpace && !rightOfPrefixIsSemicolon {
+			newText += " "
+		}
+
+	}
+
+	newText += t.Raw()
+
+	if utils.RuneCount(postfix) > 0 {
+		n := utils.RuneCount(postfix)
+		tn := len(t.Tokens)
+		lastTokenIsSpacy := tn > 0 && t.Tokens[tn-1].Type == TokenText && t.Tokens[tn-1].Key == ";"
+		leftOfPostfixIsSpace := unicode.IsSpace(utils.RuneAt(postfix, 0))
+		leftOfPostfixIsSemicolon := utils.RuneAt(postfix, 0) == '\\' &&
+			n >= 2 && utils.RuneAt(postfix, 1) == ';'
+		if !lastTokenIsSpacy && !leftOfPostfixIsSpace && !leftOfPostfixIsSemicolon {
+			newText += " "
+		}
+		newText += postfix
+	}
+	return t.updateFromText(newText)
 }
 
 func (t *Task) updateDate(field string, newDt *time.Time) error {

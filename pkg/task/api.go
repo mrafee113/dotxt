@@ -160,7 +160,7 @@ func AppendToTask(id int, text, path string) error {
 		return err
 	}
 
-	err = task.updateFromText(task.Raw() + " " + text)
+	err = task.updateByModifyingText("", text)
 	if err != nil {
 		return err
 	}
@@ -175,20 +175,7 @@ func PrependToTask(id int, text, path string) error {
 		return err
 	}
 
-	var newText string
-	if task.Priority != nil {
-		var out []string
-		task.Tokens.ForEach(func(tk *Token) {
-			if tk.Type != TokenPriority {
-				out = append(out, tk.String())
-			}
-		})
-		curText := strings.Join(out, " ")
-		newText = fmt.Sprintf("%s %s %s", *task.Priority, text, curText)
-	} else {
-		newText = text + " " + task.Raw()
-	}
-	err = task.updateFromText(newText)
+	err = task.updateByModifyingText(text, "")
 	if err != nil {
 		return err
 	}
