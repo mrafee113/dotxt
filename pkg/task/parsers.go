@@ -718,9 +718,9 @@ func parseTokens(line string) ([]*Token, []error) {
 				continue
 			}
 			tokens = append(tokens, &Token{
-				Type: TokenHint, raw: &tokenStr,
-				Key:   utils.RuneSlice(tokenStr, 0, 1),
-				Value: utils.MkPtr(utils.RuneSlice(tokenStr, 1)),
+				Type: TokenHint,
+				Key:  utils.RuneSlice(tokenStr, 0, 1),
+				raw:  &tokenStr, Value: &tokenStr,
 			})
 		case '$':
 			// $key
@@ -851,7 +851,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 				task.PID = val
 			}
 		case TokenHint:
-			task.Hints = append(task.Hints, utils.MkPtr(fmt.Sprintf("%s%s", token.Key, *token.Value.(*string))))
+			task.Hints = append(task.Hints, token.Value.(*string))
 		case TokenPriority:
 			task.Priority = token.Value.(*string)
 		case TokenDate:

@@ -108,9 +108,13 @@ func TestParseTask(t *testing.T) {
 	t.Run("validate hints #2", func(t *testing.T) {
 		task, _ = ParseTask(nil, "#hint +hint @hint !hint ?hint *hint &hint")
 		count = 0
-		task.Tokens.Filter(TkByType(TokenHint)).ForEach(func(tk *Token) {
+		ndxMap := map[int]rune{
+			0: '#', 1: '+', 2: '@', 3: '!',
+			4: '?', 5: '*', 6: '&',
+		}
+		task.Tokens.Filter(TkByType(TokenHint)).ForEachIndex(func(tk *Token, index int) {
 			count++
-			assert.Equal("hint", *tk.Value.(*string))
+			assert.Equal(string(ndxMap[index])+"hint", *tk.Value.(*string))
 		})
 		assert.Equal(7, count)
 		assert.Equal("#hint +hint @hint !hint ?hint *hint &hint", task.Norm())

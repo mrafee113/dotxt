@@ -194,7 +194,7 @@ func (tks *Tokens) Filter(cond TkCond) *Tokens {
 
 func (tk *Token) String() string {
 	switch tk.Type {
-	case TokenText, TokenPriority:
+	case TokenText, TokenHint, TokenPriority:
 		return *tk.Value.(*string)
 	case TokenID:
 		val := *tk.Value.(*string)
@@ -204,8 +204,6 @@ func (tk *Token) String() string {
 			}
 		}
 		return val
-	case TokenHint:
-		return tk.Key + *tk.Value.(*string)
 	case TokenDuration:
 		return "$" + tk.Key + "=" + unparseDuration(*tk.Value.(*time.Duration))
 	case TokenDate:
