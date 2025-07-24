@@ -74,6 +74,23 @@ func sortTime(lv, rv *time.Time) int {
 	return 2
 }
 
+func sortUrgency(l, r *Task) int {
+	if v := sortTime(l.Time.EndDate, r.Time.EndDate); v != 2 {
+		return v
+	} else if v := sortTime(l.Time.Deadline, r.Time.Deadline); v != 2 {
+		return v
+	} else if v := sortTime(l.Time.DueDate, r.Time.DueDate); v != 2 {
+		return v
+	}
+	if l.Urgent == r.Urgent {
+		return 2
+	} else if l.Urgent {
+		return -1
+	} else {
+		return 1
+	}
+}
+
 func sortReminders(lr, rr []*time.Time) int {
 	if len(lr) != 0 && len(rr) == 0 {
 		return -1
@@ -111,13 +128,7 @@ func sortReminders(lr, rr []*time.Time) int {
 }
 
 func sortDatetime(l, r *Task) int {
-	if v := sortTime(l.Time.Deadline, r.Time.Deadline); v != 2 {
-		return v
-	} else if v := sortTime(l.Time.EndDate, r.Time.EndDate); v != 2 {
-		return v
-	} else if v := sortTime(l.Time.DueDate, r.Time.DueDate); v != 2 {
-		return v
-	} else if v := sortTime(l.Time.CreationDate, r.Time.CreationDate); v != 2 { // this is pointless lol
+	if v := sortTime(l.Time.CreationDate, r.Time.CreationDate); v != 2 { // this is pointless lol
 		return v
 	} else if v := sortReminders(l.Time.Reminders, r.Time.Reminders); v != 2 {
 		return v
@@ -255,6 +266,8 @@ func sortHelper(l, r *Task) int {
 	} else if v = sortProgressCategory(l, r); v != 2 {
 		return v
 	} else if v = sortAntiPriority(l, r); v != 2 {
+		return v
+	} else if v = sortUrgency(l, r); v != 2 {
 		return v
 	} else if v = sortPriority(l, r); v != 2 {
 		return v

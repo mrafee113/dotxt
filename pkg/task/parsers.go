@@ -737,6 +737,11 @@ func parseTokens(line string) ([]*Token, []error) {
 						Type: TokenFormat, Key: "focus",
 						raw: &tokenStr,
 					})
+				case "urgent":
+					tokens = append(tokens, &Token{
+						Type: TokenText, Key: "urgent",
+						raw: &tokenStr, Value: &tokenStr,
+					})
 				default:
 					handleTokenText(tokenStr, nil)
 				}
@@ -889,6 +894,10 @@ func ParseTask(id *int, line string) (*Task, error) {
 			case "focus":
 				task.Fmt.Focus = true
 			}
+		case TokenText:
+			if token.Key == "urgent" {
+				task.Urgent = true
+			}
 		}
 	}
 	task.Tokens = tokens
@@ -974,6 +983,11 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 	if task.EID != nil && task.PID != nil && *task.EID == *task.PID {
 		task.revertIDtoText("P")
+	}
+	if task.Time.DueDate != nil && task.Urgent {
+		task.Urgent = false
+		_, ndx := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		task.Tokens = slices.Delete(task.Tokens, ndx, ndx+1)
 	}
 	for _, err := range warns {
 		logging.Logger.Debugf("task=\"%s\" warn=\"%s\"", task.String(), err)

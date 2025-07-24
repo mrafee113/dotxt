@@ -513,6 +513,26 @@ func TestParseTask(t *testing.T) {
 		require.NotNil(t, task.Fmt)
 		assert.True(task.Fmt.Focus)
 	})
+
+	t.Run("validate token urgent", func(t *testing.T) {
+		task, _ := ParseTask(nil, "hellow $urgent")
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		require.NotNil(t, tk)
+		assert.Equal("$urgent", *tk.raw)
+		if assert.NotNil(tk.Value) {
+			assert.Equal("$urgent", *tk.Value.(*string))
+		}
+		assert.True(task.Urgent)
+	})
+	t.Run("validate urgencty: due urgent dependency", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$due=1w $urgent")
+		assert.False(task.Urgent)
+		assert.NotNil(task.Time.DueDate)
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		assert.Nil(tk)
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
+		assert.NotNil(tk)
+	})
 }
 
 func TestParseDuration(t *testing.T) {

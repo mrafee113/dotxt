@@ -319,6 +319,7 @@ type Task struct {
 	Children []*Task
 	PID      *string // parent id ($P=)
 	Parent   *Task
+	Urgent   bool
 
 	Time *Temporal
 	Prog *Progress

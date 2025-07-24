@@ -397,6 +397,18 @@ func TestTokens(t *testing.T) {
 		tk, _ = task.Tokens.Find(TkByTypeKey(TokenPriority, "priority"))
 		assert.Nil(tk)
 	})
+
+	t.Run("urgent", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$urgent")
+		assert.True(task.Urgent)
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		if assert.NotNil(tk) {
+			assert.Equal("$urgent", *tk.raw)
+			if assert.NotNil(tk.Value) {
+				assert.Equal("$urgent", *tk.Value.(*string))
+			}
+		}
+	})
 }
 
 func TestRoot(t *testing.T) {
