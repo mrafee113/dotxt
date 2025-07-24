@@ -3,6 +3,7 @@ package task
 import (
 	"bytes"
 	"dotxt/pkg/utils"
+	"fmt"
 	"maps"
 	"math"
 	"os"
@@ -342,9 +343,9 @@ func TestRender(t *testing.T) {
 		assert.Equal("@at", rtask.tokens[4].raw)
 		assert.Equal("print.hints.color-at", rtask.tokens[4].color)
 		assert.Equal("$due=1w", rtask.tokens[5].raw)
-		assert.Equal("print.color-date-due", rtask.tokens[5].color)
+		assert.Equal("print.color-urgent", rtask.tokens[5].color)
 		assert.Equal("$dead=1w", rtask.tokens[6].raw)
-		assert.Equal("print.color-date-dead", rtask.tokens[6].color)
+		assert.Equal("print.color-urgent", rtask.tokens[6].color)
 		assert.Equal("$r=6d", rtask.tokens[7].raw)
 		assert.Equal("print.color-date-r", rtask.tokens[7].color)
 		assert.Equal("$id=3", rtask.tokens[8].raw)
@@ -450,6 +451,29 @@ func TestRender(t *testing.T) {
 		assert.Equal("print.color-imminent-deadline", rtask.tokens[6].color)
 		assert.Equal("$due=-4d", rtask.tokens[5].raw)
 		assert.Equal("print.color-burnt", rtask.tokens[5].color)
+
+		task, _ = ParseTask(&id, "(A) +prj #tag @at $due=1d $dead=2m $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
+		rtask = task.Render()
+		assert.Equal("print.color-date-dead", rtask.tokens[6].color)
+	})
+	t.Run("urgent", func(t *testing.T) {
+		prep := func(line string) *rTask {
+			task, _ := ParseTask(&id, line)
+			return task.Render()
+		}
+		for _, line := range []string{
+			"$due=2m", "$end=2m $due=2m", "$dead=2m $due=2m",
+		} {
+			rtask := prep(line)
+			tk := rtask.task.Tokens[0] // pay attention to ordering of dates in line
+			assert.Equal("print.color-date-"+tk.Key, rtask.tokens[0].color)
+		}
+		for _, line := range []string{
+			"$due=1w", "$end=1w $due=1w", "$dead=1w $due=1w",
+		} {
+			rtask := prep(line)
+			assert.Equal("print.color-urgent", rtask.tokens[0].color)
+		}
 	})
 }
 
@@ -981,4 +1005,38 @@ func TestPrintTask(t *testing.T) {
 	assert.Equal("210 223/3500(  6%)            (unit) tooooooooooooooooooooooooooooooooooooo\n                              looooooooooooooooooong\n", out)
 	out = capture(0)
 	assert.Equal("0 2/15( 13%) >          (unit) (A) +prj #tag @at $due=1d $dead=1w $r=22' $id=3\n                        $P=2 text $r=-3d $every=1m\n", out)
+}
+
+func TestOutputTask(t *testing.T) {
+	assert := assert.New(t)
+
+	id1 := 0
+	task1, _ := ParseTask(&id1, "(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m")
+	id2 := 1
+	task2, _ := ParseTask(&id2, "normal task")
+	id3 := 210
+	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500")
+	path, _ := parseFilepath("printTask")
+	Lists.Empty(path, task1, task2, task3)
+	rn := unparseAbsoluteDatetime(rightNow)
+
+	capture := func(id int) string {
+		realStdout := os.Stdout
+		defer func() { os.Stdout = realStdout }()
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		os.Stdout = w
+		err = OutputTask(id, path)
+		require.Nil(t, err)
+		w.Close()
+		var buf bytes.Buffer
+		_, err = buf.ReadFrom(r)
+		require.NoError(t, err)
+		return buf.String()
+	}
+
+	out := capture(210)
+	assert.Equal(fmt.Sprintf("tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500 $c=%s\n", rn), out)
+	out = capture(0)
+	assert.Equal(fmt.Sprintf("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m $c=%s\n", rn), out)
 }

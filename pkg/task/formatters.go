@@ -17,12 +17,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var rightNow time.Time
-
-func init() {
-	rightNow = time.Now()
-}
-
 /*
 	duration format rule of thumb
 
@@ -538,9 +532,13 @@ func (t *Task) Render() *rTask {
 					token: tk, raw: replacer.Replace(tk.String()), color: "print.color-default",
 				})
 			default:
+				color := "print.color-default"
+				if tk.Key == "urgent" {
+					color = "print.color-urgent"
+				}
 				replacer := strings.NewReplacer("\\'", "'", "\\\"", "\"", "\\`", "`")
 				out.tokens = append(out.tokens, &rToken{
-					token: tk, raw: replacer.Replace(tk.String()), color: "print.color-default",
+					token: tk, raw: replacer.Replace(tk.String()), color: color,
 				})
 			}
 		case TokenID:
@@ -589,16 +587,21 @@ func (t *Task) Render() *rTask {
 					return
 				}
 				color := "print.color-date-" + tk.Key
-				if t.Time.DueDate != nil && t.Time.DueDate.Sub(rightNow) <= 0 {
+				if (tk.Key == "due" && IsDateUrgent(t.Time.DueDate)) ||
+					(tk.Key == "end" && IsDateUrgent(t.Time.EndDate)) ||
+					(tk.Key == "dead" && IsDateUrgent(t.Time.Deadline)) {
+					color = "print.color-urgent"
+				}
+				if t.Time.DueDate != nil &&
+					t.Time.DueDate.Sub(rightNow) <= 0 {
 					if tk.Key == "due" {
 						color = "print.color-burnt"
-					}
-					if t.Time.Deadline != nil && t.Time.Deadline.Sub(rightNow) > 0 &&
-						tk.Key == "dead" {
+					} else if tk.Key == "dead" &&
+						IsDateUrgent(t.Time.Deadline) {
 						color = "print.color-imminent-deadline"
-					}
-					if t.Time.EndDate != nil && t.Time.EndDate.Sub(rightNow) > 0 &&
-						tk.Key == "end" {
+					} else if tk.Key == "end" &&
+						t.Time.EndDate != nil &&
+						t.Time.EndDate.Sub(rightNow) > 0 {
 						color = "print.color-running-event"
 					}
 				}
@@ -887,5 +890,18 @@ func PrintTask(id int, path string, maxWidth int) error {
 		return err
 	}
 	fmt.Println(task.Render().stringify(true, maxWidth))
+	return nil
+}
+
+func OutputTask(id int, path string) error {
+	path, err := prepFileTaskFromPath(path)
+	if err != nil {
+		return err
+	}
+	task, err := getTaskFromId(id, path)
+	if err != nil {
+		return err
+	}
+	fmt.Println(task.Raw())
 	return nil
 }

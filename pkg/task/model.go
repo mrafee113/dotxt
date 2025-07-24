@@ -11,6 +11,26 @@ import (
 	"unicode"
 )
 
+var (
+	rightNow        time.Time
+	oneMonthFromNow time.Time
+)
+
+func AdjustTime() {
+	rightNow = time.Now()
+	oneMonthFromNow = rightNow.Add(30 * 24 * time.Hour)
+}
+
+func init() {
+	AdjustTime()
+}
+
+func IsDateUrgent(dt *time.Time) bool {
+	return dt != nil &&
+		dt.After(rightNow) &&
+		dt.Before(oneMonthFromNow)
+}
+
 type List struct {
 	Tasks []*Task
 	EIDs  map[string]*Task
@@ -227,6 +247,14 @@ func (tk *Token) String() string {
 	return ""
 }
 
+func (tk *Token) IsUrgent() bool {
+	if tk.Type != TokenDate ||
+		!slices.Contains([]string{"due", "end", "dead"}, tk.Key) {
+		return false
+	}
+	return IsDateUrgent(tk.Value.(*TokenDateValue).Value)
+}
+
 type Progress struct {
 	Unit      string
 	Category  string
@@ -324,6 +352,13 @@ type Task struct {
 	Time *Temporal
 	Prog *Progress
 	Fmt  *Format
+}
+
+func (t *Task) IsUrgent() bool {
+	return t.Urgent ||
+		IsDateUrgent(t.Time.DueDate) ||
+		IsDateUrgent(t.Time.EndDate) ||
+		IsDateUrgent(t.Time.Deadline)
 }
 
 func (t *Task) String() string {

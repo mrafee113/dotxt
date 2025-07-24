@@ -984,7 +984,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	if task.EID != nil && task.PID != nil && *task.EID == *task.PID {
 		task.revertIDtoText("P")
 	}
-	if task.Urgent && task.Time.DueDate != nil && task.Time.DueDate.Before(rightNow.Add(30*24*time.Hour)) {
+	if task.Urgent && IsDateUrgent(task.Time.DueDate) {
 		task.Urgent = false
 		_, ndx := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
 		task.Tokens = slices.Delete(task.Tokens, ndx, ndx+1)

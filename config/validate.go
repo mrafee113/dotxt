@@ -31,7 +31,7 @@ func validateConfig() []error {
 				"color-imminent-deadline", "color-date-due",
 				"color-date-dead", "color-date-r", "color-every",
 				"color-dead-relations", "color-collapsed",
-				"color-hidden", "color-anti-priority",
+				"color-hidden", "color-anti-priority", "color-urgent",
 			} {
 				if err := validateColor("print." + key); err != nil {
 					errs = append(errs, err)

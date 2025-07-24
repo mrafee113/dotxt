@@ -10,10 +10,10 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(printCmd, toggleCollapseCmd, lsNCmd)
+	rootCmd.AddCommand(printCmd, toggleCollapseCmd, print1)
 	setPrintCmdFlags()
 	setToggleCollapsedCmdFlags()
-	setlsNCmdFlags()
+	setPrint1CmdFlags()
 }
 
 var printCmd = &cobra.Command{
@@ -94,7 +94,7 @@ func setToggleCollapsedCmdFlags() {
 	toggleCollapseCmd.Flags().String("list", "", "designate the target todolist")
 }
 
-var lsNCmd = &cobra.Command{
+var print1 = &cobra.Command{
 	Use:   "lsn id [--list==<todolist=todo>]",
 	Short: "print a single task from list",
 	Long: `lsn id [--list==<todolist=todo>]
@@ -126,7 +126,7 @@ var lsNCmd = &cobra.Command{
 	},
 }
 
-func setlsNCmdFlags() {
-	lsNCmd.Flags().String("list", "", "designate the target todolist")
-	lsNCmd.Flags().Int("maxlen", 80, "maximum length")
+func setPrint1CmdFlags() {
+	print1.Flags().String("list", "", "designate the target todolist")
+	print1.Flags().Int("maxlen", 80, "maximum length")
 }

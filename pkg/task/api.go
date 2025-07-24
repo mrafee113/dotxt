@@ -99,6 +99,22 @@ func cleanupRelations(path string) error {
 		task.Parent = parent
 		parent.Children = append(parent.Children, task)
 	}
+	for _, task := range Lists[path].Tasks {
+		// note: this induced urgency is imperfect;
+		//  since in sorting, among urgent tasks, the value
+		//  of the $end, $dead, and $due are taken into account.
+		//  whereas if a task has a sooner, say, $end value,
+		//  if it is a child of an urgency-induced task,
+		//  then it won't be prioritized correctly.
+		// but this flaw is miniscule and therefore negligable.
+		if task.IsUrgent() {
+			node := task
+			for node != nil {
+				node.Urgent = true
+				node = node.Parent
+			}
+		}
+	}
 	return nil
 }
 
