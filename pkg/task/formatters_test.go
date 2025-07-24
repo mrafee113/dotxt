@@ -3,7 +3,6 @@ package task
 import (
 	"bytes"
 	"dotxt/pkg/utils"
-	"fmt"
 	"maps"
 	"math"
 	"os"
@@ -962,7 +961,6 @@ func TestPrintTask(t *testing.T) {
 	task3, _ := ParseTask(&id3, "tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500")
 	path, _ := parseFilepath("printTask")
 	Lists.Empty(path, task1, task2, task3)
-	rn := unparseAbsoluteDatetime(rightNow)
 
 	capture := func(id int) string {
 		realStdout := os.Stdout
@@ -970,7 +968,7 @@ func TestPrintTask(t *testing.T) {
 		r, w, err := os.Pipe()
 		require.NoError(t, err)
 		os.Stdout = w
-		err = PrintTask(id, path)
+		err = PrintTask(id, path, 80)
 		require.Nil(t, err)
 		w.Close()
 		var buf bytes.Buffer
@@ -980,7 +978,7 @@ func TestPrintTask(t *testing.T) {
 	}
 
 	out := capture(210)
-	assert.Equal(fmt.Sprintf("tooooooooooooooooooooooooooooooooooooo looooooooooooooooooong $p=unit/223/3500 $c=%s\n", rn), out)
+	assert.Equal("210 223/3500(  6%)            (unit) tooooooooooooooooooooooooooooooooooooo\n                              looooooooooooooooooong\n", out)
 	out = capture(0)
-	assert.Equal(fmt.Sprintf("(A) +prj #tag @at $due=1d $dead=1w $r=-2h $id=3 $P=2 $p=unit/2/15/cat text $r=-3d $every=1m $c=%s\n", rn), out)
+	assert.Equal("0 2/15( 13%) >          (unit) (A) +prj #tag @at $due=1d $dead=1w $r=22' $id=3\n                        $P=2 text $r=-3d $every=1m\n", out)
 }

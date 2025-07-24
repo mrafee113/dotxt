@@ -10,9 +10,10 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(printCmd, toggleCollapseCmd)
+	rootCmd.AddCommand(printCmd, toggleCollapseCmd, lsNCmd)
 	setPrintCmdFlags()
 	setToggleCollapsedCmdFlags()
+	setlsNCmdFlags()
 }
 
 var printCmd = &cobra.Command{
@@ -91,4 +92,41 @@ var toggleCollapseCmd = &cobra.Command{
 
 func setToggleCollapsedCmdFlags() {
 	toggleCollapseCmd.Flags().String("list", "", "designate the target todolist")
+}
+
+var lsNCmd = &cobra.Command{
+	Use:   "lsn id [--list==<todolist=todo>]",
+	Short: "print a single task from list",
+	Long: `lsn id [--list==<todolist=todo>]
+  print a single task from list`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		maxlen, err := cmd.Flags().GetInt("maxlen")
+		if err != nil {
+			return err
+		}
+		if maxlen < 20 || maxlen > 300 {
+			return fmt.Errorf("%w: %w: maxlen must be  '50' <= maxlen <= '300' and not '%d'", terrors.ErrFlag, terrors.ErrValue, maxlen)
+		}
+		if len(args) < 1 {
+			return terrors.ErrNoArgsProvided
+		}
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return err
+		}
+		path, err := prepTodoListArg(cmd)
+		if err != nil {
+			return err
+		}
+
+		if err := task.LoadFile(path); err != nil {
+			return err
+		}
+		return task.PrintTask(id, path, maxlen)
+	},
+}
+
+func setlsNCmdFlags() {
+	lsNCmd.Flags().String("list", "", "designate the target todolist")
+	lsNCmd.Flags().Int("maxlen", 80, "maximum length")
 }

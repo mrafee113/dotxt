@@ -877,7 +877,7 @@ func PrintLists(paths []string, maxLen, minLen int) error {
 }
 
 // single task
-func PrintTask(id int, path string) error {
+func PrintTask(id int, path string, maxWidth int) error {
 	path, err := prepFileTaskFromPath(path)
 	if err != nil {
 		return err
@@ -886,6 +886,6 @@ func PrintTask(id int, path string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(task.Raw())
+	fmt.Println(task.Render().stringify(true, maxWidth))
 	return nil
 }
