@@ -74,12 +74,39 @@ func sortTime(lv, rv *time.Time) int {
 	return 2
 }
 
+func sortUrgentTime(lv, rv *time.Time) int {
+	if lv == nil && rv == nil {
+		return 2
+	}
+	oneMonth := rightNow.Add(30 * 24 * time.Hour)
+	lva, rva := lv != nil && lv.After(rightNow), rv != nil && rv.After(rightNow)
+	lvb, rvb := lv != nil && lv.Before(oneMonth), rv != nil && rv.Before(oneMonth)
+	if !lva && !rva {
+		return 2
+	} else if lva && lvb && !(rva && rvb) {
+		return -1
+	} else if !(lva && lvb) && rva && rvb {
+		return 1
+	} else if lvb && rvb {
+		return 2
+	}
+	if lv == nil || rv == nil {
+		return 2
+	}
+	if lv.Before(*rv) {
+		return -1
+	} else if lv.After(*rv) {
+		return 1
+	}
+	return 2
+}
+
 func sortUrgency(l, r *Task) int {
-	if v := sortTime(l.Time.EndDate, r.Time.EndDate); v != 2 {
+	if v := sortUrgentTime(l.Time.EndDate, r.Time.EndDate); v != 2 {
 		return v
-	} else if v := sortTime(l.Time.Deadline, r.Time.Deadline); v != 2 {
+	} else if v := sortUrgentTime(l.Time.Deadline, r.Time.Deadline); v != 2 {
 		return v
-	} else if v := sortTime(l.Time.DueDate, r.Time.DueDate); v != 2 {
+	} else if v := sortUrgentTime(l.Time.DueDate, r.Time.DueDate); v != 2 {
 		return v
 	}
 	if l.Urgent == r.Urgent {
@@ -128,7 +155,13 @@ func sortReminders(lr, rr []*time.Time) int {
 }
 
 func sortDatetime(l, r *Task) int {
-	if v := sortTime(l.Time.CreationDate, r.Time.CreationDate); v != 2 { // this is pointless lol
+	if v := sortTime(l.Time.EndDate, r.Time.EndDate); v != 2 {
+		return v
+	} else if v := sortTime(l.Time.Deadline, r.Time.Deadline); v != 2 {
+		return v
+	} else if v := sortTime(l.Time.DueDate, r.Time.DueDate); v != 2 {
+		return v
+	} else if v := sortTime(l.Time.CreationDate, r.Time.CreationDate); v != 2 { // this is pointless lol
 		return v
 	} else if v := sortReminders(l.Time.Reminders, r.Time.Reminders); v != 2 {
 		return v

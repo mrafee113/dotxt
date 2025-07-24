@@ -532,6 +532,14 @@ func TestParseTask(t *testing.T) {
 		assert.Nil(tk)
 		tk, _ = task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		assert.NotNil(tk)
+
+		task, _ = ParseTask(nil, "$due=5w $urgent")
+		assert.True(task.Urgent)
+		assert.NotNil(task.Time.DueDate)
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		assert.NotNil(tk)
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
+		assert.NotNil(tk)
 	})
 }
 

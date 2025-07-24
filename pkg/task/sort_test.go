@@ -277,6 +277,10 @@ func TestSortTask(t *testing.T) {
 	})
 	t.Run("urgent", func(t *testing.T) {
 		for _, lineSet := range shuffleCount([]string{
+			"$due=2m $end=1w", "$due=2m $end=2w",
+			"$due=2m $dead=1w", "$due=2m $dead=2w",
+			"$due=2m", "$due=3m",
+			"$urgent", "$urgent $due=2m",
 			"$due=1w $end=1w", "$due=1w $end=2w",
 			"$due=1w $dead=1w", "$due=1w $dead=2w",
 			"$due=1w", "$due=2w",
@@ -289,8 +293,16 @@ func TestSortTask(t *testing.T) {
 			assert.Equal("$due=1w $dead=2w", arr[3].Norm())
 			assert.Equal("$due=1w", arr[4].Norm())
 			assert.Equal("$due=2w", arr[5].Norm())
-			assert.Equal("$urgent", arr[6].Norm())
-			assert.Equal("not so urgent", arr[7].Norm())
+			assert.Equal("$urgent $due=2m", arr[6].Norm())
+			assert.Equal("$urgent", arr[7].Norm())
+			assert.Equal("$urgent", arr[8].Norm())
+			assert.Equal("not so urgent", arr[9].Norm())
+			assert.Equal("$due=2m $end=1w", arr[10].Norm())
+			assert.Equal("$due=2m $end=2w", arr[11].Norm())
+			assert.Equal("$due=2m $dead=1w", arr[12].Norm())
+			assert.Equal("$due=2m $dead=2w", arr[13].Norm())
+			assert.Equal("$due=2m", arr[14].Norm())
+			assert.Equal("$due=3m", arr[15].Norm())
 		}
 	})
 	t.Run("every", func(t *testing.T) {
