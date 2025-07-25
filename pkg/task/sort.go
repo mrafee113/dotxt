@@ -78,33 +78,52 @@ func sortUrgentTime(lv, rv *time.Time) int {
 	if lv == nil && rv == nil {
 		return 2
 	}
-	oneMonth := rightNow.Add(30 * 24 * time.Hour)
-	lva, rva := lv != nil && lv.After(rightNow), rv != nil && rv.After(rightNow)
-	lvb, rvb := lv != nil && lv.Before(oneMonth), rv != nil && rv.Before(oneMonth)
-	if !lva && !rva {
-		return 2
-	} else if lva && lvb && !(rva && rvb) {
+	lvu, rvu := IsDateUrgent(lv), IsDateUrgent(rv)
+	if lvu && !rvu {
 		return -1
-	} else if !(lva && lvb) && rva && rvb {
+	} else if !lvu && rvu {
 		return 1
-	} else if lvb && rvb {
+	} else if !lvu && !rvu {
 		return 2
-	}
-	if lv == nil || rv == nil {
-		return 2
-	}
-	if lv.Before(*rv) {
+	} else if lv.Before(*rv) {
 		return -1
 	} else if lv.After(*rv) {
 		return 1
+	} else {
+		return 2
 	}
-	return 2
 }
 
 func sortUrgency(l, r *Task) int {
-	if v := sortUrgentTime(l.Time.EndDate, r.Time.EndDate); v != 2 {
+	if v := sortNil(l.MIT, r.MIT); v == -1 || v == 1 {
 		return v
-	} else if v := sortUrgentTime(l.Time.Deadline, r.Time.Deadline); v != 2 {
+	} else if v == 3 {
+		if *l.MIT < *r.MIT {
+			return -1
+		} else if *l.MIT > *r.MIT {
+			return 1
+		}
+	}
+
+	// TODO: (sort) in the case that DueDate is urgent and has not passed,
+	//  DueDate takes precedence over End and Deadline
+	//  only in the case that DueDate has been passed, End and Dead matter
+	earliest := func(l, r *time.Time) *time.Time {
+		if l == nil {
+			return r
+		} else if r == nil {
+			return l
+		} else if l.Before(*r) || l.Equal(*r) {
+			return l
+		} else {
+			return r
+		}
+	}
+	lED, rED :=
+		earliest(l.Time.EndDate, l.Time.Deadline),
+		earliest(r.Time.EndDate, r.Time.Deadline)
+
+	if v := sortUrgentTime(lED, rED); v != 2 {
 		return v
 	} else if v := sortUrgentTime(l.Time.DueDate, r.Time.DueDate); v != 2 {
 		return v

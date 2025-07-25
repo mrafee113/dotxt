@@ -739,7 +739,7 @@ func parseTokens(line string) ([]*Token, []error) {
 					})
 				case "urgent":
 					tokens = append(tokens, &Token{
-						Type: TokenText, Key: "urgent",
+						Type: TokenPriority, Key: "urgent",
 						raw: &tokenStr, Value: &tokenStr,
 					})
 				default:
@@ -810,6 +810,19 @@ func parseTokens(line string) ([]*Token, []error) {
 					Type: TokenProgress, raw: &tokenStr,
 					Key: "p", Value: progress,
 				})
+			case "mit":
+				mitVal, err := strconv.Atoi(value)
+				if err != nil {
+					handleTokenText(tokenStr, fmt.Errorf("%w: $mit=%s: %w", terrors.ErrParse, value, err))
+					continue
+				} else if mitVal < 0 {
+					handleTokenText(tokenStr, fmt.Errorf("%w: %w: $mit value '%d' must be greater than or equal to '0'", terrors.ErrParse, terrors.ErrValue, mitVal))
+					continue
+				}
+				tokens = append(tokens, &Token{
+					Type: TokenPriority, raw: &tokenStr,
+					Key: "mit", Value: &mitVal,
+				})
 			default:
 				handleTokenText(tokenStr, nil)
 			}
@@ -863,7 +876,14 @@ func ParseTask(id *int, line string) (*Task, error) {
 		case TokenHint:
 			task.Hints = append(task.Hints, token.Value.(*string))
 		case TokenPriority:
-			task.Priority = token.Value.(*string)
+			switch token.Key {
+			case "urgent":
+				task.Urgent = true
+			case "mit":
+				task.MIT = token.Value.(*int)
+			default:
+				task.Priority = token.Value.(*string)
+			}
 		case TokenDate:
 			switch token.Key {
 			case "c":
@@ -893,10 +913,6 @@ func ParseTask(id *int, line string) (*Task, error) {
 			switch token.Key {
 			case "focus":
 				task.Fmt.Focus = true
-			}
-		case TokenText:
-			if token.Key == "urgent" {
-				task.Urgent = true
 			}
 		}
 	}
@@ -986,7 +1002,7 @@ func ParseTask(id *int, line string) (*Task, error) {
 	}
 	if task.Urgent && IsDateUrgent(task.Time.DueDate) {
 		task.Urgent = false
-		_, ndx := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		_, ndx := task.Tokens.Find(TkByTypeKey(TokenPriority, "urgent"))
 		task.Tokens = slices.Delete(task.Tokens, ndx, ndx+1)
 	}
 	for _, err := range warns {

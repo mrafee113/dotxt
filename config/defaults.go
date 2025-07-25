@@ -10,6 +10,7 @@ var colors = map[string]string{
 	"black":        "#000000",
 	"blue":         "#4895bf",
 	"blue-light":   "#6CC0FC",
+	"blue-sky":     "#90fcf5",
 	"brown":        "#c48660",
 	"cyan":         "#05FCC6",
 	"cyan-cool":    "#66D9EF",
@@ -59,6 +60,7 @@ color-date-end           = '{{ index .Colors "orange-light" }}'
 color-date-dead          = '{{ index .Colors "orange-light" }}'
 color-date-r             = '{{ index .Colors "jade-light" }}'
 color-urgent  			 = '{{ index .Colors "red-light" }}'
+color-mit				 = '{{ index .Colors "blue-sky" }}'
 color-every              = '{{ index .Colors "yellow-light" }}'
 color-dead-relations     = '{{ index .Colors "grey" }}'
 color-collapsed          = '{{ index .Colors "orange-light" }}'

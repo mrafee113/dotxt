@@ -474,6 +474,14 @@ func TestRender(t *testing.T) {
 			rtask := prep(line)
 			assert.Equal("print.color-urgent", rtask.tokens[0].color)
 		}
+		rtask := prep("$urgent")
+		assert.Equal("print.color-urgent", rtask.tokens[0].color)
+	})
+	t.Run("mit", func(t *testing.T) {
+		task, _ := ParseTask(&id, "$mit=1")
+		rtask := task.Render()
+		assert.Equal("$mit=1", rtask.tokens[0].raw)
+		assert.Equal("print.color-mit", rtask.tokens[0].color)
 	})
 }
 

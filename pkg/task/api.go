@@ -106,6 +106,7 @@ func cleanupRelations(path string) error {
 		//  whereas if a task has a sooner, say, $end value,
 		//  if it is a child of an urgency-induced task,
 		//  then it won't be prioritized correctly.
+		//  same thing happens for values of '$mit='.
 		// but this flaw is miniscule and therefore negligable.
 		if task.IsUrgent() {
 			node := task
@@ -249,7 +250,7 @@ func DeprioritizeTask(id int, path string) error {
 		return nil
 	}
 
-	_, ndx := task.Tokens.Find(TkByType(TokenPriority))
+	_, ndx := task.Tokens.Find(TkPriorityPrefix)
 	task.Tokens = slices.Delete(task.Tokens, ndx, ndx+1)
 	task.Priority = nil
 	return nil

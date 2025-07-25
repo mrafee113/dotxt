@@ -448,7 +448,7 @@ func (t *Task) Render() *rTask {
 		out.doneCountLen = utils.RuneCount(strconv.Itoa(t.Prog.DoneCount))
 	}
 	if t.Priority != nil {
-		tk, _ := t.Tokens.Find(TkByType(TokenPriority))
+		tk, _ := t.Tokens.Find(TkPriorityPrefix)
 		color := "print.color-default"
 		if tk.Key == "anti-priority" {
 			color = "print.color-anti-priority"
@@ -482,8 +482,21 @@ func (t *Task) Render() *rTask {
 	var reminderCount int
 	t.Tokens.ForEach(func(tk *Token) {
 		switch tk.Type {
-		case TokenPriority, TokenProgress:
+		case TokenProgress:
 			return
+		case TokenPriority:
+			switch tk.Key {
+			case "urgent":
+				out.tokens = append(out.tokens, &rToken{
+					token: tk, raw: tk.String(), color: "print.color-urgent",
+				})
+			case "mit":
+				out.tokens = append(out.tokens, &rToken{
+					token: tk, raw: tk.String(), color: "print.color-mit",
+				})
+			default:
+				return
+			}
 		case TokenText:
 			switch tk.Key {
 			case "quote":
@@ -532,13 +545,9 @@ func (t *Task) Render() *rTask {
 					token: tk, raw: replacer.Replace(tk.String()), color: "print.color-default",
 				})
 			default:
-				color := "print.color-default"
-				if tk.Key == "urgent" {
-					color = "print.color-urgent"
-				}
 				replacer := strings.NewReplacer("\\'", "'", "\\\"", "\"", "\\`", "`")
 				out.tokens = append(out.tokens, &rToken{
-					token: tk, raw: replacer.Replace(tk.String()), color: color,
+					token: tk, raw: replacer.Replace(tk.String()), color: "print.color-default",
 				})
 			}
 		case TokenID:

@@ -152,9 +152,27 @@ type Token struct {
 
 type Tokens []*Token
 
-type TkCond func(*Token) bool
 type TkFunc func(*Token)
 type TkFuncIndex func(*Token, int)
+type TkCond func(*Token) bool
+
+func (lc TkCond) And(rc TkCond) TkCond {
+	return func(tk *Token) bool {
+		return lc(tk) && rc(tk)
+	}
+}
+
+func (lc TkCond) Or(rc TkCond) TkCond {
+	return func(tk *Token) bool {
+		return lc(tk) || rc(tk)
+	}
+}
+
+func (c TkCond) Not() TkCond {
+	return func(tk *Token) bool {
+		return !c(tk)
+	}
+}
 
 func TkByType(tipe TokenType) TkCond {
 	return func(tk *Token) bool {
@@ -167,6 +185,9 @@ func TkByTypeKey(tipe TokenType, key string) TkCond {
 		return tk.Type == tipe && tk.Key == key
 	}
 }
+
+var TkPriorityPrefix TkCond = TkByTypeKey(TokenPriority, "priority").
+	Or(TkByTypeKey(TokenPriority, "anti-priority"))
 
 func (tks *Tokens) ForEach(fn TkFunc) {
 	for _, tk := range *tks {
@@ -215,7 +236,12 @@ func (tks *Tokens) Filter(cond TkCond) *Tokens {
 
 func (tk *Token) String() string {
 	switch tk.Type {
-	case TokenText, TokenHint, TokenPriority:
+	case TokenText, TokenHint:
+		return *tk.Value.(*string)
+	case TokenPriority:
+		if tk.Key == "mit" {
+			return fmt.Sprintf("$mit=%d", *tk.Value.(*int))
+		}
 		return *tk.Value.(*string)
 	case TokenID:
 		val := *tk.Value.(*string)
@@ -245,14 +271,6 @@ func (tk *Token) String() string {
 		}
 	}
 	return ""
-}
-
-func (tk *Token) IsUrgent() bool {
-	if tk.Type != TokenDate ||
-		!slices.Contains([]string{"due", "end", "dead"}, tk.Key) {
-		return false
-	}
-	return IsDateUrgent(tk.Value.(*TokenDateValue).Value)
 }
 
 type Progress struct {
@@ -348,6 +366,7 @@ type Task struct {
 	PID      *string // parent id ($P=)
 	Parent   *Task
 	Urgent   bool
+	MIT      *int
 
 	Time *Temporal
 	Prog *Progress
@@ -355,7 +374,7 @@ type Task struct {
 }
 
 func (t *Task) IsUrgent() bool {
-	return t.Urgent ||
+	return t.Urgent || t.MIT != nil ||
 		IsDateUrgent(t.Time.DueDate) ||
 		IsDateUrgent(t.Time.EndDate) ||
 		IsDateUrgent(t.Time.Deadline)
@@ -475,7 +494,7 @@ func (t *Task) updateByModifyingText(prefix, postfix string) error {
 		if t.Priority != nil {
 			priority := *t.Priority
 			t.Priority = nil
-			_, ndx := t.Tokens.Find(TkByType(TokenPriority))
+			_, ndx := t.Tokens.Find(TkPriorityPrefix)
 			t.Tokens = slices.Delete(t.Tokens, ndx, ndx+1)
 
 			leftOfPrefixIsSpace := unicode.IsSpace(utils.RuneAt(prefix, 0))

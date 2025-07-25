@@ -516,7 +516,7 @@ func TestParseTask(t *testing.T) {
 
 	t.Run("validate token urgent", func(t *testing.T) {
 		task, _ := ParseTask(nil, "hellow $urgent")
-		tk, _ := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenPriority, "urgent"))
 		require.NotNil(t, tk)
 		assert.Equal("$urgent", *tk.raw)
 		if assert.NotNil(tk.Value) {
@@ -528,7 +528,7 @@ func TestParseTask(t *testing.T) {
 		task, _ := ParseTask(nil, "$due=1w $urgent")
 		assert.False(task.Urgent)
 		assert.NotNil(task.Time.DueDate)
-		tk, _ := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenPriority, "urgent"))
 		assert.Nil(tk)
 		tk, _ = task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		assert.NotNil(tk)
@@ -536,10 +536,39 @@ func TestParseTask(t *testing.T) {
 		task, _ = ParseTask(nil, "$due=5w $urgent")
 		assert.True(task.Urgent)
 		assert.NotNil(task.Time.DueDate)
-		tk, _ = task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		tk, _ = task.Tokens.Find(TkByTypeKey(TokenPriority, "urgent"))
 		assert.NotNil(tk)
 		tk, _ = task.Tokens.Find(TkByTypeKey(TokenDate, "due"))
 		assert.NotNil(tk)
+	})
+
+	t.Run("validate token mit", func(t *testing.T) {
+		t.Run("normal", func(t *testing.T) {
+			task, _ := ParseTask(nil, "hello $mit=0")
+			tk, _ := task.Tokens.Find(TkByTypeKey(TokenPriority, "mit"))
+			require.NotNil(t, tk)
+			assert.Equal("$mit=0", *tk.raw)
+			if assert.NotNil(tk.Value) {
+				assert.Equal(0, *tk.Value.(*int))
+			}
+			if assert.NotNil(task.MIT) {
+				assert.Equal(0, *task.MIT)
+			}
+		})
+		t.Run("invalid number", func(t *testing.T) {
+			for _, line := range []string{
+				"$mit=something", "$mit=-2",
+			} {
+				task, _ := ParseTask(nil, line)
+				tk, _ := task.Tokens.Find(TkByTypeKey(TokenPriority, "mit"))
+				require.Nil(t, tk)
+				require.Nil(t, task.MIT)
+				tk, _ = task.Tokens.Find(TkByType(TokenText))
+				require.NotNil(t, tk)
+				assert.Equal(line, *tk.raw)
+				assert.Equal(line, *tk.Value.(*string))
+			}
+		})
 	})
 }
 

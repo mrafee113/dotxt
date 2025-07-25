@@ -32,7 +32,7 @@ func TestUpdate(t *testing.T) {
 		dt, _ := parseAbsoluteDatetime("2024-05-05T05-05")
 		assert.Exactly(*dt, *task.Time.CreationDate)
 		task.Tokens.ForEach(func(tk *Token) {
-			if tk.Type == TokenPriority {
+			if tk.Type == TokenPriority && tk.Key == "priority" {
 				assert.Equal("(B)", *tk.Value.(*string))
 			} else if tk.Type == TokenProgress {
 				assert.Equal(90, tk.Value.(*Progress).Count)
@@ -401,11 +401,24 @@ func TestTokens(t *testing.T) {
 	t.Run("urgent", func(t *testing.T) {
 		task, _ := ParseTask(nil, "$urgent")
 		assert.True(task.Urgent)
-		tk, _ := task.Tokens.Find(TkByTypeKey(TokenText, "urgent"))
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenPriority, "urgent"))
 		if assert.NotNil(tk) {
 			assert.Equal("$urgent", *tk.raw)
 			if assert.NotNil(tk.Value) {
 				assert.Equal("$urgent", *tk.Value.(*string))
+			}
+		}
+	})
+	t.Run("mit", func(t *testing.T) {
+		task, _ := ParseTask(nil, "$mit=0")
+		if assert.NotNil(task.MIT) {
+			assert.Equal(0, *task.MIT)
+		}
+		tk, _ := task.Tokens.Find(TkByTypeKey(TokenPriority, "mit"))
+		if assert.NotNil(tk) {
+			assert.Equal("$mit=0", *tk.raw)
+			if assert.NotNil(tk.Value) {
+				assert.Equal(0, *tk.Value.(*int))
 			}
 		}
 	})

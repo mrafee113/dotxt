@@ -130,8 +130,8 @@ func TestSortTask(t *testing.T) {
 			assert.Equal("(z) $p=unit/0/100", arr[4].Norm())
 			assert.Equal("$p=unit/0/100", arr[5].Norm())
 			assert.Equal("$due=1w $end=1w", arr[6].Norm())
-			assert.Equal("$due=1w $end=2w", arr[7].Norm())
-			assert.Equal("$due=1w $dead=1w", arr[8].Norm())
+			assert.Equal("$due=1w $dead=1w", arr[7].Norm())
+			assert.Equal("$due=1w $end=2w", arr[8].Norm())
 			assert.Equal("$due=1w $dead=2w", arr[9].Norm())
 			assert.Equal("(A) s", arr[10].Norm())
 			assert.Equal("(B) s", arr[11].Norm())
@@ -277,6 +277,7 @@ func TestSortTask(t *testing.T) {
 	})
 	t.Run("urgent", func(t *testing.T) {
 		for _, lineSet := range shuffleCount([]string{
+			"$mit=-1", "$mit=0", "$mit=1",
 			"$due=2m $end=1w", "$due=2m $end=2w",
 			"$due=2m $dead=1w", "$due=2m $dead=2w",
 			"$due=2m", "$due=3m",
@@ -287,22 +288,25 @@ func TestSortTask(t *testing.T) {
 			"$urgent", "not so urgent",
 		}, 5) {
 			prep(lineSet)
-			assert.Equal("$due=1w $end=1w", arr[0].Norm())
-			assert.Equal("$due=1w $end=2w", arr[1].Norm())
-			assert.Equal("$due=1w $dead=1w", arr[2].Norm())
-			assert.Equal("$due=1w $dead=2w", arr[3].Norm())
-			assert.Equal("$due=1w", arr[4].Norm())
-			assert.Equal("$due=2w", arr[5].Norm())
-			assert.Equal("$urgent $due=2m", arr[6].Norm())
-			assert.Equal("$urgent", arr[7].Norm())
-			assert.Equal("$urgent", arr[8].Norm())
-			assert.Equal("not so urgent", arr[9].Norm())
-			assert.Equal("$due=2m $end=1w", arr[10].Norm())
-			assert.Equal("$due=2m $end=2w", arr[11].Norm())
-			assert.Equal("$due=2m $dead=1w", arr[12].Norm())
-			assert.Equal("$due=2m $dead=2w", arr[13].Norm())
-			assert.Equal("$due=2m", arr[14].Norm())
-			assert.Equal("$due=3m", arr[15].Norm())
+			assert.Equal("$mit=0", arr[0].Norm())
+			assert.Equal("$mit=1", arr[1].Norm())
+			assert.Equal("$due=1w $end=1w", arr[2].Norm())
+			assert.Equal("$due=1w $dead=1w", arr[3].Norm())
+			assert.Equal("$due=1w $end=2w", arr[4].Norm())
+			assert.Equal("$due=1w $dead=2w", arr[5].Norm())
+			assert.Equal("$due=1w", arr[6].Norm())
+			assert.Equal("$due=2w", arr[7].Norm())
+			assert.Equal("$urgent $due=2m", arr[8].Norm())
+			assert.Equal("$urgent", arr[9].Norm())
+			assert.Equal("$urgent", arr[10].Norm())
+			assert.Equal("$mit=-1", arr[11].Norm())
+			assert.Equal("not so urgent", arr[12].Norm())
+			assert.Equal("$due=2m $end=1w", arr[13].Norm())
+			assert.Equal("$due=2m $end=2w", arr[14].Norm())
+			assert.Equal("$due=2m $dead=1w", arr[15].Norm())
+			assert.Equal("$due=2m $dead=2w", arr[16].Norm())
+			assert.Equal("$due=2m", arr[17].Norm())
+			assert.Equal("$due=3m", arr[18].Norm())
 		}
 	})
 	t.Run("every", func(t *testing.T) {
