@@ -264,11 +264,11 @@ func PrioritizeTask(id int, priority, path string) error {
 
 	priority = strings.TrimSpace(priority)
 	n := utils.RuneCount(priority)
-	if n > 1 && !strings.ContainsRune("[(", utils.RuneAt(priority, 0)) {
+	if n > 0 && !strings.ContainsRune("[(", utils.RuneAt(priority, 0)) {
 		priority = "(" + priority
 		n += 1
 	}
-	if n > 1 && !strings.ContainsRune(")]", utils.RuneAt(priority, n-1)) {
+	if n > 0 && !strings.ContainsRune(")]", utils.RuneAt(priority, n-1)) {
 		if utils.RuneAt(priority, 0) == '[' {
 			priority = priority + "]"
 		} else {
