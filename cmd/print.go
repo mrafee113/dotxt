@@ -95,9 +95,9 @@ func setToggleCollapsedCmdFlags() {
 }
 
 var print1 = &cobra.Command{
-	Use:   "lsn id [--list==<todolist=todo>]",
+	Use:   "print1 id [--list==<todolist=todo>]",
 	Short: "print a single task from list",
-	Long: `lsn id [--list==<todolist=todo>]
+	Long: `print1 id [--list==<todolist=todo>]
   print a single task from list`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		maxlen, err := cmd.Flags().GetInt("maxlen")
