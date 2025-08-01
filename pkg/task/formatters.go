@@ -121,6 +121,11 @@ func formatPriorities(tasks []*rTask) {
 		return
 	}
 
+	// in case this is to be modified:
+	//  the tasks in `tasks` are the ones that are to be shown.
+	//  the tasks in a given task's set of children are not necessarily to be shown.
+	//  therefore it is mandatory to skip tasks not in `tasks` whilst iterating a given set of children.
+
 	colorSaturation := viper.GetFloat64("print.priority.saturation")
 	colorLightness := viper.GetFloat64("print.priority.lightness")
 	colorStartHue := viper.GetFloat64("print.priority.start-hue")
@@ -142,6 +147,9 @@ func formatPriorities(tasks []*rTask) {
 		count := 0
 		prios := make(map[string]bool)
 		for _, t := range tasks {
+			if _, ok := taskToRTask[t]; !ok {
+				continue
+			}
 			if w, ok := weightMemo[t]; ok {
 				count += w
 				continue
@@ -168,6 +176,9 @@ func formatPriorities(tasks []*rTask) {
 		}
 		maximum := 0
 		for _, c := range t.Children {
+			if _, ok := taskToRTask[c]; !ok {
+				continue
+			}
 			maximum = max(maximum, computeDepth(c))
 		}
 		subtreeDepth[t] = maximum + 1
